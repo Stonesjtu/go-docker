@@ -107,8 +107,20 @@ class GoDScheduler(Daemon):
         '''
         Execute tasks on Docker scheduler in order
         '''
-        rejected_tasks = self.executor.run_tasks(queued_list)
-        #TODO reinject rejected_tasks
+        (running_tasks, rejected_tasks) = self.executor.run_tasks(queued_list)
+        if running_tasks:
+            for r in running_tasks:
+                self.r.rpush('jobs:running', r)
+        if rejected_tasks:
+            for r in rejected_tasks:
+                self.r.lpush('jobs:pending', r)
+
+    def check_running_jobs(self):
+        '''
+        Checks if running jobs are over
+        '''
+        #TODO
+        pass
 
     def manage_tasks(self):
         '''
@@ -128,17 +140,32 @@ class GoDScheduler(Daemon):
         for i in range(min(pending_tasks_length, self.cfg.max_job_pop)):
             pending_tasks.append(self.r.lpop('jobs:pending'))
 
-
         queued_tasks = self.schedule_tasks(pending_tasks)
         self.run_tasks(queued_tasks)
 
         print 'Get tasks to suspend'
-        #TODO
-        print 'Get tasks to resume'
-        #TODO
-        print 'Get tasks to reschedule'
-        #TODO
+        suspend_task_list = []
+        suspend_task_length = self.r.llen('jobs:suspend')
+        for i in range(min(suspend_task_length, self.cfg.max_job_pop)):
+            suspend_task_list.append(self.r.lpop('jobs:suspend'))
+        self.suspend_tasks(suspend_task_list)
 
+        print 'Get tasks to resume'
+        resume_task_list = []
+        resume_task_length = self.r.llen('jobs:resume')
+        for i in range(min(resume_task_length, self.cfg.max_job_pop)):
+            resume_task_list.append(self.r.lpop('jobs:resume'))
+        self.resume_tasks(resume_task_list)
+
+        print 'Get tasks to reschedule'
+        reschedule_task_list = []
+        reschedule_task_length = self.r.llen('jobs:reschedule')
+        for i in range(min(reschedule_task_length, self.cfg.max_job_pop)):
+            reschedule_task_list.append(self.r.lpop('jobs:rechedule'))
+        self.reschedule_tasks(reschedule_task_list)
+
+        print 'Look for terminated jobs'
+        self.check_running_jobs()
 
     def signal_handler(self, signum, frame):
         GoDScheduler.SIGINT = True

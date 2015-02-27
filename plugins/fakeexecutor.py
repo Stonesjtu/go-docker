@@ -12,8 +12,8 @@ class FakeExecutor(IExecutorPlugin):
         '''
         Execute task list on executor system
 
-        :return: rejected/errored tasks
+        :return: tuple of submitted and rejected/errored tasks
         '''
         for task in tasks:
             self.logger.info("Run:Fake:task: "+str(task))
-        return []
+        return (tasks, [])
