@@ -21,13 +21,20 @@ class Swarm(IExecutorPlugin):
 
         :return: tuple of submitted and rejected/errored tasks
         '''
+        running_tasks = []
         for task in tasks:
             job  = json.loads(task)
-            container = self.docker_client.create_container(image=job['container']['id'],
+            container = self.docker_client.create_container(image=job['container']['image'],
                                                             command=job['command']['cmd'],
                                                             cpu_shares=job['requirements']['cpu'],
-                                                            mem_limit=str(job['requirements']['ram'])+'g')
-        return ([],[])
+                                                            mem_limit=str(job['requirements']['ram'])+'g',
+                                                            ports=[22])
+            response = cli.start(container=container.get('Id'),
+                                    network_mode='host',
+                                    port_bindings={22: None})
+            job['container']['id'] = container['Id']
+            running_tasks.append(json.dumps(job))
+        return (running_tasks,[])
 
 
     def list_running_tasks(self):
