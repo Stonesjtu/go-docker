@@ -1,0 +1,9 @@
+[Core]
+Name = Swarm
+Module = swarm
+
+[Documentation]
+Author = Olivier Sallou
+Version = 0.1
+Website =
+Description = Swarm executor

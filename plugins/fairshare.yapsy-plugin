@@ -1,0 +1,9 @@
+[Core]
+Name = FaireShare
+Module = fairshare
+
+[Documentation]
+Author = Olivier Sallou
+Version = 0.1
+Website =
+Description = Fair share policy scheduling
