@@ -9,7 +9,11 @@ tasks = []
 for i in range(10):
     task = {
         'id': i,
-        'user': 'osallou',
+        'user': {
+            id: 'osallou',
+            uid: 1001,
+            gid: 1001
+        }
         'date': datetime.datetime.now().isoformat(),
         'meta': {
             'name': 'samplejob'+str(i),
@@ -21,7 +25,9 @@ for i in range(10):
             'ram': 1
         },
         'container': {
-            'id': 'centos:latest'
+            'id': 'centos:latest',
+            'volumes': [],
+            'network': True
         }
         'command': {
             'cmd': 'ls -l'
