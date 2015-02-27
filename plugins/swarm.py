@@ -21,6 +21,12 @@ class Swarm(IExecutorPlugin):
 
         :return: tuple of submitted and rejected/errored tasks
         '''
+        for task in tasks:
+            job  = json.loads(task)
+            container = self.docker_client.create_container(image=job['container']['id'],
+                                                            command=job['command']['cmd'],
+                                                            cpu_shares=job['requirements']['cpu'],
+                                                            mem_limit=str(job['requirements']['ram'])+'g')
         return ([],[])
 
 
