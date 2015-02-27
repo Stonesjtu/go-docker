@@ -20,6 +20,9 @@ for i in range(10):
             # In Gb
             'ram': 1
         },
+        'container': {
+            'id': 'centos:latest'
+        }
         'command': {
             'cmd': 'ls -l'
         }
