@@ -27,14 +27,14 @@ class IExecutorPlugin(IPlugin):
         '''
         self.logger = logger
 
-    def list_running_tasks(self):
-        '''
-        Return a list of running tasks
-        '''
-        return []
 
-    def get_finished_tasks(self, running_tasks):
+    def watch_tasks(self, task, over):
         '''
-        Return a list of tasks over ids
+        Get task status
+
+        :param task: current task
+        :type task: Task
+        :param over: is task over
+        :type over: bool
         '''
-        return []
+        return (task, True)

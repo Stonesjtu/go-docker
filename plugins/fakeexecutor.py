@@ -22,9 +22,3 @@ class FakeExecutor(IExecutorPlugin):
         for task in tasks:
             self.logger.info("Run:Fake:task: "+str(task))
         return (tasks, [])
-
-    def get_finished_tasks(self, running_tasks):
-        '''
-        Return a list of tasks over
-        '''
-        return running_tasks

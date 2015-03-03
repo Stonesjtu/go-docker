@@ -1,5 +1,7 @@
 from godocker.iExecutorPlugin import IExecutorPlugin
 import json
+import datetime
+import iso8601
 
 
 class Swarm(IExecutorPlugin):
@@ -53,34 +55,29 @@ class Swarm(IExecutorPlugin):
                 error_tasks.append(task)
         return (running_tasks,error_tasks)
 
-    def get_finished_tasks(self, running_tasks):
+    def watch_tasks(self, task):
         '''
-        Return a list of tasks over
-        '''
-        tasks_finished = []
-        containers = self.docker_client.containers()
-        containers_running = []
-        for c in containers:
-            containers_running.append(c['Id'])
-        for r in running_tasks:
-            #job  = json.loads(r)
-            job = r
-            if job['container']['id'] not in containers_running:
-                self.logger.debug('Container:'+str(job['container']['id'])+':Over')
-                r['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
-                r['container']['stats'] = self.docker_client.stats(job['container']['id'])
-                tasks_finished.append(r)
-                self.docker_client.remove_container(job['container']['id'])
-            else:
-                self.logger.debug('Container:'+job['container']['id']+':Running')
-        return tasks_finished
+        Get task status
 
+        :param task: current task
+        :type task: Task
+        :param over: is task over
+        :type over: bool
+        '''
+        over = False
 
-    def list_running_tasks(self):
-        '''
-        Return a list of running tasks
-        '''
-        #TODO, if over, remove container
-        containers = self.docker_client.containers()
-        self.logger.debug(str(containers))
-        return containers
+        #task['container']['stats'] = self.docker_client.stats(task['container']['id'])
+
+        task['container']['meta'] = self.docker_client.inspect_container(task['container']['id'])
+        finished_date =  task['container']['meta']['State']['FinishedAt']
+        finished_date = iso8601.parse_date(finished_date)
+        if finished_date.year > 1:
+            over = True
+
+        if over:
+            self.logger.warn('Container:'+str(task['container']['id'])+':Over')
+            self.docker_client.remove_container(task['container']['id'])
+            over = True
+        else:
+            self.logger.debug('Container:'+task['container']['id']+':Running')
+        return (task, over)

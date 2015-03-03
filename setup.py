@@ -14,6 +14,7 @@ config = {
                             'pymongo',
                             'redis',
                             'yapsy',
+                            'iso8601',
                             'config' ],
     'packages': find_packages(),
     'include_package_data': True,
