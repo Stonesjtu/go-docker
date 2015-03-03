@@ -19,3 +19,15 @@ docker  -H 127.0.0.1:2376  ps -a | awk 'NR > 1 {print $1}' | xargs docker  -H
 swarm binpacking strategy:
 
 bin/swarm manage --strategy binpacking -H 127.0.1:2376 nodes://127.0.0.1:2375
+
+## CAdvisor
+
+sudo docker run \
+  --volume=/:/rootfs:ro \
+  --volume=/var/run:/var/run:rw \
+  --volume=/sys:/sys:ro \
+  --volume=/var/lib/docker/:/var/lib/docker:ro \
+  --publish=8080:8080 \
+  --detach=true \
+  --name=cadvisor \
+  google/cadvisor:latest

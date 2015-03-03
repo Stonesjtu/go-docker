@@ -126,7 +126,7 @@ class GoDWatcher(Daemon):
                     return
                 task = json.loads(elt)
                 (task, over) = self.executor.watch_tasks(task)
-                print "TASK:"+str(task['id'])+":"+str(over)
+                self.logger.debug("TASK:"+str(task['id'])+":"+str(over))
                 if over:
                     self.db_jobs.update({'_id': ObjectId(task['_id']['$oid'])}, {'$set': {'status.primary': 'over', 'container': task['container']}})
                     #self.r.del('god:job:'+str(task['id'])+':container'
@@ -135,6 +135,7 @@ class GoDWatcher(Daemon):
                     self.r.rpush('god:jobs:running', task['id'])
                     self.r.set('god:job:'+str(task['id'])+':task', dumps(task))
             except KeyboardInterrupt:
+                self.logger.warn('Interrupt received, exiting after cleanup')
                 self.r.rpush('god:jobs:running', task['id'])
                 sys.exit(0)
             if nb_elt < self.cfg.max_job_pop:
