@@ -6,6 +6,7 @@ import json
 import logging
 import signal
 from pymongo import MongoClient
+from bson.json_util import dumps
 
 from yapsy.PluginManager import PluginManager
 from godocker.iSchedulerPlugin import ISchedulerPlugin
@@ -13,6 +14,9 @@ from godocker.iExecutorPlugin import IExecutorPlugin
 
 
 class GoDScheduler(Daemon):
+    '''
+    One instance only
+    '''
 
     SIGINT = False
 
@@ -30,7 +34,7 @@ class GoDScheduler(Daemon):
         '''
         cfg_file = file(f)
         self.cfg = Config(cfg_file)
-        #self.r = redis.StrictRedis(host=self.cfg.redis_host, port=self.cfg.redis_port, db=self.cfg.db)
+        self.r = redis.StrictRedis(host=self.cfg.redis_host, port=self.cfg.redis_port, db=self.cfg.db)
         self.mongo = MongoClient(self.cfg.mongo_url)
         self.db = self.mongo.god
         self.db_jobs = self.db.jobs
@@ -75,36 +79,6 @@ class GoDScheduler(Daemon):
              print "Loading executor: "+self.executor.get_name()
 
 
-    def kill_tasks(self, task_list):
-        '''
-        Kill tasks in list
-        '''
-        #TODO
-        pass
-
-    def suspend_tasks(self, suspend_list):
-        '''
-        Suspend/pause tasks in list
-        '''
-        #TODO
-        pass
-
-
-    def resume_tasks(self, resume_list):
-        '''
-        Resume tasks in list
-        '''
-        #TODO
-        pass
-
-    def reschedule_tasks(self, resched_list):
-        '''
-        Restart/reschedule running tasks in list
-        '''
-        #TODO
-        pass
-
-
     def schedule_tasks(self, pending_list):
         '''
         Schedule tasks according to pending list
@@ -120,12 +94,14 @@ class GoDScheduler(Daemon):
     def _update_scheduled_task_status(self, running_tasks, rejected_tasks):
         if running_tasks:
             for r in running_tasks:
-                #self.r.rpush('jobs:running', r)
-                self.db_jobs.update({'_id': r['_id']}, {'$set': {'status.primary': 'running', 'container': r['container']}})
+                self.r.rpush('god:jobs:running', r['id'])
+                #self.r.set('god:job:'+str(r['id'])+':container', r['container']['id'])
+                self.r.set('god:job:'+str(r['id'])+':task', dumps(r))
+                self.db_jobs.update({'_id': r['_id']}, {'$set': {'status.primary': 'running', 'status.secondary': None, 'container': r['container']}})
         if rejected_tasks:
             for r in rejected_tasks:
                 #self.r.lpush('jobs:pending', r)
-                self.db_jobs.update({'_id': r['_id']}, {'$set': {'status.secondary': 'rejected'}})
+                self.db_jobs.update({'_id': r['_id']}, {'$set': {'status.secondary': 'rejected by scheduler'}})
 
     def run_tasks(self, queued_list):
         '''
@@ -134,37 +110,18 @@ class GoDScheduler(Daemon):
         (running_tasks, rejected_tasks) = self.executor.run_tasks(queued_list, self._update_scheduled_task_status)
         self._update_scheduled_task_status(running_tasks, rejected_tasks)
 
-    def check_running_jobs(self):
+    def reschedule_tasks(self, resched_list):
         '''
-        Checks if running jobs are over
+        Restart/reschedule running tasks in list
         '''
-        lmin = 0
-        lrange = self.cfg.max_job_pop
-        #elts  = self.r.lrange('jobs:running', lmin, lmin+lrange)
-        elts = self.db_jobs.find({'status.primary': 'running'}, limit=self.cfg.max_job_pop, skip=lmin)
-        while elts.count()>0:
-            finished_tasks = self.executor.get_finished_tasks(elts)
-            for f in finished_tasks:
-                self.db_jobs.update({'_id': f['_id']}, {'$set': {'status.primary': 'over', 'container': f['container']}})
-                #self.r.lrem('jobs:running', 0, f)
-                #self.r.lpush('jobs:over', f)
-            lmin += lrange
-            elts = self.db_jobs.find({'status.primary': 'running'}, limit=self.cfg.max_job_pop, skip=lmin)
-            #elts  = self.r.lrange('jobs:running', lmin, lmin+lrange)
+        #TODO
+        pass
 
     def manage_tasks(self):
         '''
         Schedule and run tasks / kill tasks
 
         '''
-        print "Get tasks to kill"
-        #kill_task_list = []
-        #kill_task_length = self.r.llen('jobs:kill')
-        #for i in range(min(kill_task_length, self.cfg.max_job_pop)):
-        #    kill_task_list.append(self.r.lpop('jobs:kill'))
-
-        kill_task_list = self.db_jobs.find({'status.primary': 'kill'})
-        self.kill_tasks(kill_task_list)
 
         print "Get pending task"
         #pending_tasks = []
@@ -176,24 +133,6 @@ class GoDScheduler(Daemon):
         queued_tasks = self.schedule_tasks(pending_tasks)
         self.run_tasks(queued_tasks)
 
-        print 'Get tasks to suspend'
-        #suspend_task_list = []
-        #suspend_task_length = self.r.llen('jobs:suspend')
-        #for i in range(min(suspend_task_length, self.cfg.max_job_pop)):
-        #    suspend_task_list.append(self.r.lpop('jobs:suspend'))
-
-        suspend_task_list = self.db_jobs.find({'status.primary': 'suspend'})
-        self.suspend_tasks(suspend_task_list)
-
-        print 'Get tasks to resume'
-        #resume_task_list = []
-        #resume_task_length = self.r.llen('jobs:resume')
-        #for i in range(min(resume_task_length, self.cfg.max_job_pop)):
-        #    resume_task_list.append(self.r.lpop('jobs:resume'))
-
-        resume_task_list = self.db_jobs.find({'status.primary': 'resume'})
-        self.resume_tasks(resume_task_list)
-
         print 'Get tasks to reschedule'
         #reschedule_task_list = []
         #reschedule_task_length = self.r.llen('jobs:reschedule')
@@ -202,9 +141,6 @@ class GoDScheduler(Daemon):
 
         reschedule_task_list = self.db_jobs.find({'status.primary': 'reschedule'})
         self.reschedule_tasks(reschedule_task_list)
-
-        print 'Look for terminated jobs'
-        self.check_running_jobs()
 
     def signal_handler(self, signum, frame):
         GoDScheduler.SIGINT = True
