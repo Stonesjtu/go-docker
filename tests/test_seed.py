@@ -1,9 +1,17 @@
-import redis
+#import redis
+from pymongo import MongoClient
+
 import json
 import datetime
 import logging
+from config import Config
 
-r = redis.StrictRedis(host='localhost', port=6379, db=0)
+#r = redis.StrictRedis(host='localhost', port=6379, db=0)
+cfg = Config('go-d.ini')
+mongo = MongoClient(cfg.mongo_url)
+db = mongo.god
+db_jobs = db.jobs
+db_users = db.users
 
 tasks = []
 for i in range(10):
@@ -27,16 +35,24 @@ for i in range(10):
         'container': {
             'image': 'centos:latest',
             'volumes': [],
-            'network': True
+            'network': True,
+            'id': None,
+            'meta': None,
+            'stats': None
         },
         'command': {
             'cmd': '/bin/ls -l'
             #'cmd': '/bin/sleep 30'
+        },
+        'status': {
+            'primary': 'pending',
+            'secondary': None
         }
     }
     tasks.append(task)
     logging.debug('add '+str(task))
-    r.rpush('jobs:pending', json.dumps(task))
+    #r.rpush('jobs:pending', json.dumps(task))
+    db_jobs.insert(task)
 
 users = []
 
@@ -57,7 +73,8 @@ user = {
 
 users.append(user)
 for user in users:
-    r.set('user:'+user['id'], json.dumps(user['quota']))
-    r.set('user:'+user['id']+':usage:time', user['usage']['time'])
-    r.set('user:'+user['id']+':usage:cpu', user['usage']['cpu'])
-    r.set('user:'+user['id']+':usage:ram', user['usage']['ram'])
+    db_users.insert(user)
+    #r.set('user:'+user['id'], json.dumps(user['quota']))
+    #r.set('user:'+user['id']+':usage:time', user['usage']['time'])
+    #r.set('user:'+user['id']+':usage:cpu', user['usage']['cpu'])
+    #r.set('user:'+user['id']+':usage:ram', user['usage']['ram'])

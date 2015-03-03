@@ -8,3 +8,14 @@ Linked to the system users (or ldap), user will have their home mounted automati
 They will be to run jobs with their uid/gid or as root in the container.
 
 User specify his job command line and requirements (docker image, cpu, ram).
+
+## Tips
+
+Remove old containers
+
+docker  -H 127.0.0.1:2376  ps -a | awk 'NR > 1 {print $1}' | xargs docker  -H
+127.0.0.1:2376 rm
+
+swarm binpacking strategy:
+
+bin/swarm manage --strategy binpacking -H 127.0.1:2376 nodes://127.0.0.1:2375
