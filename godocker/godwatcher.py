@@ -128,6 +128,13 @@ class GoDWatcher(Daemon):
                 (task, over) = self.executor.watch_tasks(task)
                 self.logger.debug("TASK:"+str(task['id'])+":"+str(over))
                 if over:
+                    # Free ports
+                    # Put back mapping allocated ports
+                    for port in task['container']['ports']:
+                        self.logger.debug('Port:Back:'+task['container']['meta']['Node']['name']+':'+str(port))
+                        self.r.rpush('god:ports:'+host, port)
+                    task['container']['ports'] = []
+
                     self.db_jobs.update({'_id': ObjectId(task['_id']['$oid'])}, {'$set': {'status.primary': 'over', 'container': task['container']}})
                     #self.r.del('god:job:'+str(task['id'])+':container'
                     self.r.delete('god:job:'+str(task['id'])+':task')

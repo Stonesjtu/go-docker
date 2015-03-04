@@ -99,17 +99,23 @@ class GoDScheduler(Daemon):
                 #self.r.set('god:job:'+str(r['id'])+':container', r['container']['id'])
                 self.r.set('god:job:'+str(r['id'])+':task', dumps(r))
                 self.r.decr('god:jobs:queued')
-                self.db_jobs.update({'_id': r['_id']}, {'$set': {'status.primary': 'running', 'status.secondary': None, 'container': r['container']}})
+                self.db_jobs.update({'_id': r['_id']},
+                                    {'$set': {
+                                        'status.primary': 'running',
+                                        'status.secondary': None,
+                                        'container': r['container']}})
         if rejected_tasks:
             for r in rejected_tasks:
-                #self.r.lpush('jobs:pending', r)
-                self.db_jobs.update({'_id': r['_id']}, {'$set': {'status.secondary': 'rejected by scheduler'}})
+                # Put back mapping allocated ports
+                for port in r['container']['ports']:
+                    self.r.rpush('god:ports:'+host, port)
+                self.db_jobs.update({'_id': r['_id']}, {'$set': {'status.secondary': 'rejected by scheduler', 'container.ports': []}})
 
     def run_tasks(self, queued_list):
         '''
         Execute tasks on Docker scheduler in order
         '''
-        (running_tasks, rejected_tasks) = self.executor.run_tasks(queued_list, self._update_scheduled_task_status)
+        (running_tasks, rejected_tasks) = self.executor.run_tasks(queued_list, self._update_scheduled_task_status, self.get_mapping_port)
         self._update_scheduled_task_status(running_tasks, rejected_tasks)
 
     def reschedule_tasks(self, resched_list):
@@ -118,6 +124,25 @@ class GoDScheduler(Daemon):
         '''
         #TODO
         pass
+
+    def get_mapping_port(self, host, task):
+        '''
+        Get a port mapping for interactive tasks
+
+        :param host: hostname of the container
+        :type host: str
+        :param task: task
+        :type task: int
+        :return: available port
+        '''
+        if not self.r.exists('god:ports:'+host):
+            for i in range(self.cfg.port_start):
+                self.r.rpush(self.cfg.port_start + i)
+        port = self.r.lpop('god:ports:'+host)
+        self.logger.debug('Port:Give:'+task['container']['meta']['Node']['name']+':'+str(port))
+        task['container']['ports'].append(port)
+        return port
+
 
     def manage_tasks(self):
         '''
