@@ -5,6 +5,7 @@ import redis
 import json
 import logging
 import signal
+import datetime
 from pymongo import MongoClient
 from bson.json_util import dumps
 from bson.objectid import ObjectId
@@ -140,7 +141,13 @@ class GoDWatcher(Daemon):
                         self.r.rpush('god:ports:'+host, port)
                     task['container']['ports'] = []
 
-                    self.db_jobs.update({'_id': ObjectId(task['_id']['$oid'])}, {'$set': {'status.primary': 'over', 'container': task['container']}})
+                    self.db_jobs.update({'_id': ObjectId(task['_id']['$oid'])},
+                                        {'$set':
+                                            {'status.primary': 'over',
+                                            'status.date_over': datetime.datetime.now().isoformat(),
+                                            'container': task['container']
+                                            }
+                                        })
                     #self.r.del('god:job:'+str(task['id'])+':container'
                     self.r.delete('god:job:'+str(task['id'])+':task')
                 else:
@@ -155,6 +162,7 @@ class GoDWatcher(Daemon):
                 if not task_id:
                     return
                 elt = self.r.get('god:job:'+str(task_id)+':task')
+                nb_elt += 1
             else:
                 break
 

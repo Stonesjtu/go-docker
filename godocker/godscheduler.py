@@ -6,6 +6,7 @@ import json
 import logging
 import signal
 import os
+import datetime
 from pymongo import MongoClient
 from bson.json_util import dumps
 from config import Config
@@ -105,6 +106,7 @@ class GoDScheduler(Daemon):
                                     {'$set': {
                                         'status.primary': 'running',
                                         'status.secondary': None,
+                                        'status.date_running': datetime.datetime.now().isoformat(),
                                         'container': r['container']}})
         if rejected_tasks:
             for r in rejected_tasks:
