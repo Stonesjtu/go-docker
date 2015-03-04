@@ -45,9 +45,11 @@ for i in range(10):
             'network': True,
             'id': None,
             'meta': None,
-            'stats': None
+            'stats': None,
+            'ports': []
         },
         'command': {
+            'interactive': False,
             'cmd': '/bin/ls -l'
             #'cmd': '/bin/sleep 30'
         },
