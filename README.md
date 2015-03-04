@@ -23,9 +23,11 @@ multiple watchers running in parallel
 
 ## Conf
 
-Confgi is in go-d.ini. One can define the scheduler and executor to use. It must
+Config is in go-d.ini. One can define the scheduler and executor to use. It must
 be one of the classes defined in plugins. One can easily add new ones following
 godocker/iExecutorPlugin and iSchedulterPlugin interfaces
+
+One can set environment variable GOD_CONFIG to specify go-d.ini location for go-d-scheduler and go-d-watcher.
 
 ## Tips
 

@@ -5,6 +5,7 @@ import redis
 import json
 import logging
 import signal
+import os
 from pymongo import MongoClient
 from bson.json_util import dumps
 
@@ -34,7 +35,7 @@ class GoDScheduler(Daemon):
         '''
         cfg_file = file(f)
         self.cfg = Config(cfg_file)
-        self.r = redis.StrictRedis(host=self.cfg.redis_host, port=self.cfg.redis_port, db=self.cfg.db)
+        self.r = redis.StrictRedis(host=self.cfg.redis_host, port=self.cfg.redis_port, db=self.cfg.redis_db)
         self.mongo = MongoClient(self.cfg.mongo_url)
         self.db = self.mongo.god
         self.db_jobs = self.db.jobs
@@ -97,6 +98,7 @@ class GoDScheduler(Daemon):
                 self.r.rpush('god:jobs:running', r['id'])
                 #self.r.set('god:job:'+str(r['id'])+':container', r['container']['id'])
                 self.r.set('god:job:'+str(r['id'])+':task', dumps(r))
+                self.r.decr('god:jobs:queued')
                 self.db_jobs.update({'_id': r['_id']}, {'$set': {'status.primary': 'running', 'status.secondary': None, 'container': r['container']}})
         if rejected_tasks:
             for r in rejected_tasks:
@@ -160,7 +162,10 @@ class GoDScheduler(Daemon):
 
 if __name__ == "__main__":
         daemon = GoDScheduler('/tmp/godsched.pid')
-        daemon.load_config('go-d.ini')
+        config_file = 'go-d.ini'
+        if 'GOD_CONFIG' in os.environ:
+            config_file = os.environ['GOD_CONFIG']
+        daemon.load_config(config_file)
         signal.signal(signal.SIGINT, daemon.signal_handler)
 
         if len(sys.argv) == 2:

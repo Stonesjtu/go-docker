@@ -1,22 +1,29 @@
-#import redis
+import redis
 from pymongo import MongoClient
 
+import os
 import json
 import datetime
 import logging
 from config import Config
 
-#r = redis.StrictRedis(host='localhost', port=6379, db=0)
-cfg = Config('go-d.ini')
+config_file = 'go-d.ini'
+if 'GOD_CONFIG' in os.environ:
+    config_file = os.environ['GOD_CONFIG']
+cfg = Config(config_file)
+
 mongo = MongoClient(cfg.mongo_url)
 db = mongo.god
 db_jobs = db.jobs
 db_users = db.users
 
+r = redis.StrictRedis(host=cfg.redis_host, port=cfg.redis_port, db=cfg.redis_db)
+
 tasks = []
 for i in range(10):
+    task_id = r.incr('god:jobs')
     task = {
-        'id': i,
+        'id': task_id,
         'user': {
             'id': 'osallou',
             'uid': 1001,

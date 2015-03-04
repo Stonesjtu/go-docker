@@ -27,7 +27,7 @@ class GoDWatcher(Daemon):
         '''
         cfg_file = file(f)
         self.cfg = Config(cfg_file)
-        self.r = redis.StrictRedis(host=self.cfg.redis_host, port=self.cfg.redis_port, db=self.cfg.db)
+        self.r = redis.StrictRedis(host=self.cfg.redis_host, port=self.cfg.redis_port, db=self.cfg.redis_db)
         self.mongo = MongoClient(self.cfg.mongo_url)
         self.db = self.mongo.god
         self.db_jobs = self.db.jobs
@@ -201,7 +201,10 @@ class GoDWatcher(Daemon):
 
 if __name__ == "__main__":
         daemon = GoDWatcher('/tmp/godwatcher.pid')
-        daemon.load_config('go-d.ini')
+        config_file = 'go-d.ini'
+        if 'GOD_CONFIG' in os.environ:
+            config_file = os.environ['GOD_CONFIG']
+        daemon.load_config(config_file)
         signal.signal(signal.SIGINT, daemon.signal_handler)
 
         if len(sys.argv) == 2:
