@@ -15,6 +15,7 @@ config = {
                             'redis',
                             'yapsy',
                             'iso8601',
+                            'mock',
                             'config' ],
     'packages': find_packages(),
     'include_package_data': True,
