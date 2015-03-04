@@ -20,6 +20,7 @@ db_users = db.users
 r = redis.StrictRedis(host=cfg.redis_host, port=cfg.redis_port, db=cfg.redis_db)
 
 tasks = []
+interactive = False
 for i in range(10):
     task_id = r.incr('god:jobs')
     task = {
@@ -49,9 +50,9 @@ for i in range(10):
             'ports': []
         },
         'command': {
-            'interactive': False,
-            'cmd': '/bin/ls -l'
-            #'cmd': '/bin/sleep 30'
+            'interactive': interactive,
+            #'cmd': '/bin/ls -l'
+            'cmd': '/bin/sleep 30'
         },
         'status': {
             'primary': 'pending',
@@ -62,6 +63,7 @@ for i in range(10):
     logging.debug('add '+str(task))
     #r.rpush('jobs:pending', json.dumps(task))
     db_jobs.insert(task)
+    interactive = not interactive
 
 users = []
 

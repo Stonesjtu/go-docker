@@ -6,11 +6,14 @@ import json
 import logging
 import signal
 from pymongo import MongoClient
+from bson.json_util import dumps
 from bson.objectid import ObjectId
 
 from yapsy.PluginManager import PluginManager
 from godocker.iSchedulerPlugin import ISchedulerPlugin
 from godocker.iExecutorPlugin import IExecutorPlugin
+from godocker.iAuthPlugin import IAuthPlugin
+
 
 
 class GoDWatcher(Daemon):
@@ -48,7 +51,8 @@ class GoDWatcher(Daemon):
         simplePluginManager.setPluginPlaces([self.cfg.plugins_dir])
         simplePluginManager.setCategoriesFilter({
            "Scheduler": ISchedulerPlugin,
-           "Executor": IExecutorPlugin
+           "Executor": IExecutorPlugin,
+           "Auth": IAuthPlugin
          })
         # Load all plugins
         simplePluginManager.collectPlugins()
@@ -131,7 +135,8 @@ class GoDWatcher(Daemon):
                     # Free ports
                     # Put back mapping allocated ports
                     for port in task['container']['ports']:
-                        self.logger.debug('Port:Back:'+task['container']['meta']['Node']['name']+':'+str(port))
+                        host = task['container']['meta']['Node']['Name']
+                        self.logger.debug('Port:Back:'+host+':'+str(port))
                         self.r.rpush('god:ports:'+host, port)
                     task['container']['ports'] = []
 

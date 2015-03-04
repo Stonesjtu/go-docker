@@ -13,6 +13,7 @@ from config import Config
 from yapsy.PluginManager import PluginManager
 from godocker.iSchedulerPlugin import ISchedulerPlugin
 from godocker.iExecutorPlugin import IExecutorPlugin
+from godocker.iAuthPlugin import IAuthPlugin
 
 class GoDScheduler(Daemon):
     '''
@@ -56,7 +57,8 @@ class GoDScheduler(Daemon):
         simplePluginManager.setPluginPlaces([self.cfg.plugins_dir])
         simplePluginManager.setCategoriesFilter({
            "Scheduler": ISchedulerPlugin,
-           "Executor": IExecutorPlugin
+           "Executor": IExecutorPlugin,
+           "Auth": IAuthPlugin
          })
         # Load all plugins
         simplePluginManager.collectPlugins()
@@ -137,9 +139,9 @@ class GoDScheduler(Daemon):
         '''
         if not self.r.exists('god:ports:'+host):
             for i in range(self.cfg.port_start):
-                self.r.rpush(self.cfg.port_start + i)
+                self.r.rpush('god:ports:'+host, self.cfg.port_start + i)
         port = self.r.lpop('god:ports:'+host)
-        self.logger.debug('Port:Give:'+task['container']['meta']['Node']['name']+':'+str(port))
+        self.logger.debug('Port:Give:'+task['container']['meta']['Node']['Name']+':'+str(port))
         task['container']['ports'].append(port)
         return port
 

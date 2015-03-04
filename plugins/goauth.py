@@ -1,7 +1,7 @@
 from godocker.iAuthPlugin import IAuthPlugin
 import logging
 
-class goAuth(IAuthPlugin):
+class GoAuth(IAuthPlugin):
     def get_name(self):
         return "goauth"
 

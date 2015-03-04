@@ -33,6 +33,7 @@ class Swarm(IExecutorPlugin):
         running_tasks = []
         error_tasks = []
         for task in tasks:
+            container = None
             try:
                 #job  = json.loads(task)
                 job = task
@@ -40,32 +41,32 @@ class Swarm(IExecutorPlugin):
                 if job['command']['interactive']:
                     port_list = [22]
                 #self.logger.warn('Reservation: '+str(job['requirements']['cpu'])+','+str(job['requirements']['ram'])+'g')
-                container = self.docker_client.create_container(name=job['meta']['name']+'_'+str(job['id'])
-                                                                image=job['container']['image'],
+                container = self.docker_client.create_container(image=job['container']['image'],
                                                                 command=job['command']['cmd'],
                                                                 cpu_shares=job['requirements']['cpu'],
                                                                 mem_limit=str(job['requirements']['ram'])+'g',
                                                                 ports=port_list)
-
                 job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
-
                 port_mapping = {}
                 for port in port_list:
-                    mapped_port = portmapping(job['container']['meta']['Node']['name'], job)
+                    mapped_port = portmapping(job['container']['meta']['Node']['Name'], job)
                     port_mapping[port] = mapped_port
-
+                self.logger.error('OSALLOU PORTS '+str(port_mapping))
                 response = self.docker_client.start(container=container.get('Id'),
                                         network_mode='host',
                                         #publish_all_ports=True
                                         port_bindings=port_mapping
                                         )
+
                 job['container']['id'] = container['Id']
                 #job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
                 running_tasks.append(job)
                 self.logger.debug('Execute:Job:'+str(job['id'])+':'+job['container']['id'])
             except Exception as e:
-                self.logger.error(str(job['id'])+':'+str(e))
+                self.logger.error('Execute:Job:'+str(job['id'])+':'+str(e))
                 error_tasks.append(task)
+                if container:
+                    self.docker_client.remove_container(container.get('Id'))
         return (running_tasks,error_tasks)
 
     def watch_tasks(self, task):
