@@ -8,7 +8,7 @@ class IExecutorPlugin(IPlugin):
     def set_config(self, cfg):
         self.cfg = cfg
 
-    def run_tasks(self, tasks, callback=None):
+    def run_tasks(self, tasks, callback=None, portmapping=None):
         '''
         Execute task list on executor system
 
@@ -16,7 +16,8 @@ class IExecutorPlugin(IPlugin):
         :type tasks: list
         :param callback: callback function to update tasks status (running/rejected)
         :type callback: func(running list,rejected list)
-
+        :param portmapping: function(hostname) to call to get a free port on host for port mapping
+        :type portmapping: def
         :return: tuple of submitted and rejected/errored tasks
         '''
         return (None,None)
