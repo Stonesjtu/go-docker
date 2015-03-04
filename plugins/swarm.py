@@ -18,7 +18,7 @@ class Swarm(IExecutorPlugin):
 
         self.docker_client = Client(base_url=self.cfg.docker_url)
 
-    def run_tasks(self, tasks, callback=None):
+    def run_tasks(self, tasks, callback=None, portmapping=None):
         '''
         Execute task list on executor system
 
@@ -26,7 +26,8 @@ class Swarm(IExecutorPlugin):
         :type tasks: list
         :param callback: callback function to update tasks status (running/rejected)
         :type callback: func(running list,rejected list)
-
+        :param portmapping: function(hostname) to call to get a free port on host for port mapping
+        :type portmapping: def
         :return: tuple of submitted and rejected/errored tasks
         '''
         running_tasks = []
@@ -35,19 +36,31 @@ class Swarm(IExecutorPlugin):
             try:
                 #job  = json.loads(task)
                 job = task
+                port_list = []
+                if job['command']['interactive']:
+                    port_list = [22]
                 #self.logger.warn('Reservation: '+str(job['requirements']['cpu'])+','+str(job['requirements']['ram'])+'g')
-                container = self.docker_client.create_container(image=job['container']['image'],
+                container = self.docker_client.create_container(name=job['meta']['name']+'_'+str(job['id'])
+                                                                image=job['container']['image'],
                                                                 command=job['command']['cmd'],
                                                                 cpu_shares=job['requirements']['cpu'],
                                                                 mem_limit=str(job['requirements']['ram'])+'g',
-                                                                ports=[22])
+                                                                ports=port_list)
+
+                job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
+
+                port_mapping = {}
+                for port in port_list:
+                    mapped_port = portmapping(job['container']['meta']['Node']['name'], job)
+                    port_mapping[port] = mapped_port
+
                 response = self.docker_client.start(container=container.get('Id'),
                                         network_mode='host',
-                                        publish_all_ports=True
-                                        #port_bindings={22: None}
+                                        #publish_all_ports=True
+                                        port_bindings=port_mapping
                                         )
                 job['container']['id'] = container['Id']
-                job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
+                #job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
                 running_tasks.append(job)
                 self.logger.debug('Execute:Job:'+str(job['id'])+':'+job['container']['id'])
             except Exception as e:
