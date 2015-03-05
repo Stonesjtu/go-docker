@@ -1,0 +1,9 @@
+[Core]
+Name = Fifo
+Module = fifo
+
+[Documentation]
+Author = Olivier Sallou
+Version = 0.1
+Website =
+Description =First In First Out policy scheduling

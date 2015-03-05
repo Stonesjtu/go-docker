@@ -1,8 +1,8 @@
 from godocker.iSchedulerPlugin import ISchedulerPlugin
 
-class FairShare(ISchedulerPlugin):
+class FiFo(ISchedulerPlugin):
     def get_name(self):
-        return "FairShareScheduler"
+        return "FiFo"
 
     def get_type(self):
         return "Scheduler"
