@@ -11,6 +11,12 @@ Go-Docker supports a plugin system to manage authentication, scheduling and exec
 
 User specify his job command line and requirements (docker image, cpu, ram) via a CLI tool and go-d-web Web UI.
 
+## Dependencies
+apt-get install libldap2-dev gcc libsasl2-dev (Debian/Ubuntu)
+yum install libldap-devel gcc cyrus-sasl-devel (Fedora/CentOS)
+
+pip install -r requirements.txt
+
 ## Status
 
 In development

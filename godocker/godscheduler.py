@@ -53,6 +53,9 @@ class GoDScheduler(Daemon):
         fh.setFormatter(formatter)
         self.logger.addHandler(fh)
 
+        if not self.cfg.plugins_dir:
+            dirname, filename = os.path.split(os.path.abspath(__file__))
+            self.cfg.plugins_dir = os.path.join(dirname, '..', 'plugins')
 
         # Build the manager
         simplePluginManager = PluginManager()
