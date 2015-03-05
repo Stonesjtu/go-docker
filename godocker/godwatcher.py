@@ -152,6 +152,7 @@ class GoDWatcher(Daemon):
                     self.db_jobs.remove({'_id': ObjectId(task['_id']['$oid'])})
                     task['status']['primary'] = 'over'
                     task['status']['date_over'] = datetime.datetime.now().isoformat()
+                    task['_id'] = ObjectId(task['_id']['$oid'])
                     self.db_jobsover.insert(task)
                     #self.r.del('god:job:'+str(task['id'])+':container'
                     self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')

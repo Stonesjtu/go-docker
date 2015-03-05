@@ -29,7 +29,7 @@ class IExecutorPlugin(IPlugin):
         self.logger = logger
 
 
-    def watch_tasks(self, task, over):
+    def watch_tasks(self, task):
         '''
         Get task status
 

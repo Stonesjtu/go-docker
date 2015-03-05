@@ -85,6 +85,24 @@ class GoDScheduler(Daemon):
              print "Loading executor: "+self.executor.get_name()
 
 
+    def add_task(self, task):
+        '''
+        Add a new task, if status not set, set it to pending
+
+        Automatically atribute an id to the task
+
+        :param task: Task to insert
+        :type task: dict
+        :return: task id
+        '''
+        task_id = self.r.incr(self.cfg.redis_prefix+':jobs')
+        self.r.incr(self.cfg.redis_prefix+':jobs:queued')
+        task['id'] = task_id
+        if not task['status']['primary']:
+            task['status']['primary'] = 'pending'
+        self.db_jobs.insert(task)
+        return task_id
+
     def schedule_tasks(self, pending_list):
         '''
         Schedule tasks according to pending list
