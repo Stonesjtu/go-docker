@@ -41,13 +41,13 @@ To create a new plugin, create a xx.yapsy-plugin file and a xx.py file following
 Available plugins are:
 
 
-* Scheduler
- * fifo: First In First Out basic strategy
- * fairshare: not yet implemented
-* Executor
+* Scheduler:
+  * fifo: First In First Out basic strategy
+  * fairshare: not yet implemented
+* Executor:
   * swarm (Docker Swarm)
   * fake  (not be used, for test only, simulate a job execution)
-* Auth
+* Auth:
   * goauth: specific for our internal usage, but can be easily used as a template for ldap based authentications.
 
 ## Tips
