@@ -20,6 +20,8 @@ class FakeExecutor(IExecutorPlugin):
         :type portmapping: def
         :return: tuple of submitted and rejected/errored tasks
         '''
+        running_tasks = []
         for task in tasks:
             self.logger.info("Run:Fake:task: "+str(task))
-        return (tasks, [])
+            running_tasks.append(task)
+        return (running_tasks, [])
