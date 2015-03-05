@@ -29,6 +29,27 @@ godocker/iExecutorPlugin and iSchedulterPlugin interfaces
 
 One can set environment variable GOD_CONFIG to specify go-d.ini location for go-d-scheduler and go-d-watcher.
 
+## Plugins
+
+Tool support plugins for Authorization, Scheduling and Execution. A few ones are provided but it is easy to create new one, following existing ones using Yapsy.
+To create a new plugin, create a xx.yapsy-plugin file and a xx.py file following Yapsy convention. In xx.py you should extend one of the available interfaces according to plugin goal (iExecutorPlugin.py, iAuthPlugin.py, iSchedulerPlugin.py).
+
+* iScheduler plugins look at pending jobs and basically reorder them according to their scheduling strategy.
+* iExecutor execute the job and checks its status
+* iAuth is used for the web interface, to authenticate a user (ldap bind for example), get some user information (uidnumber, home directory...) and ACLs (which volumes can be mounted for this user request for example).
+
+Available plugins are:
+
+
+* Scheduler
+ * fifo: First In First Out basic strategy
+ * fairshare: not yet implemented
+* Executor
+  * swarm (Docker Swarm)
+  * fake  (not be used, for test only, simulate a job execution)
+* Auth
+  * goauth: specific for our internal usage, but can be easily used as a template for ldap based authentications.
+
 ## Tips
 
 Remove old containers
