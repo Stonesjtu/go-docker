@@ -69,11 +69,6 @@ users = []
 
 user = {
     'id': 'osallou',
-    'quota': {
-        'cpu': 100,
-        'ram': 100,
-        'time': -1
-    },
     'usage':
     {
         'time': 0,
