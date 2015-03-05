@@ -7,12 +7,18 @@ nodes). User does not need to have Docker rights, everything will go through the
 Linked to the system users (or ldap), user will have their home mounted automatically as well as other configured directories according to required priviledges in container.
 They will be to run jobs with their uid/gid or as root in the container.
 
-User specify his job command line and requirements (docker image, cpu, ram).
+Go-Docker supports a plugin system to manage authentication, scheduling and execution of containers.
+
+User specify his job command line and requirements (docker image, cpu, ram) via a CLI tool and go-d-web Web UI.
+
+## Status
+
+In development
 
 ## Scheduler
 
 scheduler is in charge of scheduling pending jobs and running them on an
-executor
+executor.
 
 There is only one scheduler running
 
@@ -49,6 +55,7 @@ Available plugins are:
   * fake  (not be used, for test only, simulate a job execution)
 * Auth:
   * goauth: specific for our internal usage, but can be easily used as a template for ldap based authentications.
+  * fakeauth: fake authentication for tests
 
 ## Tips
 
