@@ -23,6 +23,8 @@ In development
 
 [![Build Status](https://drone.io/bitbucket.org/osallou/go-docker/status.png)](https://drone.io/bitbucket.org/osallou/go-docker/latest)
 
+[![codecov.io](https://codecov.io/bitbucket/osallou/go-docker/coverage.svg?branch=master)](https://codecov.io/bitbucket/osallou/go-docker?branch=master)
+
 ## Scheduler
 
 scheduler is in charge of scheduling pending jobs and running them on an
