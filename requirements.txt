@@ -22,3 +22,4 @@ python-bcrypt==0.3.1
 python-ldap==2.4.19
 redis==2.10.3
 codecov
+coverage
