@@ -29,6 +29,7 @@ class GoDScheduler(Daemon):
         '''
         self.db_jobs.ensure_index('user.id')
         self.db_jobs.ensure_index('status.primary')
+        self.db_jobsover.ensure_index('status.primary')
         self.db_users.ensure_index('id')
 
     def load_config(self, f):
@@ -41,6 +42,7 @@ class GoDScheduler(Daemon):
         self.mongo = MongoClient(self.cfg.mongo_url)
         self.db = self.mongo.god
         self.db_jobs = self.db.jobs
+        self.db_jobsover = self.db.jobsover
         self.db_users = self.db.users
 
         self.logger = logging.getLogger('godocker')

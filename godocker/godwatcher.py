@@ -35,6 +35,7 @@ class GoDWatcher(Daemon):
         self.mongo = MongoClient(self.cfg.mongo_url)
         self.db = self.mongo.god
         self.db_jobs = self.db.jobs
+        self.db_jobsover = self.db.jobsover
         self.db_users = self.db.users
 
         self.logger = logging.getLogger('godocker')
@@ -141,13 +142,17 @@ class GoDWatcher(Daemon):
                         self.r.rpush('god:ports:'+host, port)
                     task['container']['ports'] = []
 
-                    self.db_jobs.update({'_id': ObjectId(task['_id']['$oid'])},
-                                        {'$set':
-                                            {'status.primary': 'over',
-                                            'status.date_over': datetime.datetime.now().isoformat(),
-                                            'container': task['container']
-                                            }
-                                        })
+                    #self.db_jobs.update({'_id': ObjectId(task['_id']['$oid'])},
+                    #                    {'$set':
+                    #                        {'status.primary': 'over',
+                    #                        'status.date_over': datetime.datetime.now().isoformat(),
+                    #                        'container': task['container']
+                    #                        }
+                    #                    })
+                    self.db_jobs.remove({'_id': ObjectId(task['_id']['$oid'])})
+                    task['status']['primary'] = 'over'
+                    task['status']['date_over'] = datetime.datetime.now().isoformat()
+                    self.db_jobsover.insert(task)
                     #self.r.del('god:job:'+str(task['id'])+':container'
                     self.r.delete('god:job:'+str(task['id'])+':task')
                 else:
