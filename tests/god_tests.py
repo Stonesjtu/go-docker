@@ -30,6 +30,8 @@ class SchedulerTest(unittest.TestCase):
         self.test_dir = tempfile.mkdtemp('god')
         self.daemon = GoDScheduler(os.path.join(self.test_dir,'godsched.pid'))
         self.daemon.load_config(self.cfg)
+        self.watcher = GoDWatcher(os.path.join(self.test_dir,'godwatcher.pid'))
+        self.watcher.load_config(self.cfg)
 
     def tearDown(self):
         pass

@@ -40,7 +40,7 @@ class GoDScheduler(Daemon):
         self.cfg = Config(cfg_file)
         self.r = redis.StrictRedis(host=self.cfg.redis_host, port=self.cfg.redis_port, db=self.cfg.redis_db)
         self.mongo = MongoClient(self.cfg.mongo_url)
-        self.db = self.mongo.god
+        self.db = self.mongo[self.cfg.mongo_db]
         self.db_jobs = self.db.jobs
         self.db_jobsover = self.db.jobsover
         self.db_users = self.db.users
@@ -100,10 +100,10 @@ class GoDScheduler(Daemon):
     def _update_scheduled_task_status(self, running_tasks, rejected_tasks):
         if running_tasks:
             for r in running_tasks:
-                self.r.rpush('god:jobs:running', r['id'])
+                self.r.rpush(self.cfg.redis_prefix+':jobs:running', r['id'])
                 #self.r.set('god:job:'+str(r['id'])+':container', r['container']['id'])
-                self.r.set('god:job:'+str(r['id'])+':task', dumps(r))
-                self.r.decr('god:jobs:queued')
+                self.r.set(self.cfg.redis_prefix+':job:'+str(r['id'])+':task', dumps(r))
+                self.r.decr(self.cfg.redis_prefix+':jobs:queued')
                 self.db_jobs.update({'_id': r['_id']},
                                     {'$set': {
                                         'status.primary': 'running',
@@ -114,7 +114,7 @@ class GoDScheduler(Daemon):
             for r in rejected_tasks:
                 # Put back mapping allocated ports
                 for port in r['container']['ports']:
-                    self.r.rpush('god:ports:'+host, port)
+                    self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                 self.db_jobs.update({'_id': r['_id']}, {'$set': {'status.secondary': 'rejected by scheduler', 'container.ports': []}})
 
     def run_tasks(self, queued_list):
@@ -141,10 +141,10 @@ class GoDScheduler(Daemon):
         :type task: int
         :return: available port
         '''
-        if not self.r.exists('god:ports:'+host):
+        if not self.r.exists(self.cfg.redis_prefix+':ports:'+host):
             for i in range(self.cfg.port_start):
-                self.r.rpush('god:ports:'+host, self.cfg.port_start + i)
-        port = self.r.lpop('god:ports:'+host)
+                self.r.rpush(self.cfg.redis_prefix+':ports:'+host, self.cfg.port_start + i)
+        port = self.r.lpop(self.cfg.redis_prefix+':ports:'+host)
         self.logger.debug('Port:Give:'+task['container']['meta']['Node']['Name']+':'+str(port))
         task['container']['ports'].append(port)
         return port

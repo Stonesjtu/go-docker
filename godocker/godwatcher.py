@@ -33,7 +33,7 @@ class GoDWatcher(Daemon):
         self.cfg = Config(cfg_file)
         self.r = redis.StrictRedis(host=self.cfg.redis_host, port=self.cfg.redis_port, db=self.cfg.redis_db)
         self.mongo = MongoClient(self.cfg.mongo_url)
-        self.db = self.mongo.god
+        self.db = self.mongo[self.cfg.mongo_db]
         self.db_jobs = self.db.jobs
         self.db_jobsover = self.db.jobsover
         self.db_users = self.db.users
@@ -121,10 +121,10 @@ class GoDWatcher(Daemon):
         print "Check running jobs"
         nb_elt = 1
         #elts  = self.r.lrange('jobs:running', lmin, lmin+lrange)
-        task_id = self.r.lpop('god:jobs:running')
+        task_id = self.r.lpop(self.cfg.redis_prefix+':jobs:running')
         if not task_id:
             return
-        elt = self.r.get('god:job:'+str(task_id)+':task')
+        elt = self.r.get(self.cfg.redis_prefix+':job:'+str(task_id)+':task')
         while True:
             #elts = self.db_jobs.find({'status.primary': 'running'}, limit=self.cfg.max_job_pop)
             try:
@@ -139,7 +139,7 @@ class GoDWatcher(Daemon):
                     for port in task['container']['ports']:
                         host = task['container']['meta']['Node']['Name']
                         self.logger.debug('Port:Back:'+host+':'+str(port))
-                        self.r.rpush('god:ports:'+host, port)
+                        self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                     task['container']['ports'] = []
 
                     #self.db_jobs.update({'_id': ObjectId(task['_id']['$oid'])},
@@ -154,19 +154,19 @@ class GoDWatcher(Daemon):
                     task['status']['date_over'] = datetime.datetime.now().isoformat()
                     self.db_jobsover.insert(task)
                     #self.r.del('god:job:'+str(task['id'])+':container'
-                    self.r.delete('god:job:'+str(task['id'])+':task')
+                    self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
                 else:
-                    self.r.rpush('god:jobs:running', task['id'])
-                    self.r.set('god:job:'+str(task['id'])+':task', dumps(task))
+                    self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
+                    self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
             except KeyboardInterrupt:
                 self.logger.warn('Interrupt received, exiting after cleanup')
-                self.r.rpush('god:jobs:running', task['id'])
+                self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
                 sys.exit(0)
             if nb_elt < self.cfg.max_job_pop:
-                task_id = self.r.lpop('god:jobs:running')
+                task_id = self.r.lpop(self.cfg.redis_prefix+':jobs:running')
                 if not task_id:
                     return
-                elt = self.r.get('god:job:'+str(task_id)+':task')
+                elt = self.r.get(self.cfg.redis_prefix+':job:'+str(task_id)+':task')
                 nb_elt += 1
             else:
                 break
