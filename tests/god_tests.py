@@ -34,7 +34,6 @@ class SchedulerTest(unittest.TestCase):
         self.scheduler.init()
         self.watcher = GoDWatcher(os.path.join(self.test_dir,'godwatcher.pid'))
         self.watcher.load_config(self.cfg)
-        self.watcher.init()
         self.sample_task = {
             'id': None,
             'user': {
