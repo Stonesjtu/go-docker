@@ -148,17 +148,25 @@ class GoDScheduler(Daemon):
                 self.db_jobs.update({'_id': r['_id']}, {'$set': {'status.secondary': 'rejected by scheduler', 'container.ports': []}})
 
 
+    def _get_task_dir(self, task):
+        '''
+        Get directory where task files are written
+        '''
+        task_dir = os.path.join(self.cfg.shared_dir,'tasks','pairtree_root',pairtree.id2path(str(task['id'])),'task')
+        return task_dir
+
     def _create_command(self, task):
         '''
         Write command script on disk
         '''
-        task_dir = os.path.join(self.cfg.shared_dir,'tasks','pairtree_root',pairtree.id2path(str(task['id'])))
+        task_dir = self._get_task_dir(task)
         if not os.path.exists(task_dir):
             task_obj = self.store.create_object(str(task['id']))
         else:
             task_obj = self.store.get_object(str(task['id']))
-        task_obj.add_bytestream('cmd.sh', task['command']['cmd'])
+        task_obj.add_bytestream('cmd.sh', task['command']['cmd'], path='task')
         os.chmod(os.path.join(task_dir,'cmd.sh'), 0755)
+        task['command']['script'] = os.path.join(task_dir, 'task', 'cmd.sh')
 
     def run_tasks(self, queued_list):
         '''
