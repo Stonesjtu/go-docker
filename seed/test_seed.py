@@ -47,7 +47,8 @@ for i in range(10):
             'id': None,
             'meta': None,
             'stats': None,
-            'ports': []
+            'ports': [],
+            'root': False
         },
         'command': {
             'interactive': interactive,
@@ -69,6 +70,11 @@ users = []
 
 user = {
     'id': 'osallou',
+    'last': datetime.datetime.now()
+    'uid': 1001,
+    'gid': 1001,
+    'homeDirectory': '/home/osallou',
+    'email': 'fakeemail@no.mail',
     'usage':
     {
         'time': 0,
