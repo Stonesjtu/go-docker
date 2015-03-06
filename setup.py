@@ -12,6 +12,7 @@ config = {
     'version': '1.0.0',
     'install_requires': ['nose',
                          'sphinx',
+                         'pairtree',
                             'pymongo',
                             'python-ldap',
                             'redis',

@@ -10,7 +10,7 @@ import datetime
 from pymongo import MongoClient
 from bson.json_util import dumps
 from config import Config
-
+import pairtree
 from yapsy.PluginManager import PluginManager
 from godocker.iSchedulerPlugin import ISchedulerPlugin
 from godocker.iExecutorPlugin import IExecutorPlugin
@@ -62,6 +62,9 @@ class GoDScheduler(Daemon):
             self.cfg.shared_dir = os.path.join(dirname, '..', 'godshared')
             if not os.path.exists(self.cfg.shared_dir):
                 os.makedirs(self.cfg.shared_dir)
+
+        f = pairtree.PairtreeStorageFactory()
+        self.store = f.get_store(store_dir=os.path.join(self.cfg.shared_dir,'tasks'), uri_base="http://")
 
         # Build the manager
         simplePluginManager = PluginManager()
@@ -144,13 +147,27 @@ class GoDScheduler(Daemon):
                     self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                 self.db_jobs.update({'_id': r['_id']}, {'$set': {'status.secondary': 'rejected by scheduler', 'container.ports': []}})
 
+
+    def _create_command(self, task):
+        '''
+        Write command script on disk
+        '''
+        task_dir = os.path.join(self.cfg.shared_dir,'tasks','pairtree_root',pairtree.id2path(str(task['id'])))
+        if not os.path.exists(task_dir):
+            task_obj = self.store.create_object(str(task['id']))
+        else:
+            task_obj = self.store.get_object(str(task['id']))
+        task_obj.add_bytestream('cmd.sh', task['command']['cmd'])
+        os.chmod(os.path.join(task_dir,'cmd.sh'), 0755)
+
     def run_tasks(self, queued_list):
         '''
         Execute tasks on Docker scheduler in order
         '''
         for task in queued_list:
             # Create run script
-            continue
+            self._create_command(task)
+
         (running_tasks, rejected_tasks) = self.executor.run_tasks(queued_list, self._update_scheduled_task_status, self.get_mapping_port)
         self._update_scheduled_task_status(running_tasks, rejected_tasks)
 

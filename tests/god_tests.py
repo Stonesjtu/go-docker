@@ -9,6 +9,7 @@ import logging
 import copy
 import stat
 import datetime
+import pairtree
 
 #from mock import patch
 
@@ -26,6 +27,12 @@ class SchedulerTest(unittest.TestCase):
     '''
 
     def setUp(self):
+        # pairtree cleanup
+        dirname, filename = os.path.split(os.path.abspath(__file__))
+        shared_dir = os.path.join(dirname, '..', 'godshared')
+        if os.path.exists(os.path.join(shared_dir,'tasks')):
+            shutil.rmtree(os.path.join(shared_dir,'tasks'))
+
         curdir = os.path.dirname(os.path.abspath(__file__))
         self.cfg =os.path.join(curdir,'go-d.ini')
         self.test_dir = tempfile.mkdtemp('god')
@@ -73,6 +80,10 @@ class SchedulerTest(unittest.TestCase):
         self.scheduler.db.drop_collection('users')
         self.scheduler.r.flushdb()
 
+        self.scheduler.cfg.shared_dir = tempfile.mkdtemp('godshared')
+        f = pairtree.PairtreeStorageFactory()
+        self.scheduler.store = f.get_store(store_dir=os.path.join(self.scheduler.cfg.shared_dir,'tasks'), uri_base="http://")
+
     def tearDown(self):
         pass
 
@@ -95,6 +106,7 @@ class SchedulerTest(unittest.TestCase):
         self.assertTrue(len(queued_tasks) == 1)
         return queued_tasks
 
+    @attr('run')
     def test_run_task(self):
         queued_tasks = self.test_schedule_task()
         self.scheduler.run_tasks(queued_tasks)
