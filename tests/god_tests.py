@@ -85,6 +85,8 @@ class SchedulerTest(unittest.TestCase):
         self.scheduler.store = f.get_store(store_dir=os.path.join(self.scheduler.cfg.shared_dir,'tasks'), uri_base="http://")
 
     def tearDown(self):
+        if os.path.exists(self.scheduler.cfg.shared_dir):
+            shutil.rmtree(self.scheduler.cfg.shared_dir)
         pass
 
     def test_task_create(self):
