@@ -190,6 +190,9 @@ class GoDWatcher(Daemon):
         #    kill_task_list.append(self.r.lpop('jobs:kill'))
 
         kill_task_list = self.db_jobs.find({'status.primary': 'kill'})
+        task_list = []
+        for p in kill_task_list:
+            task_list.append(p)
         self.kill_tasks(kill_task_list)
 
         print 'Get tasks to suspend'
@@ -199,7 +202,10 @@ class GoDWatcher(Daemon):
         #    suspend_task_list.append(self.r.lpop('jobs:suspend'))
 
         suspend_task_list = self.db_jobs.find({'status.primary': 'suspend'})
-        self.suspend_tasks(suspend_task_list)
+        task_list = []
+        for p in suspend_task_list:
+            task_list.append(p)
+        self.suspend_tasks(task_list)
 
         print 'Get tasks to resume'
         #resume_task_list = []
@@ -208,7 +214,10 @@ class GoDWatcher(Daemon):
         #    resume_task_list.append(self.r.lpop('jobs:resume'))
 
         resume_task_list = self.db_jobs.find({'status.primary': 'resume'})
-        self.resume_tasks(resume_task_list)
+        task_list = []
+        for p in resume_task_list:
+            task_list.append(p)
+        self.resume_tasks(task_list)
 
         print 'Look for terminated jobs'
         self.check_running_jobs()
