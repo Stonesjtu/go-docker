@@ -12,6 +12,8 @@ class FakeExecutor(IExecutorPlugin):
         '''
         Execute task list on executor system
 
+        this fake executor will reject all tasks above 5 to simulate a "no more resources"
+
         :param tasks: list of tasks to run
         :type tasks: list
         :param callback: callback function to update tasks status (running/rejected)
@@ -21,7 +23,14 @@ class FakeExecutor(IExecutorPlugin):
         :return: tuple of submitted and rejected/errored tasks
         '''
         running_tasks = []
+        rejected_tasks = []
+        i = 0
         for task in tasks:
-            self.logger.info("Run:Fake:task: "+str(task))
-            running_tasks.append(task)
-        return (running_tasks, [])
+            if i < 5:
+                self.logger.debug("Run:Fake:task:run:"+str(task['id']))
+                running_tasks.append(task)
+            else:
+                self.logger.debug("Run:Fake:task:reject:"+str(task['id']))
+                rejected_tasks.append(task)
+            i += 1
+        return (running_tasks, rejected_tasks)

@@ -103,3 +103,27 @@ class SchedulerTest(unittest.TestCase):
         self.watcher.check_running_jobs()
         over_tasks = self.watcher.db_jobsover.find()
         self.assertTrue(over_tasks.count() == 1)
+
+    def test_rejected_task(self):
+        queued_tasks = []
+        # Queue 6 tasks
+        for i in range(6):
+            task_id = self.test_task_create()
+            pending_task = self.scheduler.db_jobs.find_one({'id': task_id})
+            queued_tasks.append(pending_task)
+        # Run tasks
+        self.scheduler.run_tasks(queued_tasks)
+        running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
+        self.assertTrue(running_tasks.count() == 5)
+        # 1 task should have been rejected and set back as pending
+        pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
+        self.assertTrue(pending_tasks.count() == 1)
+
+    def test_reschedule_rejected_task(self):
+        self.test_rejected_task()
+        # Now, we have 1 left in pending
+        pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
+        queued_tasks = self.scheduler.schedule_tasks(pending_tasks)
+        self.scheduler.run_tasks(queued_tasks)
+        pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
+        self.assertTrue(pending_tasks.count() == 0)
