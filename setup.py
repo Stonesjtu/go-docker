@@ -11,6 +11,7 @@ config = {
     'author_email': 'olivier.sallou@irisa.fr',
     'version': '1.0.0',
     'install_requires': ['nose',
+                         'sphinx',
                             'pymongo',
                             'redis',
                             'yapsy',
