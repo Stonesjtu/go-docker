@@ -70,7 +70,7 @@ users = []
 
 user = {
     'id': 'osallou',
-    'last': datetime.datetime.now()
+    'last': datetime.datetime.now(),
     'uid': 1001,
     'gid': 1001,
     'homeDirectory': '/home/osallou',
