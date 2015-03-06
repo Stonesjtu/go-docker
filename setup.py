@@ -13,6 +13,7 @@ config = {
     'install_requires': ['nose',
                          'sphinx',
                             'pymongo',
+                            'python-ldap',
                             'redis',
                             'yapsy',
                             'iso8601',
