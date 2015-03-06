@@ -29,6 +29,7 @@ class GoDScheduler(Daemon):
         '''
         Database initialization
         '''
+        self.db_jobs.ensure_index('id')
         self.db_jobs.ensure_index('user.id')
         self.db_jobs.ensure_index('status.primary')
         self.db_jobsover.ensure_index('status.primary')
