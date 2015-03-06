@@ -17,6 +17,11 @@ yum install libldap-devel gcc cyrus-sasl-devel (Fedora/CentOS)
 
 pip install -r requirements.txt
 
+## Directories
+
+go-d-docker needs a shared directory between go-d-scheduler, go-d-watcher and
+container nodes.
+
 ## Status
 
 In development
