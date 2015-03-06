@@ -57,6 +57,12 @@ class GoDScheduler(Daemon):
             dirname, filename = os.path.split(os.path.abspath(__file__))
             self.cfg.plugins_dir = os.path.join(dirname, '..', 'plugins')
 
+        if not self.cfg.shared_dir:
+            dirname, filename = os.path.split(os.path.abspath(__file__))
+            self.cfg.shared_dir = os.path.join(dirname, '..', 'godshared')
+            if not os.path.exists(self.cfg.shared_dir):
+                os.makedirs(self.cfg.shared_dir)
+
         # Build the manager
         simplePluginManager = PluginManager()
         # Tell it the default place(s) where to find plugins
@@ -142,6 +148,9 @@ class GoDScheduler(Daemon):
         '''
         Execute tasks on Docker scheduler in order
         '''
+        for task in queued_list:
+            # Create run script
+            continue
         (running_tasks, rejected_tasks) = self.executor.run_tasks(queued_list, self._update_scheduled_task_status, self.get_mapping_port)
         self._update_scheduled_task_status(running_tasks, rejected_tasks)
 
@@ -184,7 +193,10 @@ class GoDScheduler(Daemon):
         #    pending_tasks.append(self.r.lpop('jobs:pending'))
 
         pending_tasks = self.db_jobs.find({'status.primary': 'pending'})
-        queued_tasks = self.schedule_tasks(pending_tasks)
+        task_list = []
+        for p in pending_tasks:
+            task_list.append(p)
+        queued_tasks = self.schedule_tasks(task_list)
         self.run_tasks(queued_tasks)
 
         print 'Get tasks to reschedule'
@@ -194,7 +206,10 @@ class GoDScheduler(Daemon):
         #    reschedule_task_list.append(self.r.lpop('jobs:rechedule'))
 
         reschedule_task_list = self.db_jobs.find({'status.primary': 'reschedule'})
-        self.reschedule_tasks(reschedule_task_list)
+        task_list = []
+        for p in pending_tasks:
+            task_list.append(p)
+        self.reschedule_tasks(task_list)
 
     def signal_handler(self, signum, frame):
         GoDScheduler.SIGINT = True

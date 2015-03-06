@@ -88,8 +88,11 @@ class SchedulerTest(unittest.TestCase):
     def test_schedule_task(self):
         task_id = self.test_task_create()
         pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
-        queued_tasks = self.scheduler.schedule_tasks(pending_tasks)
-        self.assertTrue(queued_tasks.count() == 1)
+        task_list = []
+        for p in pending_tasks:
+            task_list.append(p)
+        queued_tasks = self.scheduler.schedule_tasks(task_list)
+        self.assertTrue(len(queued_tasks) == 1)
         return queued_tasks
 
     def test_run_task(self):
@@ -123,7 +126,10 @@ class SchedulerTest(unittest.TestCase):
         self.test_rejected_task()
         # Now, we have 1 left in pending
         pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
-        queued_tasks = self.scheduler.schedule_tasks(pending_tasks)
+        task_list = []
+        for p in pending_tasks:
+            task_list.append(p)
+        queued_tasks = self.scheduler.schedule_tasks(task_list)
         self.scheduler.run_tasks(queued_tasks)
         pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
         self.assertTrue(pending_tasks.count() == 0)
