@@ -17,6 +17,7 @@ from optparse import OptionParser
 
 from godocker.godscheduler import GoDScheduler
 from godocker.godwatcher import GoDWatcher
+from godocker.pairtreeStorage import PairtreeStorage
 
 import unittest
 
@@ -81,8 +82,7 @@ class SchedulerTest(unittest.TestCase):
         self.scheduler.r.flushdb()
 
         self.scheduler.cfg.shared_dir = tempfile.mkdtemp('godshared')
-        f = pairtree.PairtreeStorageFactory()
-        self.scheduler.store = f.get_store(store_dir=os.path.join(self.scheduler.cfg.shared_dir,'tasks'), uri_base="http://")
+        self.scheduler.store = PairtreeStorage(self.scheduler.cfg)
 
     def tearDown(self):
         if os.path.exists(self.scheduler.cfg.shared_dir):

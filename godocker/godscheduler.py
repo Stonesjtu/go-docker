@@ -10,11 +10,13 @@ import datetime
 from pymongo import MongoClient
 from bson.json_util import dumps
 from config import Config
-import pairtree
 from yapsy.PluginManager import PluginManager
+
 from godocker.iSchedulerPlugin import ISchedulerPlugin
 from godocker.iExecutorPlugin import IExecutorPlugin
 from godocker.iAuthPlugin import IAuthPlugin
+from godocker.pairtreeStorage import PairtreeStorage
+
 
 class GoDScheduler(Daemon):
     '''
@@ -57,14 +59,7 @@ class GoDScheduler(Daemon):
             dirname, filename = os.path.split(os.path.abspath(__file__))
             self.cfg.plugins_dir = os.path.join(dirname, '..', 'plugins')
 
-        if not self.cfg.shared_dir:
-            dirname, filename = os.path.split(os.path.abspath(__file__))
-            self.cfg.shared_dir = os.path.join(dirname, '..', 'godshared')
-            if not os.path.exists(self.cfg.shared_dir):
-                os.makedirs(self.cfg.shared_dir)
-
-        f = pairtree.PairtreeStorageFactory()
-        self.store = f.get_store(store_dir=os.path.join(self.cfg.shared_dir,'tasks'), uri_base="http://")
+        self.store = PairtreeStorage(self.cfg)
 
         # Build the manager
         simplePluginManager = PluginManager()
@@ -148,25 +143,13 @@ class GoDScheduler(Daemon):
                 self.db_jobs.update({'_id': r['_id']}, {'$set': {'status.secondary': 'rejected by scheduler', 'container.ports': []}})
 
 
-    def _get_task_dir(self, task):
-        '''
-        Get directory where task files are written
-        '''
-        task_dir = os.path.join(self.cfg.shared_dir,'tasks','pairtree_root',pairtree.id2path(str(task['id'])),'task')
-        return task_dir
-
     def _create_command(self, task):
         '''
         Write command script on disk
         '''
-        task_dir = self._get_task_dir(task)
-        if not os.path.exists(task_dir):
-            task_obj = self.store.create_object(str(task['id']))
-        else:
-            task_obj = self.store.get_object(str(task['id']))
-        task_obj.add_bytestream('cmd.sh', task['command']['cmd'], path='task')
-        os.chmod(os.path.join(task_dir,'cmd.sh'), 0755)
-        task['command']['script'] = os.path.join(task_dir, 'task', 'cmd.sh')
+        script_file = self.store.add_file(task, 'cmd.sh', task['command']['cmd'])
+        os.chmod(script_file, 0755)
+        task['command']['script'] = script_file
 
     def run_tasks(self, queued_list):
         '''
