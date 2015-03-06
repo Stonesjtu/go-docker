@@ -71,6 +71,7 @@ users = []
 user = {
     'id': 'osallou',
     'last': datetime.datetime.now(),
+    'apikey': '1234'
     'uid': 1001,
     'gid': 1001,
     'homeDirectory': '/home/osallou',
