@@ -29,6 +29,10 @@ class FakeExecutor(IExecutorPlugin):
             if i < 5:
                 self.logger.debug("Run:Fake:task:run:"+str(task['id']))
                 running_tasks.append(task)
+                if task['command']['interactive']:
+                    # port mapping
+                    task['container']['meta'] = { 'Node': { 'Name': 'fake-laptop'} }
+                    mapped_port = portmapping('fake-laptop', task)
             else:
                 self.logger.debug("Run:Fake:task:reject:"+str(task['id']))
                 rejected_tasks.append(task)

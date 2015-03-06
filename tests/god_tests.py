@@ -108,7 +108,6 @@ class SchedulerTest(unittest.TestCase):
         self.assertTrue(len(queued_tasks) == 1)
         return queued_tasks
 
-    @attr('run')
     def test_run_task(self):
         queued_tasks = self.test_schedule_task()
         self.scheduler.run_tasks(queued_tasks)
@@ -147,3 +146,19 @@ class SchedulerTest(unittest.TestCase):
         self.scheduler.run_tasks(queued_tasks)
         pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
         self.assertTrue(pending_tasks.count() == 0)
+
+
+    def test_run_interactive_task(self):
+        task = copy.deepcopy(self.sample_task)
+        task['command']['interactive'] = True
+        task_id = self.scheduler.add_task(task)
+        pending_task = self.scheduler.db_jobs.find_one({'id': task_id})
+        queued_tasks = [pending_task]
+        self.scheduler.run_tasks(queued_tasks)
+        ports_allocated = self.scheduler.r.llen(self.scheduler.cfg.redis_prefix+':ports:fake-laptop')
+        self.assertTrue(ports_allocated >= 1)
+        nb_ports_before = self.scheduler.r.llen(self.scheduler.cfg.redis_prefix+':ports:fake-laptop')
+        self.watcher.check_running_jobs()
+        nb_ports_after = self.scheduler.r.llen(self.scheduler.cfg.redis_prefix+':ports:fake-laptop')
+        # Check port is released
+        self.assertTrue(nb_ports_before + 1 == nb_ports_after)

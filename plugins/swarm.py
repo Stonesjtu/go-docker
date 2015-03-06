@@ -51,7 +51,6 @@ class Swarm(IExecutorPlugin):
                 for port in port_list:
                     mapped_port = portmapping(job['container']['meta']['Node']['Name'], job)
                     port_mapping[port] = mapped_port
-                self.logger.error('OSALLOU PORTS '+str(port_mapping))
                 response = self.docker_client.start(container=container.get('Id'),
                                         network_mode='host',
                                         #publish_all_ports=True
