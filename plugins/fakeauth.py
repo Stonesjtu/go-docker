@@ -23,6 +23,8 @@ class FakeAuth(IAuthPlugin):
                   'homeDirectory': userHomeDirectory
                   }
         '''
+        if login != 'osallou':
+            return None
         user = {
                  'id' : 'osallou',
                  'uidNumber': 1001,
