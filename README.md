@@ -5,14 +5,16 @@ Cluster management tool with Docker
 Manage user job (batch/interactive) submissions with Docker (like gridengine on
 nodes). User does not need to have Docker rights, everything will go through the application.
 Linked to the system users (or ldap), user will have their home mounted automatically as well as other configured directories according to required priviledges in container.
-They will be to run jobs with their uid/gid or as root in the container.
+They will be able to run jobs with their uid/gid or as root in the container.
 
 Go-Docker supports a plugin system to manage authentication, scheduling and execution of containers.
 
 User specify his job command line and requirements (docker image, cpu, ram) via a CLI tool and go-d-web Web UI.
 
 ## Dependencies
+
 apt-get install libldap2-dev gcc libsasl2-dev (Debian/Ubuntu)
+
 yum install libldap-devel gcc cyrus-sasl-devel (Fedora/CentOS)
 
 pip install -r requirements.txt
@@ -53,11 +55,12 @@ One can set environment variable GOD_CONFIG to specify go-d.ini location for go-
 ## Plugins
 
 Tool support plugins for Authorization, Scheduling and Execution. A few ones are provided but it is easy to create new one, following existing ones using Yapsy.
+
 To create a new plugin, create a xx.yapsy-plugin file and a xx.py file following Yapsy convention. In xx.py you should extend one of the available interfaces according to plugin goal (iExecutorPlugin.py, iAuthPlugin.py, iSchedulerPlugin.py).
 
 * iScheduler plugins look at pending jobs and basically reorder them according to their scheduling strategy.
 * iExecutor execute the job and checks its status
-* iAuth is used for the web interface, to authenticate a user (ldap bind for example), get some user information (uidnumber, home directory...) and ACLs (which volumes can be mounted for this user request for example).
+* iAuth is used by the web interface, to authenticate a user (ldap bind for example), get some user information (uidnumber, home directory...) and ACLs (which volumes can be mounted for this user request for example).
 
 Available plugins are:
 
