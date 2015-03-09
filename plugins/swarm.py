@@ -41,20 +41,38 @@ class Swarm(IExecutorPlugin):
                 if job['command']['interactive']:
                     port_list = [22]
                 #self.logger.warn('Reservation: '+str(job['requirements']['cpu'])+','+str(job['requirements']['ram'])+'g')
+                vol_list = []
+                for v in job['container']['volumes']:
+                    if v['mount'] is None:
+                        v['mount'] = v['path']
+                    vol_list.append(v['mount'])
                 container = self.docker_client.create_container(image=job['container']['image'],
-                                                                command=job['command']['cmd'],
+                                                                command=job['command']['script'],
                                                                 cpu_shares=job['requirements']['cpu'],
                                                                 mem_limit=str(job['requirements']['ram'])+'g',
-                                                                ports=port_list)
+                                                                ports=port_list,
+                                                                volumes=vol_list)
                 job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
                 port_mapping = {}
                 for port in port_list:
                     mapped_port = portmapping(job['container']['meta']['Node']['Name'], job)
                     port_mapping[port] = mapped_port
+                vol_binds = {}
+                for v in job['container']['volumes']:
+                    if v['mount'] is None:
+                        v['mount'] = v['path']
+                    ro = True
+                    if v['acl'] == 'rw':
+                        ro = False
+                    vol_binds[v['path']] = {
+                        'bind': v['mount'],
+                        'ro': ro
+                    }
                 response = self.docker_client.start(container=container.get('Id'),
                                         network_mode='host',
                                         #publish_all_ports=True
-                                        port_bindings=port_mapping
+                                        port_bindings=port_mapping,
+                                        binds=vol_binds
                                         )
 
                 job['container']['id'] = container['Id']

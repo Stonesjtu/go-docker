@@ -139,6 +139,7 @@ class GoDScheduler(Daemon):
         if rejected_tasks:
             for r in rejected_tasks:
                 # Put back mapping allocated ports
+                host = r['container']['meta']['Node']['Name']
                 for port in r['container']['ports']:
                     self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                 self.db_jobs.update({'_id': r['_id']}, {'$set': {'status.secondary': 'rejected by scheduler', 'container.ports': []}})
@@ -150,7 +151,15 @@ class GoDScheduler(Daemon):
         '''
         script_file = self.store.add_file(task, 'cmd.sh', task['command']['cmd'])
         os.chmod(script_file, 0755)
-        task['command']['script'] = script_file
+        task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
+            # Add task directory
+        task_dir = self.store.get_task_dir(task)
+        task['container']['volumes'].append({
+            'name': 'go-docker',
+            'acl': 'rw',
+            'path': task_dir,
+            'mount': '/mnt/go-docker'
+        })
 
     def run_tasks(self, queued_list):
         '''
@@ -159,6 +168,8 @@ class GoDScheduler(Daemon):
         for task in queued_list:
             # Create run script
             self._create_command(task)
+            self.logger.debug("Execute:Task:Run:Try")
+            self.logger.debug(str(task))
 
         (running_tasks, rejected_tasks) = self.executor.run_tasks(queued_list, self._update_scheduled_task_status, self.get_mapping_port)
         self._update_scheduled_task_status(running_tasks, rejected_tasks)
