@@ -141,7 +141,7 @@ class GoDScheduler(Daemon):
         if rejected_tasks:
             for r in rejected_tasks:
                 # Put back mapping allocated ports
-                if container['meta'] and 'Node' in container['meta'] and 'Name' in container['meta']['Node']:
+                if r['container']['meta'] and 'Node' in r['container']['meta'] and 'Name' in r['container']['meta']['Node']:
                     host = r['container']['meta']['Node']['Name']
                     for port in r['container']['ports']:
                         self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
