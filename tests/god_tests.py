@@ -67,7 +67,8 @@ class SchedulerTest(unittest.TestCase):
                 'id': None,
                 'meta': None,
                 'stats': None,
-                'ports': []
+                'ports': [],
+                'root': False
             },
             'command': {
                 'interactive': False,

@@ -135,7 +135,7 @@ class GoAuth(IAuthPlugin):
         for req in requested_volumes:
             if req['name'] == 'home':
                 req['path'] = user['homeDirectory']
-                req['mount'] = '/home/'+user['id']
+                req['mount'] = '/mnt/home'
                 volumes.append(req)
                 continue
             if req['name'] == 'omaha':

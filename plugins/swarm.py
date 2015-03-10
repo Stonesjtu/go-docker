@@ -68,6 +68,7 @@ class Swarm(IExecutorPlugin):
                         'bind': v['mount'],
                         'ro': ro
                     }
+
                 response = self.docker_client.start(container=container.get('Id'),
                                         network_mode='host',
                                         #publish_all_ports=True

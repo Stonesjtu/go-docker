@@ -163,6 +163,47 @@ class GoDScheduler(Daemon):
             'path': task_dir,
             'mount': '/mnt/go-docker'
         })
+        # Write wrapper script to run script with user uidNumber/guidNumber
+        # Chown files in shared dir to gives files ACLs to user at the end
+        # Exit with code of executed cmd.sh
+        cmd = "#!/bin/bash\n"
+        cmd += "groupadd --gid "+str(task['user']['gid'])+" godocker"
+        cmd += " && useradd --uid "+str(task['user']['uid'])+" --gid "+str(task['user']['gid'])+" godocker\n"
+        # Installing and using sudo instead of su
+        # docker has issues with kernel (need recent kernel) to apply su (and others)
+        # in container.
+        # https://github.com/docker/docker/issues/5899
+        cmd += "if [ -n \"$(command -v sudo)\" ]; then\n"
+        cmd += " echo \"sudo installed\"\n"
+        cmd += "else\n"
+        cmd += "if [ -n \"$(command -v yum)\" ]; then\n"
+        cmd += "  yum -y install sudo\n"
+        cmd += "fi\n"
+        cmd += "if [ -n \"$(command -v apt-get)\" ]; then\n"
+        cmd += "  export DEBIAN_FRONTEND=noninteractive\n"
+        cmd += "  apt-get -y install sudo\n"
+        cmd += "fi\n"
+        cmd += "fi\n"
+        cmd += "sed -i  \"s/Defaults\\s\\+requiretty/#/g\" /etc/sudoers\n"
+        cmd += "cd /mnt/go-docker\n"
+        cmd += "export GODOCKER_JID="+str(task['id'])+"\n"
+        cmd += "export GODOCKER_PWD=/mnt/go-docker\n"
+        vol_home = "export GODOCKER_HOME=/mnt/go-docker"
+        for v in task['container']['volumes']:
+            if v['name'] == 'home':
+                vol_home = "export GODOCKER_HOME=" + v['mount']
+                break
+        cmd += vol_home+"\n"
+        if not task['container']['root']:
+            cmd += "sudo -u godocker bash -c \""+vol_home+" ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\"\n"
+        else:
+            cmd += "/mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\n"
+        cmd += "ret_code=$?\n"
+        cmd += "chown -R godocker:godocker /mnt/go-docker/*\n"
+        cmd += "exit $ret_code\n"
+        script_file = self.store.add_file(task, 'godocker.sh', cmd)
+        os.chmod(script_file, 0755)
+        task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
 
     def run_tasks(self, queued_list):
         '''
@@ -238,13 +279,15 @@ class GoDScheduler(Daemon):
         GoDScheduler.SIGINT = True
         self.logger.warn('User request to exit')
 
-    def run(self):
+    def run(self, loop=True):
         '''
         Main executor loop
 
         '''
-
-        while True and not GoDScheduler.SIGINT:
+        infinite = True
+        while infinite and True and not GoDScheduler.SIGINT:
             # Schedule timer
             self.manage_tasks()
             time.sleep(2)
+            if not loop:
+                infinite = False

@@ -228,13 +228,15 @@ class GoDWatcher(Daemon):
         GoDWatcher.SIGINT = True
         self.logger.warn('User request to exit')
 
-    def run(self):
+    def run(self, loop=True):
         '''
         Main executor loop
 
         '''
-
-        while True and not GoDWatcher.SIGINT:
+        infinite = True
+        while infinite and True and not GoDWatcher.SIGINT:
             # Schedule timer
             self.manage_tasks()
             time.sleep(2)
+            if not loop:
+                infinite = False
