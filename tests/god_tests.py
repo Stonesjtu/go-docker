@@ -49,7 +49,10 @@ class SchedulerTest(unittest.TestCase):
             'user': {
                 'id': 'osallou',
                 'uid': 1001,
-                'gid': 1001
+                'gid': 1001,
+                'credentials': {
+                    'public': ''
+                }
             },
             'date': time.mktime(dt.timetuple()),
             'meta': {
