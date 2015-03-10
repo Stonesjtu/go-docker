@@ -95,6 +95,14 @@ All files in GODOCKER_PWD will be chowned to the user id/gid.
 
 If root access is required, user should take care not to write to other directories (if allowed) as files will have root ACLs.
 
+Network access is required if sudo is not installed, go-docker will install it at container start.
+
+## Interactive sessions
+
+If user selects an interactive session, a port will be opened and the sshd process started in the container.
+For interactive sessions, the selected image MUST have the openssh server package installed.
+
+Mapped port will be available in task description. 
 
 ## Tips
 
