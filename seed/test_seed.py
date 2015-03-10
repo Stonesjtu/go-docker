@@ -4,6 +4,7 @@ from pymongo import MongoClient
 import os
 import json
 import datetime
+import time
 import logging
 from config import Config
 
@@ -22,6 +23,7 @@ r = redis.StrictRedis(host=cfg.redis_host, port=cfg.redis_port, db=cfg.redis_db)
 tasks = []
 interactive = False
 for i in range(10):
+    dt = datetime.datetime.now()
     task_id = r.incr('god:jobs')
     task = {
         'id': task_id,
@@ -30,7 +32,7 @@ for i in range(10):
             'uid': 1001,
             'gid': 1001
         },
-        'date': datetime.datetime.now().isoformat(),
+        'date': time.mktime(dt.timetuple()),
         'meta': {
             'name': 'samplejob'+str(i),
             'description': 'blabla'

@@ -9,6 +9,7 @@ import logging
 import copy
 import stat
 import datetime
+import time
 import pairtree
 
 #from mock import patch
@@ -42,6 +43,7 @@ class SchedulerTest(unittest.TestCase):
         self.scheduler.init()
         self.watcher = GoDWatcher(os.path.join(self.test_dir,'godwatcher.pid'))
         self.watcher.load_config(self.cfg)
+        dt = datetime.datetime.now()
         self.sample_task = {
             'id': None,
             'user': {
@@ -49,7 +51,7 @@ class SchedulerTest(unittest.TestCase):
                 'uid': 1001,
                 'gid': 1001
             },
-            'date': datetime.datetime.now().isoformat(),
+            'date': time.mktime(dt.timetuple()),
             'meta': {
                 'name': 'samplejob',
                 'description': 'blabla'

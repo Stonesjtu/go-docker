@@ -7,6 +7,7 @@ import logging
 import signal
 import os
 import datetime
+import time
 from pymongo import MongoClient
 from bson.json_util import dumps
 from config import Config
@@ -130,18 +131,20 @@ class GoDScheduler(Daemon):
                 #self.r.set('god:job:'+str(r['id'])+':container', r['container']['id'])
                 self.r.set(self.cfg.redis_prefix+':job:'+str(r['id'])+':task', dumps(r))
                 self.r.decr(self.cfg.redis_prefix+':jobs:queued')
+                dt = datetime.datetime.now()
                 self.db_jobs.update({'_id': r['_id']},
                                     {'$set': {
                                         'status.primary': 'running',
                                         'status.secondary': None,
-                                        'status.date_running': datetime.datetime.now().isoformat(),
+                                        'status.date_running': time.mktime(dt.timetuple()),
                                         'container': r['container']}})
         if rejected_tasks:
             for r in rejected_tasks:
                 # Put back mapping allocated ports
-                host = r['container']['meta']['Node']['Name']
-                for port in r['container']['ports']:
-                    self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
+                if container['meta'] and 'Node' in container['meta'] and 'Name' in container['meta']['Node']:
+                    host = r['container']['meta']['Node']['Name']
+                    for port in r['container']['ports']:
+                        self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                 self.db_jobs.update({'_id': r['_id']}, {'$set': {'status.secondary': 'rejected by scheduler', 'container.ports': []}})
 
 

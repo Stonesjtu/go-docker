@@ -6,6 +6,7 @@ import json
 import logging
 import signal
 import datetime
+import time
 import os
 from pymongo import MongoClient
 from bson.json_util import dumps
@@ -155,7 +156,8 @@ class GoDWatcher(Daemon):
                     #                    })
                     self.db_jobs.remove({'_id': ObjectId(task['_id']['$oid'])})
                     task['status']['primary'] = 'over'
-                    task['status']['date_over'] = datetime.datetime.now().isoformat()
+                    dt = datetime.datetime.now()
+                    task['status']['date_over'] = time.mktime(dt.timetuple())
                     task['_id'] = ObjectId(task['_id']['$oid'])
                     self.db_jobsover.insert(task)
                     #self.r.del('god:job:'+str(task['id'])+':container'
