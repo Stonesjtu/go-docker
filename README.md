@@ -32,6 +32,7 @@ In development
 
 [![codecov.io](https://codecov.io/bitbucket/osallou/go-docker/coverage.svg?branch=master)](https://codecov.io/bitbucket/osallou/go-docker?branch=master)
 
+
 ## Scheduler
 
 scheduler is in charge of scheduling pending jobs and running them on an
@@ -74,6 +75,26 @@ Available plugins are:
 * Auth:
   * goauth: specific for our internal usage, but can be easily used as a template for ldap based authentications.
   * fakeauth: fake authentication for tests
+
+
+## User scripts
+
+User submits a bash script that will be executed as root or user id (according to request) in the container.
+Volumes will be mounted in container according to requested volumes and iAuth interface.
+
+'home' is a reserved name for volumes, expecting to match user home directory (if mounted). An environment variable will point to the mounted directory.
+
+Several environment variables are available in user script:
+
+* GODOCKER_JID: Job identifier
+* GODOCKER_PWD: Job directory, container will execute script in this directory
+* GODOCKER_HOME: mount path for user home directory.
+
+If root access is not required, script will be executed with user id/gid under the container user name *godocker*.
+All files in GODOCKER_PWD will be chowned to the user id/gid.
+
+If root access is required, user should take care not to write to other directories (if allowed) as files will have root ACLs.
+
 
 ## Tips
 
