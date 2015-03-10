@@ -24,10 +24,12 @@ if __name__ == "__main__":
                         daemon.run()
                 elif 'init' == sys.argv[1]:
                         daemon.init()
+                elif 'once' == sys.argv[1]:
+                        daemon.run(False)
                 else:
                         print "Unknown command"
                         sys.exit(2)
                 sys.exit(0)
         else:
-                print "usage: %s start|stop|restart" % sys.argv[0]
+                print "usage: %s start|stop|restart|init|once" % sys.argv[0]
                 sys.exit(2)
