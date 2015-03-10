@@ -73,7 +73,12 @@ users = []
 user = {
     'id': 'osallou',
     'last': datetime.datetime.now(),
-    'apikey': '1234'
+    'apikey': '1234',
+    'credentials': {
+        'apikey': ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(10)),
+        'private': '',
+        'public': ''
+    },
     'uid': 1001,
     'gid': 1001,
     'homeDirectory': '/home/osallou',

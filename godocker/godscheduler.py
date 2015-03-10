@@ -198,12 +198,13 @@ class GoDScheduler(Daemon):
             # should execute ssh, copy user ssh key from home in /root/.ssh/authorized_keys or /home/gocker/.ssh/authorized_keys
             # Need to create .ssh dir
             # sshd MUST be installed in container
+            ssh_dir = ""
             if task['container']['root']:
-                cmd +="/root/.ssh"
+                ssh_dir = "/root/.ssh"
             else:
-                cmd +="/home/godocker/.ssh"
+                ssh_dir = "/home/godocker/.ssh"
             cmd +="mkdir -p "+ssh_dir+"\n"
-            cmd +="cat $GODOCKER_HOME/.ssh/*.pub > "+ssh_dir+"/authorized_keys\n"
+            cmd +="echo \"" + task['user']['credentials']['public'] + "\" > "+ssh_dir+"/authorized_keys\n"
             cmd +="/usr/sbin/sshd -f /etc/ssh/sshd_config"
         else:
             if not task['container']['root']:
