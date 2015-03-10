@@ -194,10 +194,22 @@ class GoDScheduler(Daemon):
                 vol_home = "export GODOCKER_HOME=" + v['mount']
                 break
         cmd += vol_home+"\n"
-        if not task['container']['root']:
-            cmd += "sudo -u godocker bash -c \""+vol_home+" ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\"\n"
+        if task['command']['interactive']:
+            # should execute ssh, copy user ssh key from home in /root/.ssh/authorized_keys or /home/gocker/.ssh/authorized_keys
+            # Need to create .ssh dir
+            # sshd MUST be installed in container
+            if task['container']['root']:
+                cmd +="/root/.ssh"
+            else:
+                cmd +="/home/godocker/.ssh"
+            cmd +="mkdir -p "+ssh_dir+"\n"
+            cmd +="cat $GODOCKER_HOME/.ssh/*.pub > "+ssh_dir+"/authorized_keys\n"
+            cmd +="/usr/sbin/sshd -f /etc/ssh/sshd_config"
         else:
-            cmd += "/mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\n"
+            if not task['container']['root']:
+                cmd += "sudo -u godocker bash -c \""+vol_home+" ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\"\n"
+            else:
+                cmd += "/mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\n"
         cmd += "ret_code=$?\n"
         cmd += "chown -R godocker:godocker /mnt/go-docker/*\n"
         cmd += "exit $ret_code\n"
