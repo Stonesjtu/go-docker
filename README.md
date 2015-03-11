@@ -53,6 +53,10 @@ godocker/iExecutorPlugin and iSchedulterPlugin interfaces
 
 One can set environment variable GOD_CONFIG to specify go-d.ini location for go-d-scheduler and go-d-watcher.
 
+Once application is configured, it is necessary, the first time, to initialize the database:
+
+  python go-d-scheduler.py init
+
 ## Plugins
 
 Tool support plugins for Authorization, Scheduling and Execution. A few ones are provided but it is easy to create new one, following existing ones using Yapsy.
@@ -102,7 +106,7 @@ Network access is required if sudo is not installed, go-docker will install it a
 If user selects an interactive session, a port will be opened and the sshd process started in the container.
 For interactive sessions, the selected image MUST have the openssh server package installed.
 
-Mapped port will be available in task description. 
+Mapped port will be available in task description.
 
 ## Tips
 
