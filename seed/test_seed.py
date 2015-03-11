@@ -24,7 +24,7 @@ tasks = []
 interactive = False
 for i in range(10):
     dt = datetime.datetime.now()
-    task_id = r.incr('god:jobs')
+    task_id = r.incr(cfg.redis_prefix+':jobs')
     task = {
         'id': task_id,
         'user': {
