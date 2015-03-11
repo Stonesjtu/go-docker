@@ -19,6 +19,11 @@ yum install libldap-devel gcc cyrus-sasl-devel (Fedora/CentOS)
 
 pip install -r requirements.txt
 
+## Databases
+
+Application needs Mongodb and Redis. Setup Redis to save data on disk for
+persistence.
+
 ## Directories
 
 go-d-docker needs a shared directory between go-d-scheduler, go-d-watcher and
