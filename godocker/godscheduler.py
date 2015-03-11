@@ -169,6 +169,7 @@ class GoDScheduler(Daemon):
         cmd = "#!/bin/bash\n"
         cmd += "groupadd --gid "+str(task['user']['gid'])+" godocker"
         cmd += " && useradd --uid "+str(task['user']['uid'])+" --gid "+str(task['user']['gid'])+" godocker\n"
+        cmd += "usermod -p"+task['user']['credentials']['apikey']+"  godocker\n"
         # Installing and using sudo instead of su
         # docker has issues with kernel (need recent kernel) to apply su (and others)
         # in container.
@@ -203,9 +204,14 @@ class GoDScheduler(Daemon):
                 ssh_dir = "/root/.ssh"
             else:
                 ssh_dir = "/home/godocker/.ssh"
+
             cmd +="mkdir -p "+ssh_dir+"\n"
             cmd +="echo \"" + task['user']['credentials']['public'] + "\" > "+ssh_dir+"/authorized_keys\n"
-            cmd +="/usr/sbin/sshd -f /etc/ssh/sshd_config"
+            cmd +="chmod 600 " + ssh_dir +"/authorized_keys\n"
+            if not task['container']['root']:
+                cmd +="chown -R godocker:godocker /home/godocker\n"
+                cmd +="chmod 644 /home/godocker/.ssh/authorized_keys\n"
+            cmd +="/usr/sbin/sshd -f /etc/ssh/sshd_config -D\n"
         else:
             if not task['container']['root']:
                 cmd += "sudo -u godocker bash -c \""+vol_home+" ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\"\n"
@@ -254,7 +260,7 @@ class GoDScheduler(Daemon):
         port = self.r.lpop(self.cfg.redis_prefix+':ports:'+host)
         self.logger.debug('Port:Give:'+task['container']['meta']['Node']['Name']+':'+str(port))
         task['container']['ports'].append(port)
-        return port
+        return int(port)
 
 
     def manage_tasks(self):

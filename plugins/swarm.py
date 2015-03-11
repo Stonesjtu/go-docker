@@ -68,9 +68,9 @@ class Swarm(IExecutorPlugin):
                         'bind': v['mount'],
                         'ro': ro
                     }
-
+                print "##"+str(port_mapping)
                 response = self.docker_client.start(container=container.get('Id'),
-                                        network_mode='host',
+                                        network_mode='bridge',
                                         #publish_all_ports=True
                                         port_bindings=port_mapping,
                                         binds=vol_binds
@@ -97,18 +97,25 @@ class Swarm(IExecutorPlugin):
         :type over: bool
         '''
         over = False
-
+        finished_date = None
         #task['container']['stats'] = self.docker_client.stats(task['container']['id'])
+        try:
+            task['container']['meta'] = self.docker_client.inspect_container(task['container']['id'])
+            finished_date =  task['container']['meta']['State']['FinishedAt']
+            finished_date = iso8601.parse_date(finished_date)
+        except Exception:
+            self.logger.debug("Could not get container, may be already killed: "+task['container']['id'])
+            finished_date = datetime.datetime.now()
 
-        task['container']['meta'] = self.docker_client.inspect_container(task['container']['id'])
-        finished_date =  task['container']['meta']['State']['FinishedAt']
-        finished_date = iso8601.parse_date(finished_date)
         if finished_date.year > 1:
             over = True
 
         if over:
             self.logger.warn('Container:'+str(task['container']['id'])+':Over')
-            self.docker_client.remove_container(task['container']['id'])
+            try:
+                self.docker_client.remove_container(task['container']['id'])
+            except Exception:
+                self.logger.debug('Could not remove container '+task['container']['id'])
             over = True
         else:
             self.logger.debug('Container:'+task['container']['id']+':Running')

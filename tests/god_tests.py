@@ -51,6 +51,7 @@ class SchedulerTest(unittest.TestCase):
                 'uid': 1001,
                 'gid': 1001,
                 'credentials': {
+                    'apikey': '123',
                     'public': ''
                 }
             },
