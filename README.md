@@ -2,14 +2,20 @@
 
 Cluster management tool with Docker
 
-Manage user job (batch/interactive) submissions with Docker (like gridengine on
+Manage user job (batch/interactive) submissions with Docker (like SUN Grid Engine, Torque, ... on
 nodes). User does not need to have Docker rights, everything will go through the application.
 Linked to the system users (or ldap), user will have their home mounted automatically as well as other configured directories according to required priviledges in container.
 They will be able to run jobs with their uid/gid or as root in the container.
 
+The user specifies his job command line or script and its requirements (docker image, cpu, ram) via a CLI tool and go-d-web Web UI.
+
 Go-Docker supports a plugin system to manage authentication, scheduling and execution of containers.
 
-User specify his job command line and requirements (docker image, cpu, ram) via a CLI tool and go-d-web Web UI.
+Go-Docker does not compete against Kuberbenets, Mesos frameworks etc... on the contrary. Most of those tools manage efficiently the dispatch of containers, but they are not "user aware". All users are equal and equal in time. They do not focus either usually on the need to log into a container for interactive tasks, they focus on executing a task based on what user asks. Go-Docker wants to act as a top layer above those tools and to benefit from those tools. The plugin mechanism provides a way to create an executor for Swarm (provided with the tool), but also Kubernetes etc...
+
+This application mainly targets systems where you know your users (not an open cloud platform) which have a home directory they usually access to via SSH/SCP/... , working dirs, ... With Go-Docker, they can ask to get their home directroy mounted in the container (read-only when root access is required for example, and rw for basic access), as well as other pre-defined directories to do... what they need to do. The Authentication plugin will define what users can mount or not.
+With the plugin schedulers, it is possible to reorder the pending jobs before running them, based on previous user usage for example, or to reject a job because user reached some quota.
+
 
 ## Dependencies
 
