@@ -16,6 +16,7 @@ config = {
                             'pymongo',
                             'influxdb',
                             'python-ldap',
+                            'docker-py',
                             'redis',
                             'yapsy',
                             'iso8601',
