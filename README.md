@@ -63,6 +63,7 @@ In development
 
 [![codecov.io](https://codecov.io/bitbucket/osallou/go-docker/coverage.svg?branch=master)](https://codecov.io/bitbucket/osallou/go-docker?branch=master)
 
+[![Dependency Status](https://www.versioneye.com/user/projects/5501ca4e4a1064db0e0003b2/badge.svg?style=flat)](https://www.versioneye.com/user/projects/5501ca4e4a1064db0e0003b2)
 
 ## Scheduler
 
