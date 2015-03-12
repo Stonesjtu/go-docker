@@ -1,4 +1,6 @@
 godshared
+nosetests.xml
+coverage.xml
 
 # log files
 *.log
