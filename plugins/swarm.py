@@ -120,3 +120,24 @@ class Swarm(IExecutorPlugin):
         else:
             self.logger.debug('Container:'+task['container']['id']+':Running')
         return (task, over)
+
+
+    def kill_task(self, task):
+        '''
+        Kills a running task
+
+        :param tasks: task to kill
+        :type tasks: Task
+        :return: (Task, over) over is True if task could be killed
+        '''
+        over = True
+        try:
+            self.docker_client.kill(task['container']['id'])
+        except Exception:
+            self.logger.debug("Could not kill container: "+task['container']['id'])
+        try:
+            self.docker_client.remove_container(task['container']['id'])
+        except Exception:
+            self.logger.debug("Could not kill/remove container: "+task['container']['id'])
+            over = False
+        return (task, over)

@@ -87,8 +87,26 @@ class GoDWatcher(Daemon):
         '''
         Kill tasks in list
         '''
-        #TODO
-        pass
+        for task in task_list:
+            (task, over) = self.executor.kill_task(task)
+            # If not over, executor could not kill the task
+            if over:
+                for port in task['container']['ports']:
+                    host = task['container']['meta']['Node']['Name']
+                    self.logger.debug('Port:Back:'+host+':'+str(port))
+                    self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
+                task['container']['ports'] = []
+                self.db_jobs.remove({'_id': task['_id']})
+                task['status']['primary'] = 'over'
+                task['status']['secondary'] = 'killed'
+                dt = datetime.datetime.now()
+                task['status']['date_over'] = time.mktime(dt.timetuple())
+                self.db_jobsover.insert(task)
+                self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
+            else:
+                # Could not kill, put back in queue
+                self.logger.warn('Executor:Kill:Error:'+task['id'])
+                self.r.rpush(self.cfg.redis_prefix+':jobs:kill',dumps(task))
 
     def suspend_tasks(self, suspend_list):
         '''
@@ -147,15 +165,9 @@ class GoDWatcher(Daemon):
                         self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                     task['container']['ports'] = []
 
-                    #self.db_jobs.update({'_id': ObjectId(task['_id']['$oid'])},
-                    #                    {'$set':
-                    #                        {'status.primary': 'over',
-                    #                        'status.date_over': datetime.datetime.now().isoformat(),
-                    #                        'container': task['container']
-                    #                        }
-                    #                    })
                     self.db_jobs.remove({'_id': ObjectId(task['_id']['$oid'])})
                     task['status']['primary'] = 'over'
+                    task['status']['secondary'] = ''
                     dt = datetime.datetime.now()
                     task['status']['date_over'] = time.mktime(dt.timetuple())
                     task['_id'] = ObjectId(task['_id']['$oid'])
@@ -186,22 +198,22 @@ class GoDWatcher(Daemon):
 
         '''
         print "Get tasks to kill"
-        #kill_task_list = []
-        #kill_task_length = self.r.llen('jobs:kill')
-        #for i in range(min(kill_task_length, self.cfg.max_job_pop)):
-        #    kill_task_list.append(self.r.lpop('jobs:kill'))
+        kill_task_list = []
+        kill_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:kill')
+        for i in range(min(kill_task_length, self.cfg.max_job_pop)):
+            kill_task_list.append(json.loads(self.r.lpop(self.cfg.redis_prefix+':jobs:kill')))
 
-        kill_task_list = self.db_jobs.find({'status.primary': 'kill'})
-        task_list = []
-        for p in kill_task_list:
-            task_list.append(p)
+        #kill_task_list = self.db_jobs.find({'status.primary': 'kill'})
+        #task_list = []
+        #for p in kill_task_list:
+        #    task_list.append(p)
         self.kill_tasks(kill_task_list)
 
         print 'Get tasks to suspend'
         #suspend_task_list = []
-        #suspend_task_length = self.r.llen('jobs:suspend')
+        #suspend_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:suspend')
         #for i in range(min(suspend_task_length, self.cfg.max_job_pop)):
-        #    suspend_task_list.append(self.r.lpop('jobs:suspend'))
+        #    suspend_task_list.append(self.r.lpop(self.cfg.redis_prefix+':jobs:suspend'))
 
         suspend_task_list = self.db_jobs.find({'status.primary': 'suspend'})
         task_list = []
@@ -211,9 +223,9 @@ class GoDWatcher(Daemon):
 
         print 'Get tasks to resume'
         #resume_task_list = []
-        #resume_task_length = self.r.llen('jobs:resume')
+        #resume_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:resume')
         #for i in range(min(resume_task_length, self.cfg.max_job_pop)):
-        #    resume_task_list.append(self.r.lpop('jobs:resume'))
+        #    resume_task_list.append(self.r.lpop(self.cfg.redis_prefix+':jobs:resume'))
 
         resume_task_list = self.db_jobs.find({'status.primary': 'resume'})
         task_list = []

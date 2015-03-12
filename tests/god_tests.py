@@ -11,6 +11,7 @@ import stat
 import datetime
 import time
 import pairtree
+from bson.json_util import dumps
 
 #from mock import patch
 
@@ -120,11 +121,23 @@ class SchedulerTest(unittest.TestCase):
         self.scheduler.run_tasks(queued_tasks)
         running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
         self.assertTrue(running_tasks.count() == 1)
+        return running_tasks
 
     def test_watch_task_over(self):
         self.test_run_task()
         self.watcher.check_running_jobs()
         over_tasks = self.watcher.db_jobsover.find()
+        self.assertTrue(over_tasks.count() == 1)
+
+    def test_kill_task(self):
+        running_tasks = self.test_run_task()
+        task_to_kill = running_tasks[0]
+        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:kill', dumps(task_to_kill))
+        print str(task_to_kill)
+        self.watcher.kill_tasks([task_to_kill])
+        running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
+        self.assertTrue(running_tasks.count() == 0)
+        over_tasks = self.scheduler.db_jobsover.find()
         self.assertTrue(over_tasks.count() == 1)
 
     def test_rejected_task(self):
