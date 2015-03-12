@@ -51,7 +51,7 @@ class GoDScheduler(Daemon):
 
         self.logger = logging.getLogger('godocker')
         self.logger.setLevel(logging.DEBUG)
-        fh = logging.FileHandler('go.log')
+        fh = logging.FileHandler('god_scheduler.log')
         fh.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)
@@ -138,7 +138,7 @@ class GoDScheduler(Daemon):
                 self.r.set(self.cfg.redis_prefix+':job:'+str(r['id'])+':task', dumps(r))
                 self.r.decr(self.cfg.redis_prefix+':jobs:queued')
                 dt = datetime.datetime.now()
-                self.db_jobs.update({'_id': r['_id']},
+                self.db_jobs.update({'id': r['id']},
                                     {'$set': {
                                         'status.primary': 'running',
                                         'status.secondary': None,
@@ -151,7 +151,7 @@ class GoDScheduler(Daemon):
                     host = r['container']['meta']['Node']['Name']
                     for port in r['container']['ports']:
                         self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
-                self.db_jobs.update({'_id': r['_id']}, {'$set': {'status.secondary': 'rejected by scheduler', 'container.ports': []}})
+                self.db_jobs.update({'id': r['id']}, {'$set': {'status.secondary': 'rejected by scheduler', 'container.ports': []}})
 
 
     def _create_command(self, task):

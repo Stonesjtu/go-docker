@@ -66,7 +66,6 @@ class Swarm(IExecutorPlugin):
                         'bind': v['mount'],
                         'ro': ro
                     }
-                print "##"+str(port_mapping)
                 response = self.docker_client.start(container=container.get('Id'),
                                         network_mode='bridge',
                                         #publish_all_ports=True
@@ -131,11 +130,15 @@ class Swarm(IExecutorPlugin):
         over = True
         try:
             self.docker_client.kill(task['container']['id'])
-        except Exception:
+        except Exception as e:
             self.logger.debug("Could not kill container: "+task['container']['id'])
         try:
             self.docker_client.remove_container(task['container']['id'])
-        except Exception:
+        except Exception as e:
             self.logger.debug("Could not kill/remove container: "+task['container']['id'])
-            over = False
+            if e.response.status_code == 404:
+                self.logger.debug('container not found, already deleted?')
+                over = True
+            else:
+                over = False
         return (task, over)

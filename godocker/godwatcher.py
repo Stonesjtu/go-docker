@@ -42,7 +42,7 @@ class GoDWatcher(Daemon):
 
         self.logger = logging.getLogger('godocker')
         self.logger.setLevel(logging.DEBUG)
-        fh = logging.FileHandler('go.log')
+        fh = logging.FileHandler('god_watcher.log')
         fh.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)
@@ -98,21 +98,23 @@ class GoDWatcher(Daemon):
                 (task, over) = self.executor.kill_task(task)
             # If not over, executor could not kill the task
             if over:
+                self.logger.debug('Executor:Kill:Success:'+str(task['id']))
                 for port in task['container']['ports']:
                     host = task['container']['meta']['Node']['Name']
                     self.logger.debug('Port:Back:'+host+':'+str(port))
                     self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                 task['container']['ports'] = []
-                self.db_jobs.remove({'_id': task['_id']})
+                self.db_jobs.remove({'id': task['id']})
                 task['status']['primary'] = 'over'
                 task['status']['secondary'] = 'killed'
                 dt = datetime.datetime.now()
                 task['status']['date_over'] = time.mktime(dt.timetuple())
+                del task['_id']
                 self.db_jobsover.insert(task)
                 self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
             else:
                 # Could not kill, put back in queue
-                self.logger.warn('Executor:Kill:Error:'+task['id'])
+                self.logger.warn('Executor:Kill:Error:'+str(task['id']))
                 self.r.rpush(self.cfg.redis_prefix+':jobs:kill',dumps(task))
 
     def suspend_tasks(self, suspend_list):
@@ -172,12 +174,13 @@ class GoDWatcher(Daemon):
                         self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                     task['container']['ports'] = []
 
-                    self.db_jobs.remove({'_id': ObjectId(task['_id']['$oid'])})
+                    self.db_jobs.remove({'id': task['id']})
                     task['status']['primary'] = 'over'
                     task['status']['secondary'] = ''
                     dt = datetime.datetime.now()
                     task['status']['date_over'] = time.mktime(dt.timetuple())
-                    task['_id'] = ObjectId(task['_id']['$oid'])
+                    #task['_id'] = ObjectId(task['_id']['$oid'])
+                    del task['_id']
                     self.db_jobsover.insert(task)
                     #self.r.del('god:job:'+str(task['id'])+':container'
                     self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
