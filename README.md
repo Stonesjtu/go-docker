@@ -63,8 +63,7 @@ In development
 
 [![codecov.io](https://codecov.io/bitbucket/osallou/go-docker/coverage.svg?branch=master)](https://codecov.io/bitbucket/osallou/go-docker?branch=master)
 
-[![Dependency Status](https://www.versioneye.com/user/projects/5501ca4e4a1064db0e0003b2/badge.svg?style=flat)](https://www.versioneye.com/user/projects/5501ca4e4a1064db0e0003b2)
-
+[![Dependency Status](https://www.versioneye.com/user/projects/5501ce724a10640f8c000097/badge.svg?style=flat)](https://www.versioneye.com/user/projects/5501ce724a10640f8c000097)
 ## Scheduler
 
 scheduler is in charge of scheduling pending jobs and running them on an
