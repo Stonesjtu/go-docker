@@ -25,3 +25,4 @@ codecov
 coverage
 sphinx
 pairtree
+influxdb

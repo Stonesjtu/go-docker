@@ -45,6 +45,11 @@ pip install -r requirements.txt
 Application needs Mongodb and Redis. Setup Redis to save data on disk for
 persistence.
 
+For time based statistics, you can optionally install InfluxDB (if you do not
+with to use it, let influxdb_host to empty in configuration file).
+If InfluxDB is used, databases must be created first as well as a read-only
+user. Graphics can be displayed with Grafana on series *god_task_usage*
+
 ## Directories
 
 go-d-docker needs a shared directory between go-d-scheduler, go-d-watcher and

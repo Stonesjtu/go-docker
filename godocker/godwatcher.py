@@ -11,6 +11,7 @@ import os
 from pymongo import MongoClient
 from bson.json_util import dumps
 from bson.objectid import ObjectId
+from influxdb import client as influxdb
 
 from yapsy.PluginManager import PluginManager
 from godocker.iSchedulerPlugin import ISchedulerPlugin
@@ -39,6 +40,15 @@ class GoDWatcher(Daemon):
         self.db_jobs = self.db.jobs
         self.db_jobsover = self.db.jobsover
         self.db_users = self.db.users
+
+        self.db_influx = None
+        if self.cfg.influxdb_host:
+            host = self.cfg.influxdb_host
+            port = self.cfg.influxdb_port
+            username = self.cfg.influxdb_user
+            password = self.cfg.influxdb_password
+            database = self.cfg.influxdb_db
+            self.db_influx = influxdb.InfluxDBClient(host, port, username, password, database)
 
         self.logger = logging.getLogger('godocker')
         self.logger.setLevel(logging.DEBUG)
@@ -145,6 +155,36 @@ class GoDWatcher(Daemon):
         #return None
         return self.scheduler.schedule(pending_list, None)
 
+    def _add_to_stats(self, task):
+        '''
+        Add task to stats db
+        '''
+        if self.db_influx is None:
+            return
+        task_duration = 0
+        if task['status']['date_running'] and task['status']['date_over']:
+            task_duration = task['status']['date_over'] - task['status']['date_running']
+        task_waiting = 0
+        if task['status']['date_running']:
+            task_waiting = task['status']['date_running'] - task['date']
+        #dt = datetime.datetime.now()
+        #current_timestamp = time.mktime(dt.timetuple())
+        data = [{
+            'points': [[
+                task['user']['id'],
+                task['requirements']['cpu'],
+                task['requirements']['ram'],
+                task_duration,
+                task_waiting
+            ]],
+            'name':'god_task_usage',
+            'columns': ["user", "cpu", "ram", "durationtime", "waitingtime"]
+        }]
+        try:
+            self.db_influx.write_points(data)
+        except Exception as e:
+            # Do not fail on stat writing
+            self.logger.error('Stat:Error:'+str(e))
 
     def check_running_jobs(self):
         '''
@@ -153,6 +193,7 @@ class GoDWatcher(Daemon):
         print "Check running jobs"
         nb_elt = 1
         #elts  = self.r.lrange('jobs:running', lmin, lmin+lrange)
+        nb_running_jobs = self.r.llen(self.cfg.redis_prefix+':jobs:running')
         task_id = self.r.lpop(self.cfg.redis_prefix+':jobs:running')
         if not task_id:
             return
@@ -184,6 +225,7 @@ class GoDWatcher(Daemon):
                     self.db_jobsover.insert(task)
                     #self.r.del('god:job:'+str(task['id'])+':container'
                     self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
+                    self._add_to_stats(task)
                 else:
                     self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
                     self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
@@ -191,7 +233,7 @@ class GoDWatcher(Daemon):
                 self.logger.warn('Interrupt received, exiting after cleanup')
                 self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
                 sys.exit(0)
-            if nb_elt < self.cfg.max_job_pop:
+            if nb_elt < self.cfg.max_job_pop and nb_elt < nb_running_jobs:
                 task_id = self.r.lpop(self.cfg.redis_prefix+':jobs:running')
                 if not task_id:
                     return

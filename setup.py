@@ -14,6 +14,7 @@ config = {
                          'sphinx',
                          'pairtree',
                             'pymongo',
+                            'influxdb',
                             'python-ldap',
                             'redis',
                             'yapsy',

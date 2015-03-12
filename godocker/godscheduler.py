@@ -135,14 +135,17 @@ class GoDScheduler(Daemon):
             for r in running_tasks:
                 self.r.rpush(self.cfg.redis_prefix+':jobs:running', r['id'])
                 #self.r.set('god:job:'+str(r['id'])+':container', r['container']['id'])
+                r['status']['primary'] = 'running'
+                r['status']['secondary'] = None
+                dt = datetime.datetime.now()
+                r['status']['date_running'] = time.mktime(dt.timetuple())
                 self.r.set(self.cfg.redis_prefix+':job:'+str(r['id'])+':task', dumps(r))
                 self.r.decr(self.cfg.redis_prefix+':jobs:queued')
-                dt = datetime.datetime.now()
                 self.db_jobs.update({'id': r['id']},
                                     {'$set': {
-                                        'status.primary': 'running',
-                                        'status.secondary': None,
-                                        'status.date_running': time.mktime(dt.timetuple()),
+                                        'status.primary': r['status']['primary'],
+                                        'status.secondary': r['status']['secondary'],
+                                        'status.date_running': r['status']['date_running'],
                                         'container': r['container']}})
         if rejected_tasks:
             for r in rejected_tasks:
