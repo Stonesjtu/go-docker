@@ -11,6 +11,8 @@ import stat
 import datetime
 import time
 import pairtree
+import string
+import random
 from bson.json_util import dumps
 
 #from mock import patch
@@ -45,6 +47,26 @@ class SchedulerTest(unittest.TestCase):
         self.watcher = GoDWatcher(os.path.join(self.test_dir,'godwatcher.pid'))
         self.watcher.load_config(self.cfg)
         dt = datetime.datetime.now()
+        self.sample_user = {
+            'id': 'osallou',
+            'last': datetime.datetime.now(),
+            'apikey': '1234',
+            'credentials': {
+                'apikey': ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(10)),
+                'private': '',
+                'public': ''
+            },
+            'uid': 1001,
+            'gid': 1001,
+            'homeDirectory': '/home/osallou',
+            'email': 'fakeemail@no.mail',
+            'usage':
+            {
+                'time': 0,
+                'cpu': 0,
+                'ram': 0
+            }
+        }
         self.sample_task = {
             'id': None,
             'user': {
@@ -182,3 +204,9 @@ class SchedulerTest(unittest.TestCase):
         nb_ports_after = self.scheduler.r.llen(self.scheduler.cfg.redis_prefix+':ports:fake-laptop')
         # Check port is released
         self.assertTrue(nb_ports_before + 1 == nb_ports_after)
+
+
+    def test_plugin_get_users(self):
+        self.scheduler.db_users.insert(self.sample_user)
+        user_list = self.scheduler.executor.get_users(['osallou'])
+        self.assertTrue(user_list.count()==1)

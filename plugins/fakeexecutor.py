@@ -8,7 +8,7 @@ class FakeExecutor(IExecutorPlugin):
     def get_type(self):
         return "Executor"
 
-    def run_tasks(self, tasks, callback=None, portmapping=None):
+    def run_tasks(self, tasks, callback=None):
         '''
         Execute task list on executor system
 
@@ -18,8 +18,6 @@ class FakeExecutor(IExecutorPlugin):
         :type tasks: list
         :param callback: callback function to update tasks status (running/rejected)
         :type callback: func(running list,rejected list)
-        :param portmapping: function(hostname) to call to get a free port on host for port mapping
-        :type portmapping: def
         :return: tuple of submitted and rejected/errored tasks
         '''
         running_tasks = []
@@ -32,7 +30,7 @@ class FakeExecutor(IExecutorPlugin):
                 if task['command']['interactive']:
                     # port mapping
                     task['container']['meta'] = { 'Node': { 'Name': 'fake-laptop'} }
-                    mapped_port = portmapping('fake-laptop', task)
+                    mapped_port = self.get_mapping_port('fake-laptop', task)
             else:
                 self.logger.debug("Run:Fake:task:reject:"+str(task['id']))
                 rejected_tasks.append(task)

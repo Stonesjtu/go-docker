@@ -18,7 +18,7 @@ class Swarm(IExecutorPlugin):
 
         self.docker_client = Client(base_url=self.cfg.docker_url)
 
-    def run_tasks(self, tasks, callback=None, portmapping=None):
+    def run_tasks(self, tasks, callback=None):
         '''
         Execute task list on executor system
 
@@ -26,8 +26,6 @@ class Swarm(IExecutorPlugin):
         :type tasks: list
         :param callback: callback function to update tasks status (running/rejected)
         :type callback: func(running list,rejected list)
-        :param portmapping: function(hostname) to call to get a free port on host for port mapping
-        :type portmapping: def
         :return: tuple of submitted and rejected/errored tasks
         '''
         running_tasks = []
@@ -55,7 +53,7 @@ class Swarm(IExecutorPlugin):
                 job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
                 port_mapping = {}
                 for port in port_list:
-                    mapped_port = portmapping(job['container']['meta']['Node']['Name'], job)
+                    mapped_port = self.get_mapping_port(job['container']['meta']['Node']['Name'], job)
                     port_mapping[port] = mapped_port
                 vol_binds = {}
                 for v in job['container']['volumes']:

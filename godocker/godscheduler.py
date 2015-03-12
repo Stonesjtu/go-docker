@@ -83,6 +83,9 @@ class GoDScheduler(Daemon):
              self.scheduler = pluginInfo.plugin_object
              self.scheduler.set_config(self.cfg)
              self.scheduler.set_logger(self.logger)
+             self.scheduler.set_redis_handler(self.r)
+             self.scheduler.set_jobs_handler(self.db_jobs)
+             self.scheduler.set_users_handler(self.db_users)
              print "Loading scheduler: "+self.scheduler.get_name()
         self.executor = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Executor"):
@@ -91,6 +94,9 @@ class GoDScheduler(Daemon):
              self.executor = pluginInfo.plugin_object
              self.executor.set_config(self.cfg)
              self.executor.set_logger(self.logger)
+             self.executor.set_redis_handler(self.r)
+             self.executor.set_jobs_handler(self.db_jobs)
+             self.executor.set_users_handler(self.db_users)
              print "Loading executor: "+self.executor.get_name()
 
 
@@ -234,7 +240,7 @@ class GoDScheduler(Daemon):
             self.logger.debug("Execute:Task:Run:Try")
             self.logger.debug(str(task))
 
-        (running_tasks, rejected_tasks) = self.executor.run_tasks(queued_list, self._update_scheduled_task_status, self.get_mapping_port)
+        (running_tasks, rejected_tasks) = self.executor.run_tasks(queued_list, self._update_scheduled_task_status)
         self._update_scheduled_task_status(running_tasks, rejected_tasks)
 
     def reschedule_tasks(self, resched_list):
@@ -244,28 +250,10 @@ class GoDScheduler(Daemon):
         #TODO
         pass
 
-    def get_mapping_port(self, host, task):
-        '''
-        Get a port mapping for interactive tasks
-
-        :param host: hostname of the container
-        :type host: str
-        :param task: task
-        :type task: int
-        :return: available port
-        '''
-        if not self.r.exists(self.cfg.redis_prefix+':ports:'+host):
-            for i in range(self.cfg.port_start):
-                self.r.rpush(self.cfg.redis_prefix+':ports:'+host, self.cfg.port_start + i)
-        port = self.r.lpop(self.cfg.redis_prefix+':ports:'+host)
-        self.logger.debug('Port:Give:'+task['container']['meta']['Node']['Name']+':'+str(port))
-        task['container']['ports'].append(port)
-        return int(port)
-
 
     def manage_tasks(self):
         '''
-        Schedule and run tasks / kill tasks
+        Schedule and run tasks
 
         '''
 

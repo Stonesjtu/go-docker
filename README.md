@@ -11,7 +11,11 @@ The user specifies his job command line or script and its requirements (docker i
 
 Go-Docker supports a plugin system to manage authentication, scheduling and execution of containers.
 
-Go-Docker does not compete against Kuberbenets, Mesos frameworks etc... on the contrary. Most of those tools manage efficiently the dispatch of containers, but they are not "user aware". All users are equal and equal in time. They do not focus either usually on the need to log into a container for interactive tasks, they focus on executing a task based on what user asks. Go-Docker wants to act as a top layer above those tools and to benefit from those tools. The plugin mechanism provides a way to create an executor for Swarm (provided with the tool), but also Kubernetes etc...
+Go-Docker does not compete against Kuberbenets, Mesos frameworks etc... on the contrary.
+Most of those tools manage efficiently the dispatch of containers, but they are not "user aware". All users are equal and equal in time. They do not focus either usually on the need to log into a container for interactive tasks, they focus on executing a task based on what user asks. Go-Docker wants to act as a top layer above those tools and to benefit from those tools. The plugin mechanism provides a way to create an executor for Swarm (provided with the tool), but also Kubernetes etc...
+theu also usually focus on running "production" long running tasks (such as a webapp), or regular tasks (Chronos). GO-Docker focus on one computational task. If it fails, there is no automatic restart, user will decide after anaylisis to reschedule it if necessary.
+
+1 task = 1 computation = 1 result
 
 This application mainly targets systems where you know your users (not an open cloud platform) which have a home directory they usually access to via SSH/SCP/... , working dirs, ... With Go-Docker, they can ask to get their home directroy mounted in the container (read-only when root access is required for example, and rw for basic access), as well as other pre-defined directories to do... what they need to do. The Authentication plugin will define what users can mount or not.
 With the plugin schedulers, it is possible to reorder the pending jobs before running them, based on previous user usage for example, or to reject a job because user reached some quota.

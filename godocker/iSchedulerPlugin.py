@@ -1,12 +1,7 @@
-from yapsy.IPlugin import IPlugin
+from godocker.IGoDockerPlugin import IGoDockerPlugin
 
-class ISchedulerPlugin(IPlugin):
+class ISchedulerPlugin(IGoDockerPlugin):
 
-    def get_name(self):
-        pass
-
-    def set_config(self, cfg):
-        self.cfg = cfg
 
     def schedule(self, tasks, users):
         '''
@@ -15,9 +10,3 @@ class ISchedulerPlugin(IPlugin):
         :return: list of sorted tasks
         '''
         pass
-
-    def set_logger(self, logger):
-        '''
-        Set logger for logging
-        '''
-        self.logger = logger

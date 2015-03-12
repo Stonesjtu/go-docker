@@ -1,19 +1,6 @@
-from yapsy.IPlugin import IPlugin
+from godocker.IGoDockerPlugin import IGoDockerPlugin
 
-class IAuthPlugin(IPlugin):
-
-    def get_name(self):
-        pass
-
-    def set_config(self, cfg):
-        self.cfg = cfg
-
-
-    def set_logger(self, logger):
-        '''
-        Set logger for logging
-        '''
-        self.logger = logger
+class IAuthPlugin(IGoDockerPlugin):
 
     def bind_credentials(self, login, password):
         '''

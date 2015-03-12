@@ -72,6 +72,9 @@ class GoDWatcher(Daemon):
              self.scheduler = pluginInfo.plugin_object
              self.scheduler.set_config(self.cfg)
              self.scheduler.set_logger(self.logger)
+             self.scheduler.set_redis_handler(self.r)
+             self.scheduler.set_jobs_handler(self.db_jobs)
+             self.scheduler.set_users_handler(self.db_users)
              print "Loading scheduler: "+self.scheduler.get_name()
         self.executor = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Executor"):
@@ -80,6 +83,9 @@ class GoDWatcher(Daemon):
              self.executor = pluginInfo.plugin_object
              self.executor.set_config(self.cfg)
              self.executor.set_logger(self.logger)
+             self.executor.set_redis_handler(self.r)
+             self.executor.set_jobs_handler(self.db_jobs)
+             self.executor.set_users_handler(self.db_users)
              print "Loading executor: "+self.executor.get_name()
 
 
@@ -88,7 +94,8 @@ class GoDWatcher(Daemon):
         Kill tasks in list
         '''
         for task in task_list:
-            (task, over) = self.executor.kill_task(task)
+            if task['status']['primary'] != 'pending':
+                (task, over) = self.executor.kill_task(task)
             # If not over, executor could not kill the task
             if over:
                 for port in task['container']['ports']:
