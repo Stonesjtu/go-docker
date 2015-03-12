@@ -1,7 +1,6 @@
 Chameleon==2.22
 Mako==1.0.1
 Yapsy==1.10.423
-argparse==1.2.1
 backports.ssl-match-hostname==3.4.0.2
 config==0.3.9
 docker-py==1.1.0
