@@ -23,7 +23,7 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 ## Features
 
 * job submission
-* job list (running or over)
+* job watch (check if job is over)
 * kill job
 
 ### TODO
