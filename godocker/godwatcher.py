@@ -106,6 +106,8 @@ class GoDWatcher(Daemon):
         for task in task_list:
             if task['status']['primary'] != 'pending':
                 (task, over) = self.executor.kill_task(task)
+            else:
+                over = True
             # If not over, executor could not kill the task
             if over:
                 self.logger.debug('Executor:Kill:Success:'+str(task['id']))
@@ -215,7 +217,12 @@ class GoDWatcher(Daemon):
                         self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                     task['container']['ports'] = []
 
-                    self.db_jobs.remove({'id': task['id']})
+                    remove_result = self.db_jobs.remove({'id': task['id']})
+                    print str(remove_result)
+                    if remove_result['n'] == 0:
+                        # Not present anymore, may have been removed already
+                        # Remove from jobs over to replace it
+                        self.db_jobsover.remove({'id': task['id']})
                     task['status']['primary'] = 'over'
                     task['status']['secondary'] = ''
                     dt = datetime.datetime.now()

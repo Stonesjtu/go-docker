@@ -151,11 +151,19 @@ class SchedulerTest(unittest.TestCase):
         over_tasks = self.watcher.db_jobsover.find()
         self.assertTrue(over_tasks.count() == 1)
 
-    def test_kill_task(self):
+    def test_kill_task_running(self):
         running_tasks = self.test_run_task()
         task_to_kill = running_tasks[0]
         self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:kill', dumps(task_to_kill))
-        print str(task_to_kill)
+        self.watcher.kill_tasks([task_to_kill])
+        running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
+        self.assertTrue(running_tasks.count() == 0)
+        over_tasks = self.scheduler.db_jobsover.find()
+        self.assertTrue(over_tasks.count() == 1)
+
+    def test_kill_task_pending(self):
+        pending_tasks = self.test_schedule_task()
+        task_to_kill = pending_tasks[0]
         self.watcher.kill_tasks([task_to_kill])
         running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
         self.assertTrue(running_tasks.count() == 0)
