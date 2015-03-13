@@ -16,7 +16,7 @@ class Swarm(IExecutorPlugin):
 
         from docker import Client
 
-        self.docker_client = Client(base_url=self.cfg.docker_url)
+        self.docker_client = Client(base_url=self.cfg.docker_url, version=self.cfg.docker_api_version)
 
     def run_tasks(self, tasks, callback=None):
         '''

@@ -218,7 +218,6 @@ class GoDWatcher(Daemon):
                     task['container']['ports'] = []
 
                     remove_result = self.db_jobs.remove({'id': task['id']})
-                    print str(remove_result)
                     if remove_result['n'] == 0:
                         # Not present anymore, may have been removed already
                         # Remove from jobs over to replace it
