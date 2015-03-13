@@ -99,6 +99,19 @@ class GoDWatcher(Daemon):
              print "Loading executor: "+self.executor.get_name()
 
 
+    def _set_task_exitcode(self, task, exitcode):
+        '''
+        Sets exit code in input task
+        '''
+        if task['container']['meta'] is None:
+            task['container']['meta'] = {}
+        if 'State' in task['container']['meta']:
+            task['container']['meta']['State']['ExitCode'] = 137
+        else:
+            task['container']['meta'] = {
+                'State': {'ExitCode': 137}
+            }
+
     def kill_tasks(self, task_list):
         '''
         Kill tasks in list
@@ -106,8 +119,10 @@ class GoDWatcher(Daemon):
         for task in task_list:
             if task['status']['primary'] != 'pending':
                 (task, over) = self.executor.kill_task(task)
+                self._set_task_exitcode(task, 137)
             else:
                 over = True
+                self._set_task_exitcode(task, 137)
             # If not over, executor could not kill the task
             if over:
                 self.logger.debug('Executor:Kill:Success:'+str(task['id']))
