@@ -44,4 +44,5 @@ class PairtreeStorage(IStorage):
             task_obj = self.store.get_object(str(task['id']))
 
         task_obj.add_bytestream(name, content, path='task')
+        os.chmod(task_dir, 0777)
         return os.path.join(task_dir, name)
