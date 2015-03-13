@@ -56,6 +56,8 @@ Graphics can be displayed with Grafana on series *god_task_usage*
 
 InfluxDB can also be used with cAdvisor to archive usage statistics (see go-docker-web)
 
+InfluxDB is optional but recommended.
+
 ## Directories
 
 go-d-docker needs a shared directory between go-d-scheduler, go-d-watcher and
