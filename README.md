@@ -32,6 +32,10 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 * suspend/resume jobs
 * Reschedule a job
 
+## LICENSE
+
+See COPYRIGHT file. Go-Docker is developped at IRISA.
+
 ## Dependencies
 
 apt-get install libldap2-dev gcc libsasl2-dev (Debian/Ubuntu)
@@ -47,8 +51,10 @@ persistence.
 
 For time based statistics, you can optionally install InfluxDB (if you do not
 with to use it, let influxdb_host to empty in configuration file).
-If InfluxDB is used, databases must be created first as well as a read-only
-user. Graphics can be displayed with Grafana on series *god_task_usage*
+If InfluxDB is used, databases must be created first.
+Graphics can be displayed with Grafana on series *god_task_usage*
+
+InfluxDB can also be used with cAdvisor to archive usage statistics (see go-docker-web)
 
 ## Directories
 
