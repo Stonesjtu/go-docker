@@ -79,8 +79,8 @@ user = {
         'private': '',
         'public': ''
     },
-    'uid': 1001,
-    'gid': 1001,
+    'uidNumber': 1001,
+    'uidNumber': 1001,
     'homeDirectory': '/home/osallou',
     'email': 'fakeemail@no.mail',
     'usage':
