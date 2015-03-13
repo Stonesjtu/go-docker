@@ -23,16 +23,25 @@ class FakeAuth(IAuthPlugin):
                   'homeDirectory': userHomeDirectory
                   }
         '''
-        if login != 'osallou':
-            return None
-        user = {
+
+        users = {}
+        users['osallou'] = {
                  'id' : 'osallou',
                  'uidNumber': 1001,
                  'gidNumber': 1001,
                  'email': 'olivier.sallou@irisa.fr',
                  'homeDirectory': '/home/osallou'
                }
-        return user
+        users['www-data'] = {
+                 'id' : 'www-data',
+                 'uidNumber': 33,
+                 'gidNumber': 33,
+                 'email': 'olivier.sallou@irisa.fr',
+                 'homeDirectory': '/tmp'
+               }
+        if login not in users:
+            return None
+        return users[login]
 
 
 
