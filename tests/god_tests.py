@@ -112,6 +112,7 @@ class SchedulerTest(unittest.TestCase):
         self.scheduler.db.drop_collection('jobs')
         self.scheduler.db.drop_collection('jobsover')
         self.scheduler.db.drop_collection('users')
+        self.scheduler.db_users.insert(self.sample_user)
         self.scheduler.r.flushdb()
 
         self.scheduler.cfg.shared_dir = tempfile.mkdtemp('godshared')
@@ -168,6 +169,7 @@ class SchedulerTest(unittest.TestCase):
         self.watcher.check_running_jobs()
         over_tasks = self.watcher.db_jobsover.find()
         self.assertTrue(over_tasks.count() == 1)
+        
 
     def test_kill_task_running(self):
         running_tasks = self.test_run_task()
@@ -233,6 +235,5 @@ class SchedulerTest(unittest.TestCase):
 
 
     def test_plugin_get_users(self):
-        self.scheduler.db_users.insert(self.sample_user)
         user_list = self.scheduler.executor.get_users(['osallou'])
         self.assertTrue(user_list.count()==1)

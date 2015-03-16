@@ -141,6 +141,7 @@ class GoDWatcher(Daemon):
                 del task['_id']
                 self.db_jobsover.insert(task)
                 self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
+                self.update_user_usage(task)
             else:
                 # Could not kill, put back in queue
                 self.logger.warn('Executor:Kill:Error:'+str(task['id']))
@@ -211,6 +212,48 @@ class GoDWatcher(Daemon):
             # Do not fail on stat writing
             self.logger.error('Stat:Error:'+str(e))
 
+    def update_user_usage(self, task):
+        '''
+        Add to user usage task consumption (cpu,ram,time)
+        '''
+        task_user = self.db_users.find_one({'id': task['user']['id']})
+        last_update = datetime.datetime.now()
+        if not 'usage' in task_user:
+            task_user['usage'] = {}
+        if 'last' not in task_user['usage'] or not task_user['usage']['last']:
+            last_delta = 0
+        else:
+            last_delta = (last_update - task_user['usage']['last']).days
+
+        task_duration = 0
+        if 'date_running' in task['status'] and task['status']['date_running'] and task['status']['date_over']:
+            task_duration = task['status']['date_over'] - task['status']['date_running']
+
+        if last_delta > self.cfg.user_reset_usage_duration:
+            self.db_users.update({'id': task['user']['id']},{
+                '$set': {
+                    'usage.cpu': task['requirements']['cpu'],
+                    'usage.ram': task['requirements']['ram'],
+                    'usage.time': task_duration
+                },
+                '$set': {
+                    'last': last_update
+                }
+
+            })
+        else:
+            self.db_users.update({'id': task['user']['id']},{
+                '$inc': {
+                    'usage.cpu': task['requirements']['cpu'],
+                    'usage.ram': task['requirements']['ram'],
+                    'usage.time': task_duration
+                },
+                '$set': {
+                    'last': last_update
+                }
+
+            })
+
     def check_running_jobs(self):
         '''
         Checks if running jobs are over
@@ -254,6 +297,7 @@ class GoDWatcher(Daemon):
                     self.db_jobsover.insert(task)
                     #self.r.del('god:job:'+str(task['id'])+':container'
                     self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
+                    self.update_user_usage(task)
                     self._add_to_stats(task)
                 else:
                     self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
