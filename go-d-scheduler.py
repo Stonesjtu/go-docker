@@ -12,11 +12,12 @@ if __name__ == "__main__":
             config_file = os.environ['GOD_CONFIG']
         daemon.load_config(config_file)
         signal.signal(signal.SIGINT, daemon.signal_handler)
-
+        daemon.stop_daemon = False
         if len(sys.argv) == 2:
                 if 'start' == sys.argv[1]:
                         daemon.start()
                 elif 'stop' == sys.argv[1]:
+                        daemin.stop_daemon = True
                         daemon.stop()
                 elif 'restart' == sys.argv[1]:
                         daemon.restart()

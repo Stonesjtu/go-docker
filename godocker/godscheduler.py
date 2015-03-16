@@ -311,11 +311,15 @@ class GoDScheduler(Daemon):
         pending_tasks = self.db_jobs.find({'status.primary': 'pending'})
         task_list = []
         for p in pending_tasks:
+            if self.stop_daemon:
+                return
             task_list.append(p)
         queued_tasks = self.schedule_tasks(task_list)
         self.run_tasks(queued_tasks)
 
         print 'Get tasks to reschedule'
+        if self.stop_daemon:
+            return
         #reschedule_task_list = []
         #reschedule_task_length = self.r.llen('jobs:reschedule')
         #for i in range(min(reschedule_task_length, self.cfg.max_job_pop)):

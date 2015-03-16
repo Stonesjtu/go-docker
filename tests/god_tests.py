@@ -43,9 +43,11 @@ class SchedulerTest(unittest.TestCase):
         self.test_dir = tempfile.mkdtemp('god')
         self.scheduler = GoDScheduler(os.path.join(self.test_dir,'godsched.pid'))
         self.scheduler.load_config(self.cfg)
+        self.scheduler.stop_daemon = False
         self.scheduler.init()
         self.watcher = GoDWatcher(os.path.join(self.test_dir,'godwatcher.pid'))
         self.watcher.load_config(self.cfg)
+        self.watcher.stop_daemon = False
         dt = datetime.datetime.now()
         self.sample_user = {
             'id': 'osallou',
