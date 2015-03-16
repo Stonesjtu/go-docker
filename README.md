@@ -77,7 +77,9 @@ In development
 scheduler is in charge of scheduling pending jobs and running them on an
 executor.
 
-There is only one scheduler running
+There is only one scheduler running. At startup, scheduler will check if Redis
+database is populated, if not, it will sync it with mongo database. This
+automatic check prevents Redis flushes or loss of data.
 
 ## Watcher
 

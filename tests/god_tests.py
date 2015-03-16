@@ -145,6 +145,21 @@ class SchedulerTest(unittest.TestCase):
         self.assertTrue(running_tasks.count() == 1)
         return running_tasks
 
+
+    def test_check_redis_restore(self):
+        running_tasks = self.test_run_task()
+        nb_running_redis = self.scheduler.r.llen(self.watcher.cfg.redis_prefix+':jobs:running')
+        total_redis = self.scheduler.r.get(self.watcher.cfg.redis_prefix+':jobs')
+        self.assertTrue(nb_running_redis > 0)
+        self.scheduler.r.flushdb()
+        self.assertTrue(self.scheduler.r.llen(self.watcher.cfg.redis_prefix+':jobs:running') == 0)
+        self.scheduler.check_redis()
+        nb_running_redis_after_restore = self.scheduler.r.llen(self.watcher.cfg.redis_prefix+':jobs:running')
+        self.assertTrue(nb_running_redis == nb_running_redis_after_restore)
+        total_redis_after_restore = self.scheduler.r.get(self.watcher.cfg.redis_prefix+':jobs')
+        self.assertTrue(total_redis == total_redis_after_restore)
+
+
     def test_watch_task_over(self):
         self.test_run_task()
         self.watcher.check_running_jobs()

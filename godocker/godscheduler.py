@@ -9,6 +9,7 @@ import os
 import datetime
 import time
 from pymongo import MongoClient
+from pymongo import DESCENDING as pyDESCENDING
 from bson.json_util import dumps
 from config import Config
 from yapsy.PluginManager import PluginManager
@@ -35,6 +36,45 @@ class GoDScheduler(Daemon):
         self.db_jobs.ensure_index('status.primary')
         self.db_jobsover.ensure_index('status.primary')
         self.db_users.ensure_index('id')
+
+    def check_redis(self):
+        jobs_mongo = self.db_jobs.find()
+        nb_jobs_mongo = jobs_mongo.count()
+        nb_jobs_over_mongo = self.db_jobsover.find().count()
+        #nb_running_redis = self.r.llen(self.cfg.redis_prefix+':jobs:running')
+        if nb_jobs_mongo >0 or nb_jobs_over_mongo >0:
+            # Not the first run
+            jobs_counter = self.r.get(self.cfg.redis_prefix+':jobs')
+            if jobs_counter > 0:
+                self.logger.info("Redis database looks ok")
+                return
+            else:
+                # Redis lost its data
+                self.logger.warn("Redis database looks empty, syncing data....")
+                # Get Max id
+                max_task_id = 0
+                if nb_jobs_mongo > 0:
+                    max_task = self.db_jobs.find().sort("id", pyDESCENDING).limit(1)
+                    max_task_id = max_task[0]['id']
+                else:
+                    max_task = self.db_jobsover.find().sort("id", pyDESCENDING).limit(1)
+                    max_task_id = max_task[0]['id']
+                self.r.set(self.cfg.redis_prefix+':jobs', max_task_id)
+                # Set running and kill tasks
+                for task in jobs_mongo:
+                    if task['status']['primary'] == 'pending':
+                        self.r.incr(self.cfg.redis_prefix+':jobs:queued')
+                        continue
+                    if task['status']['secondary'] == 'kill requested':
+                        self.r.rpush(cfg.redis_prefix+':jobs:kill', dumps(task))
+                        continue
+                    if task['status']['primary'] == 'running':
+                        self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
+                        self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
+                        continue
+                self.logger.warn("Redis database has been synced, continuing.")
+        else:
+            self.logger.info("No task found in database, looks like a first run")
 
     def load_config(self, f):
         '''
@@ -98,6 +138,8 @@ class GoDScheduler(Daemon):
              self.executor.set_jobs_handler(self.db_jobs)
              self.executor.set_users_handler(self.db_users)
              print "Loading executor: "+self.executor.get_name()
+
+        self.check_redis()
 
 
     def add_task(self, task):
