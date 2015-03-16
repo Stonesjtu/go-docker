@@ -52,5 +52,7 @@ class IExecutorPlugin(IGoDockerPlugin):
                 self.redis_handler.rpush(self.cfg.redis_prefix+':ports:'+host, self.cfg.port_start + i)
         port = self.redis_handler.lpop(self.cfg.redis_prefix+':ports:'+host)
         self.logger.debug('Port:Give:'+task['container']['meta']['Node']['Name']+':'+str(port))
+        if not 'ports' in task['container']:
+            task['container']['ports'] = []
         task['container']['ports'].append(port)
         return int(port)
