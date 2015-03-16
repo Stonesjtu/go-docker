@@ -35,7 +35,8 @@ for i in range(10):
         'date': time.mktime(dt.timetuple()),
         'meta': {
             'name': 'samplejob'+str(i),
-            'description': 'blabla'
+            'description': 'blabla',
+            'tags': []
         },
         'requirements': {
             'cpu': 1,
@@ -73,7 +74,6 @@ users = []
 user = {
     'id': 'osallou',
     'last': datetime.datetime.now(),
-    'apikey': '1234',
     'credentials': {
         'apikey': ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(10)),
         'private': '',

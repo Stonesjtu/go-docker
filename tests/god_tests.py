@@ -83,7 +83,8 @@ class SchedulerTest(unittest.TestCase):
             'date': time.mktime(dt.timetuple()),
             'meta': {
                 'name': 'samplejob',
-                'description': 'blabla'
+                'description': 'blabla',
+                'tags': []
             },
             'requirements': {
                 'cpu': 1,
