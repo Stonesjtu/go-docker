@@ -119,6 +119,8 @@ class GoDWatcher(Daemon):
         for task in task_list:
             if self.stop_daemon:
                 return
+            if task['status']['primary'] == 'over':
+                continue
             if task['status']['primary'] != 'pending':
                 (task, over) = self.executor.kill_task(task)
                 self._set_task_exitcode(task, 137)
