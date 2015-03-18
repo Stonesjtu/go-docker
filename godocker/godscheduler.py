@@ -217,10 +217,11 @@ class GoDScheduler(Daemon):
         # Write wrapper script to run script with user uidNumber/guidNumber
         # Chown files in shared dir to gives files ACLs to user at the end
         # Exit with code of executed cmd.sh
+        user_id = task['user']['id']
         cmd = "#!/bin/bash\n"
-        cmd += "groupadd --gid "+str(task['user']['gid'])+" godocker"
-        cmd += " && useradd --uid "+str(task['user']['uid'])+" --gid "+str(task['user']['gid'])+" godocker\n"
-        cmd += "usermod -p"+task['user']['credentials']['apikey']+"  godocker\n"
+        cmd += "groupadd --gid "+str(task['user']['gid'])+" "+user_id
+        cmd += " && useradd --uid "+str(task['user']['uid'])+" --gid "+str(task['user']['gid'])+" "+user_id+"\n"
+        cmd += "usermod -p"+task['user']['credentials']['apikey']+"  "+user_id+"\n"
         # Installing and using sudo instead of su
         # docker has issues with kernel (need recent kernel) to apply su (and others)
         # in container.
@@ -254,22 +255,22 @@ class GoDScheduler(Daemon):
             if task['container']['root']:
                 ssh_dir = "/root/.ssh"
             else:
-                ssh_dir = "/home/godocker/.ssh"
+                ssh_dir = "/home/"+user_id+"/.ssh"
 
             cmd +="mkdir -p "+ssh_dir+"\n"
             cmd +="echo \"" + task['user']['credentials']['public'] + "\" > "+ssh_dir+"/authorized_keys\n"
             cmd +="chmod 600 " + ssh_dir +"/authorized_keys\n"
             if not task['container']['root']:
-                cmd +="chown -R godocker:godocker /home/godocker\n"
-                cmd +="chmod 644 /home/godocker/.ssh/authorized_keys\n"
+                cmd +="chown -R "+user_id+":"+user_id+" /home/godocker\n"
+                cmd +="chmod 644 /home/"+user_id+"/.ssh/authorized_keys\n"
             cmd +="/usr/sbin/sshd -f /etc/ssh/sshd_config -D\n"
         else:
             if not task['container']['root']:
-                cmd += "sudo -u godocker bash -c \""+vol_home+" ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\"\n"
+                cmd += "sudo -u "+user_id+" bash -c \""+vol_home+" ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\"\n"
             else:
                 cmd += "/mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\n"
         cmd += "ret_code=$?\n"
-        cmd += "chown -R godocker:godocker /mnt/go-docker/*\n"
+        cmd += "chown -R "+user_id+":"+user_id+" /mnt/go-docker/*\n"
         cmd += "exit $ret_code\n"
         script_file = self.store.add_file(task, 'godocker.sh', cmd)
         os.chmod(script_file, 0755)
