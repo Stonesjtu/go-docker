@@ -143,6 +143,7 @@ class GoDWatcher(Daemon):
                 self.db_jobsover.insert(task)
                 self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
                 self.update_user_usage(task)
+                self.notify_msg(task)
             else:
                 # Could not kill, put back in queue
                 self.logger.warn('Executor:Kill:Error:'+str(task['id']))
@@ -255,6 +256,19 @@ class GoDWatcher(Daemon):
 
             })
 
+    def notify_msg(self, task):
+        if not self.cfg.live_events:
+            return
+        status = task['status']['primary']
+        if task['status']['secondary'] == 'killed':
+            status = 'killed'
+        self.r.publish(self.cfg.redis_prefix+':jobs:pubsub', dumps({
+            'user': task['user']['id'],
+            'id': task['id'],
+            'status': status,
+            'name': task['meta']['name']
+        }))
+
     def check_running_jobs(self):
         '''
         Checks if running jobs are over
@@ -300,6 +314,7 @@ class GoDWatcher(Daemon):
                     self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
                     self.update_user_usage(task)
                     self._add_to_stats(task)
+                    self.notify_msg(task)
                 else:
                     self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
                     self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
