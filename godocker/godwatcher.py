@@ -125,6 +125,7 @@ class GoDWatcher(Daemon):
             else:
                 over = True
                 self._set_task_exitcode(task, 137)
+                self.r.decr(self.cfg.redis_prefix+':jobs:queued')
             # If not over, executor could not kill the task
             if over:
                 self.logger.debug('Executor:Kill:Success:'+str(task['id']))
