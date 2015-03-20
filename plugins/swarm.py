@@ -162,10 +162,11 @@ class Swarm(IExecutorPlugin):
         try:
             self.docker_client.pause(task['container']['id'])
         except Exception as e:
+            self.logger.debug(str(e))
             self.logger.debug("Could not pause container: "+task['container']['id'])
             over = False
 
-        return (task, True)
+        return (task, over)
 
     def resume_task(self, task):
         '''
@@ -177,9 +178,11 @@ class Swarm(IExecutorPlugin):
         '''
         over = True
         try:
+            self.logger.debug("Unpause:"+str(task['id']))
             self.docker_client.unpause(task['container']['id'])
         except Exception as e:
+            self.logger.debug(str(e))
             self.logger.debug("Could not pause container: "+task['container']['id'])
             over = False
 
-        return (task, True)
+        return (task, over)

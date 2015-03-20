@@ -162,6 +162,7 @@ class GoDWatcher(Daemon):
                 return
             status = None
             over = False
+            print str(task)
             if task['status']['primary'] == 'pending' or task['status']['primary'] == 'over':
                 status = "suspend rejected"
                 over = True
@@ -191,7 +192,7 @@ class GoDWatcher(Daemon):
                 return
             status = None
             over = False
-            if task['status']['secondary'] == 'pending' or task['status']['primary'] == 'over' or task['status']['secondary'] != 'suspended':
+            if task['status']['primary'] == 'pending' or task['status']['primary'] == 'over' or task['status']['secondary'] != 'resume requested':
                 status = "resume rejected"
                 over = True
             else:
@@ -397,7 +398,7 @@ class GoDWatcher(Daemon):
         suspend_task_list = []
         suspend_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:suspend')
         for i in range(min(suspend_task_length, self.cfg.max_job_pop)):
-            suspend_task_list.append(self.r.lpop(self.cfg.redis_prefix+':jobs:suspend'))
+            suspend_task_list.append(json.loads(self.r.lpop(self.cfg.redis_prefix+':jobs:suspend')))
 
         #suspend_task_list = self.db_jobs.find({'status.primary': 'suspend'})
         #task_list = []
@@ -411,7 +412,7 @@ class GoDWatcher(Daemon):
         resume_task_list = []
         resume_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:resume')
         for i in range(min(resume_task_length, self.cfg.max_job_pop)):
-            resume_task_list.append(self.r.lpop(self.cfg.redis_prefix+':jobs:resume'))
+            resume_task_list.append(json.loads(self.r.lpop(self.cfg.redis_prefix+':jobs:resume')))
 
         #resume_task_list = self.db_jobs.find({'status.primary': 'resume'})
         #task_list = []
