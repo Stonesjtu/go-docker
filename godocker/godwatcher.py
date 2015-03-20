@@ -403,7 +403,7 @@ class GoDWatcher(Daemon):
         #task_list = []
         #for p in suspend_task_list:
         #    task_list.append(p)
-        self.suspend_tasks(task_list)
+        self.suspend_tasks(suspend_task_list)
 
         print 'Get tasks to resume'
         if self.stop_daemon:
@@ -417,7 +417,7 @@ class GoDWatcher(Daemon):
         #task_list = []
         #for p in resume_task_list:
         #    task_list.append(p)
-        self.resume_tasks(task_list)
+        self.resume_tasks(resume_task_list)
 
         print 'Look for terminated jobs'
         if self.stop_daemon:
