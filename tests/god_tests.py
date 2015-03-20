@@ -169,7 +169,7 @@ class SchedulerTest(unittest.TestCase):
         self.watcher.check_running_jobs()
         over_tasks = self.watcher.db_jobsover.find()
         self.assertTrue(over_tasks.count() == 1)
-        
+
 
     def test_kill_task_running(self):
         running_tasks = self.test_run_task()
@@ -184,11 +184,56 @@ class SchedulerTest(unittest.TestCase):
     def test_kill_task_pending(self):
         pending_tasks = self.test_schedule_task()
         task_to_kill = pending_tasks[0]
+        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:kill', dumps(task_to_kill))
         self.watcher.kill_tasks([task_to_kill])
         running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
         self.assertTrue(running_tasks.count() == 0)
         over_tasks = self.scheduler.db_jobsover.find()
         self.assertTrue(over_tasks.count() == 1)
+
+
+    def test_suspend_task_running(self):
+        running_tasks = self.test_run_task()
+        task_to_suspend = running_tasks[0]
+        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:suspend', dumps(task_to_suspend))
+        self.watcher.suspend_tasks([task_to_suspend])
+        suspended_task = self.scheduler.db_jobs.find_one({'id': task_to_suspend['id']})
+        self.assertTrue(suspended_task['status']['secondary'] == 'suspended')
+        return suspended_task
+
+    def test_suspend_task_pending(self):
+        pending_tasks = self.test_schedule_task()
+        task_to_suspend = pending_tasks[0]
+        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:suspend', dumps(task_to_suspend))
+        self.watcher.suspend_tasks([task_to_suspend])
+        suspended_task = self.scheduler.db_jobs.find_one({'id': task_to_suspend['id']})
+        self.assertTrue(suspended_task['status']['secondary'] == 'suspend rejected')
+        return task_to_suspend
+
+    def test_resume_task_suspended(self):
+        suspended_task = self.test_suspend_task_running()
+        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:resume', dumps(suspended_task))
+        self.watcher.resume_tasks([suspended_task])
+        resumed_task = self.scheduler.db_jobs.find_one({'id': suspended_task['id']})
+        self.assertTrue(suspended_task['status']['secondary'] == 'resumed')
+        return resumed_task
+
+    def test_resume_task_pending(self):
+        pending_tasks = self.test_schedule_task()
+        task_to_resume = pending_tasks[0]
+        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:resume', dumps(task_to_resume))
+        self.watcher.resume_tasks([task_to_resume])
+        resumed_task = self.scheduler.db_jobs.find_one({'id': task_to_resume['id']})
+        self.assertTrue(resumed_task['status']['secondary'] == 'resume rejected')
+
+
+    def test_resume_task_running(self):
+        running_tasks = self.test_run_task()
+        task_to_resume = running_tasks[0]
+        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:resume', dumps(task_to_resume))
+        self.watcher.resume_tasks([task_to_resume])
+        resumed_task = self.scheduler.db_jobs.find_one({'id': task_to_resume['id']})
+        self.assertTrue(resumed_task['status']['secondary'] == 'resume rejected')
 
     def test_rejected_task(self):
         queued_tasks = []

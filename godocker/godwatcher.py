@@ -155,20 +155,57 @@ class GoDWatcher(Daemon):
         '''
         Suspend/pause tasks in list
         '''
-        #TODO
         if self.stop_daemon:
             return
-        pass
+        for task in suspend_list:
+            if self.stop_daemon:
+                return
+            status = None
+            over = False
+            if task['status']['primary'] == 'pending' or task['status']['primary'] == 'over':
+                status = "suspend rejected"
+                over = True
+            else:
+                (task, over) = self.executor.suspend_task(task)
+                status = "suspended"
+            if over:
+                task['status']['secondary'] = status
+                self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
+                if task['status']['primary'] != 'over':
+                    self.db_jobs.update({'id' : task['id']},{'$set': {'status.secondary': status}})
+            else:
+                # Could not kill, put back in queue
+                self.logger.warn('Executor:Suspend:Error:'+str(task['id']))
+                self.r.rpush(self.cfg.redis_prefix+':jobs:suspend',dumps(task))
+
 
 
     def resume_tasks(self, resume_list):
         '''
         Resume tasks in list
         '''
-        #TODO
         if self.stop_daemon:
             return
-        pass
+        for task in resume_list:
+            if self.stop_daemon:
+                return
+            status = None
+            over = False
+            if task['status']['secondary'] == 'pending' or task['status']['primary'] == 'over' or task['status']['secondary'] != 'suspended':
+                status = "resume rejected"
+                over = True
+            else:
+                (task, over) = self.executor.resume_task(task)
+                status = "resumed"
+            if over:
+                task['status']['secondary'] = status
+                self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
+                if task['status']['primary'] != 'over':
+                    self.db_jobs.update({'id' : task['id']},{'$set': {'status.secondary': status}})
+            else:
+                # Could not resumed, put back in queue
+                self.logger.warn('Executor:Resume:Error:'+str(task['id']))
+                self.r.rpush(self.cfg.redis_prefix+':jobs:resume',dumps(task))
 
 
 
@@ -357,29 +394,29 @@ class GoDWatcher(Daemon):
         print 'Get tasks to suspend'
         if self.stop_daemon:
             return
-        #suspend_task_list = []
-        #suspend_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:suspend')
-        #for i in range(min(suspend_task_length, self.cfg.max_job_pop)):
-        #    suspend_task_list.append(self.r.lpop(self.cfg.redis_prefix+':jobs:suspend'))
+        suspend_task_list = []
+        suspend_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:suspend')
+        for i in range(min(suspend_task_length, self.cfg.max_job_pop)):
+            suspend_task_list.append(self.r.lpop(self.cfg.redis_prefix+':jobs:suspend'))
 
-        suspend_task_list = self.db_jobs.find({'status.primary': 'suspend'})
-        task_list = []
-        for p in suspend_task_list:
-            task_list.append(p)
+        #suspend_task_list = self.db_jobs.find({'status.primary': 'suspend'})
+        #task_list = []
+        #for p in suspend_task_list:
+        #    task_list.append(p)
         self.suspend_tasks(task_list)
 
         print 'Get tasks to resume'
         if self.stop_daemon:
             return
-        #resume_task_list = []
-        #resume_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:resume')
-        #for i in range(min(resume_task_length, self.cfg.max_job_pop)):
-        #    resume_task_list.append(self.r.lpop(self.cfg.redis_prefix+':jobs:resume'))
+        resume_task_list = []
+        resume_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:resume')
+        for i in range(min(resume_task_length, self.cfg.max_job_pop)):
+            resume_task_list.append(self.r.lpop(self.cfg.redis_prefix+':jobs:resume'))
 
-        resume_task_list = self.db_jobs.find({'status.primary': 'resume'})
-        task_list = []
-        for p in resume_task_list:
-            task_list.append(p)
+        #resume_task_list = self.db_jobs.find({'status.primary': 'resume'})
+        #task_list = []
+        #for p in resume_task_list:
+        #    task_list.append(p)
         self.resume_tasks(task_list)
 
         print 'Look for terminated jobs'

@@ -142,3 +142,38 @@ class Swarm(IExecutorPlugin):
             else:
                 over = False
         return (task, over)
+
+
+    def suspend_task(self, task):
+        '''
+        Suspend/pause a task
+
+        :param tasks: task to suspend
+        :type tasks: Task
+        :return: (Task, over) over is True if task could be suspended
+        '''
+        over = True
+        try:
+            self.docker_client.pause(task['container']['id'])
+        except Exception as e:
+            self.logger.debug("Could not pause container: "+task['container']['id'])
+            over = False
+
+        return (task, True)
+
+    def resume_task(self, task):
+        '''
+        Resume/restart a task
+
+        :param tasks: task to resumed
+        :type tasks: Task
+        :return: (Task, over) over is True if task could be resumed
+        '''
+        over = True
+        try:
+            self.docker_client.unpause(task['container']['id'])
+        except Exception as e:
+            self.logger.debug("Could not pause container: "+task['container']['id'])
+            over = False
+
+        return (task, True)

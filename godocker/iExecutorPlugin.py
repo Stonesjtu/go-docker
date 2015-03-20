@@ -2,6 +2,29 @@ from godocker.IGoDockerPlugin import IGoDockerPlugin
 
 class IExecutorPlugin(IGoDockerPlugin):
 
+
+    def suspend_task(self, task):
+        '''
+        Suspend/pause a task
+
+        :param tasks: task to suspend
+        :type tasks: Task
+        :return: (Task, over) over is True if task could be suspended
+        '''
+
+        return (task, True)
+
+    def resume_task(self, task):
+        '''
+        Resume/restart a task
+
+        :param tasks: task to resumed
+        :type tasks: Task
+        :return: (Task, over) over is True if task could be resumed
+        '''
+
+        return (task, True)
+
     def run_tasks(self, tasks, callback=None):
         '''
         Execute task list on executor system
