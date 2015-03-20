@@ -51,6 +51,12 @@ class Swarm(IExecutorPlugin):
                                                                 ports=port_list,
                                                                 volumes=vol_list)
                 job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
+                if 'Node' not in job['container']['meta']:
+                    # If using 1 Docker instance, for tests, intead of swarm,
+                    # some fields are not present, or not at the same place
+                    # Use required fields and place them like in swarm
+                    job['container']['meta']['Node'] = {'Name': job['container']['meta']['Config']['Hostname']}
+
                 port_mapping = {}
                 for port in port_list:
                     mapped_port = self.get_mapping_port(job['container']['meta']['Node']['Name'], job)
