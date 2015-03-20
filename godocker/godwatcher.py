@@ -162,7 +162,6 @@ class GoDWatcher(Daemon):
                 return
             status = None
             over = False
-            print str(task)
             if task['status']['primary'] == 'pending' or task['status']['primary'] == 'over':
                 status = "suspend rejected"
                 over = True

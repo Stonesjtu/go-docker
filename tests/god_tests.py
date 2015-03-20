@@ -212,10 +212,11 @@ class SchedulerTest(unittest.TestCase):
 
     def test_resume_task_suspended(self):
         suspended_task = self.test_suspend_task_running()
+        suspended_task['status']['secondary'] = 'resume requested'
         self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:resume', dumps(suspended_task))
         self.watcher.resume_tasks([suspended_task])
         resumed_task = self.scheduler.db_jobs.find_one({'id': suspended_task['id']})
-        self.assertTrue(suspended_task['status']['secondary'] == 'resumed')
+        self.assertTrue(resumed_task['status']['secondary'] == 'resumed')
         return resumed_task
 
     def test_resume_task_pending(self):
