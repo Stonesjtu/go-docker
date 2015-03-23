@@ -62,11 +62,15 @@ class GoDScheduler(Daemon):
                 self.r.set(self.cfg.redis_prefix+':jobs', max_task_id)
                 # Set running and kill tasks
                 for task in jobs_mongo:
-                    if task['status']['primary'] == 'pending':
-                        self.r.incr(self.cfg.redis_prefix+':jobs:queued')
-                        continue
                     if task['status']['secondary'] == 'kill requested':
                         self.r.rpush(cfg.redis_prefix+':jobs:kill', dumps(task))
+                    if task['status']['secondary'] == 'suspend requested':
+                        self.r.rpush(cfg.redis_prefix+':jobs:suspend', dumps(task))
+                    if task['status']['secondary'] == 'resume requested':
+                        self.r.rpush(cfg.redis_prefix+':jobs:resume', dumps(task))
+                        
+                    if task['status']['primary'] == 'pending':
+                        self.r.incr(self.cfg.redis_prefix+':jobs:queued')
                         continue
                     if task['status']['primary'] == 'running':
                         self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
