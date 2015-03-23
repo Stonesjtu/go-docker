@@ -135,6 +135,13 @@ Several environment variables are available in user script:
 * GODOCKER_PWD: Job directory, container will execute script in this directory
 * GODOCKER_HOME: mount path for user home directory.
 
+For job arrays the following variables are also available:
+
+* GOGOCKER_TASK_ID: Job array task identifier
+* GOGOCKER_TASK_FIRST: First job array task identifier
+* GOGOCKER_TASK_LAST: Last job array task identifier
+* GOGOCKER_TASK_STEP: steps in job array identifiers
+
 If root access is not required, script will be executed with user id/gid under the container user name *godocker*.
 All files in GODOCKER_PWD will be chowned to the user id/gid.
 
@@ -148,6 +155,16 @@ If user selects an interactive session, a port will be opened and the sshd proce
 For interactive sessions, the selected image MUST have the openssh server package installed.
 
 Mapped port will be available in task description.
+
+## Job arrays
+
+Job arrays allows to execute multiple jobs with same parameters. A
+start:end:step definition generate X jobs in separate job directories with
+additional environment variables (GOGOCKER_TASK_ID, ...).
+
+Main task has an id and refers the X sub tasks. Main task does not execute any
+command and ends when all sub tasks are over. Killing a main tasks also kills
+all the sub tasks.
 
 ## Tips
 
