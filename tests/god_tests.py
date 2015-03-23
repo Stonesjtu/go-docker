@@ -71,6 +71,7 @@ class SchedulerTest(unittest.TestCase):
         }
         self.sample_task = {
             'id': None,
+            'parent_task_id': None,
             'user': {
                 'id': 'osallou',
                 'uid': 1001,
@@ -88,7 +89,16 @@ class SchedulerTest(unittest.TestCase):
             },
             'requirements': {
                 'cpu': 1,
-                'ram': 1
+                'ram': 1,
+                'array': {
+                    # begin:end:step, example: 5:20:1
+                    'values': None,
+                    # task id value according to above definition
+                    'task_id': None,
+                    'nb_tasks': 0,
+                    'nb_tasks_over': 0,
+                    'tasks': []
+                }
             },
             'container': {
                 'image': 'centos:latest',
@@ -278,6 +288,66 @@ class SchedulerTest(unittest.TestCase):
         nb_ports_after = self.scheduler.r.llen(self.scheduler.cfg.redis_prefix+':ports:fake-laptop')
         # Check port is released
         self.assertTrue(nb_ports_before + 1 == nb_ports_after)
+
+
+    def test_task_array_create(self):
+        task = copy.deepcopy(self.sample_task)
+        task['requirements']['array']['values'] = '1:3:1'
+        task_id = self.scheduler.add_task(task)
+        self.assertTrue(task_id > 0)
+        new_task = self.scheduler.db_jobs.find_one({'id': task_id})
+        self.assertTrue(new_task is not None)
+        self.assertTrue(new_task['status']['primary'] == 'pending')
+        nb_tasks = self.scheduler.db_jobs.find().count()
+        self.assertTrue(nb_tasks == 4)
+        return (task_id, new_task['requirements']['array']['tasks'])
+
+    def test_task_array_schedule(self):
+        (task_id, subtasks) = self.test_task_array_create()
+        pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
+        task_list = []
+        for p in pending_tasks:
+            task_list.append(p)
+        queued_tasks = self.scheduler.schedule_tasks(task_list)
+        self.assertTrue(len(queued_tasks) == 4)
+        return queued_tasks
+
+    def test_run_task_array(self):
+        queued_tasks = self.test_task_array_schedule()
+        self.scheduler.run_tasks(queued_tasks)
+        running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
+        self.assertTrue(running_tasks.count() == 4)
+        return running_tasks
+
+    def test_watch_task_array_over(self):
+        self.test_run_task_array()
+        self.watcher.check_running_jobs()
+        # May need a second pass, need to get all child tasks over first to get parent task over
+        self.watcher.check_running_jobs()
+        over_tasks = self.watcher.db_jobsover.find()
+        self.assertTrue(over_tasks.count() == 4)
+
+
+    def test_kill_task_running(self):
+        running_tasks = self.test_run_task_array()
+        task_to_kill = None
+        subtasks_to_kill = []
+        for running_task in running_tasks:
+            if running_task['parent_task_id'] is None:
+                task_to_kill = running_task
+            else:
+                subtasks_to_kill.append(running_task)
+        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:kill', dumps(task_to_kill))
+        self.watcher.kill_tasks([task_to_kill])
+        self.watcher.kill_tasks(subtasks_to_kill)
+        self.watcher.kill_tasks([task_to_kill])
+        running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
+        for task in running_tasks:
+            print str(task)
+        self.assertTrue(running_tasks.count() == 0)
+        over_tasks = self.scheduler.db_jobsover.find()
+        self.assertTrue(over_tasks.count() == 4)
+
 
 
     def test_plugin_get_users(self):

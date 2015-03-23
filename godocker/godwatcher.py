@@ -17,6 +17,7 @@ from yapsy.PluginManager import PluginManager
 from godocker.iSchedulerPlugin import ISchedulerPlugin
 from godocker.iExecutorPlugin import IExecutorPlugin
 from godocker.iAuthPlugin import IAuthPlugin
+from godocker.utils import is_array_task, is_array_child_task
 
 
 
@@ -122,7 +123,21 @@ class GoDWatcher(Daemon):
             if task['status']['primary'] == 'over':
                 continue
             if task['status']['primary'] != 'pending':
-                (task, over) = self.executor.kill_task(task)
+
+                if is_array_task(task):
+                    # If an array parent, only checks if some child tasks are still running
+                    nb_subtasks_running = int(self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtaskrunning'))
+                    if nb_subtasks_running > 0:
+                        over = False
+                        # kill sub tasks
+                        for subtask_id in task['requirements']['array']['tasks']:
+                            task_to_kill = self.r.get(self.cfg.redis_prefix+':job:'+str(task['id']))
+                            self.r.rpush(self.cfg.redis_prefix+':jobs:kill', task_to_kill)
+                    else:
+                        over = True
+                else:
+                    (task, over) = self.executor.kill_task(task)
+
                 self._set_task_exitcode(task, 137)
             else:
                 over = True
@@ -144,8 +159,16 @@ class GoDWatcher(Daemon):
                 del task['_id']
                 self.db_jobsover.insert(task)
                 self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
+                if is_array_task(task):
+                    self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtaskrunning')
+                if is_array_child_task(task):
+                    self.r.decr(self.cfg.redis_prefix+':job:'+str(task['parent_task_id'])+':subtaskrunning')
+                    self.db_jobs.update({'id': task['parent_task_id']}, {'$inc': {'requirements.array.nb_tasks_over': 1}})
+                    task['requirements']['array']['nb_tasks_over']
                 self.update_user_usage(task)
-                self.notify_msg(task)
+
+                if not is_array_child_task(task):
+                    self.notify_msg(task)
             else:
                 # Could not kill, put back in queue
                 self.logger.warn('Executor:Kill:Error:'+str(task['id']))
@@ -160,9 +183,14 @@ class GoDWatcher(Daemon):
         for task in suspend_list:
             if self.stop_daemon:
                 return
+
             status = None
             over = False
             if task['status']['primary'] == 'pending' or task['status']['primary'] == 'over':
+                status = "suspend rejected"
+                over = True
+            elif is_array_task(task):
+                # suspend not supported for array_tasks
                 status = "suspend rejected"
                 over = True
             else:
@@ -308,6 +336,7 @@ class GoDWatcher(Daemon):
             'name': task['meta']['name']
         }))
 
+
     def check_running_jobs(self):
         '''
         Checks if running jobs are over
@@ -326,7 +355,15 @@ class GoDWatcher(Daemon):
                 if not elt:
                     return
                 task = json.loads(elt)
-                (task, over) = self.executor.watch_tasks(task)
+                if is_array_task(task):
+                    # If an array parent, only checks if some child tasks are still running
+                    nb_subtasks_running = int(self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtaskrunning'))
+                    if nb_subtasks_running > 0:
+                        over = False
+                    else:
+                        over = True
+                else:
+                    (task, over) = self.executor.watch_tasks(task)
                 self.logger.debug("TASK:"+str(task['id'])+":"+str(over))
                 if over:
                     # Free ports
@@ -336,6 +373,12 @@ class GoDWatcher(Daemon):
                         self.logger.debug('Port:Back:'+host+':'+str(port))
                         self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                     task['container']['ports'] = []
+
+                    if is_array_task(task):
+                        self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtaskrunning')
+                    if is_array_child_task(task):
+                        self.r.decr(self.cfg.redis_prefix+':job:'+str(task['parent_task_id'])+':subtaskrunning')
+                        self.db_jobs.update({'id': task['parent_task_id']}, {'$inc': {'requirements.array.nb_tasks_over': 1}})
 
                     remove_result = self.db_jobs.remove({'id': task['id']})
                     if remove_result['n'] == 0:
@@ -353,7 +396,8 @@ class GoDWatcher(Daemon):
                     self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
                     self.update_user_usage(task)
                     self._add_to_stats(task)
-                    self.notify_msg(task)
+                    if not is_array_child_task(task):
+                        self.notify_msg(task)
                 else:
                     self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
                     self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))

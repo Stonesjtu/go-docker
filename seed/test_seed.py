@@ -27,6 +27,8 @@ for i in range(10):
     task_id = r.incr(cfg.redis_prefix+':jobs')
     task = {
         'id': task_id,
+        # id of the parent task
+        'parent_task_id': None
         'user': {
             'id': 'osallou',
             'uid': 1001,
@@ -41,7 +43,16 @@ for i in range(10):
         'requirements': {
             'cpu': 1,
             # In Gb
-            'ram': 1
+            'ram': 1,
+            'array': {
+                # begin:end:step, example: 5:20:1
+                'values': None,
+                # task id value according to above definition
+                'task_id': None,
+                'nb_tasks': 0,
+                'nb_tasks_over': 0,
+                'tasks': []
+            }
         },
         'container': {
             'image': 'centos:latest',

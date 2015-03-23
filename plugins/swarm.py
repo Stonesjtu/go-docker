@@ -18,6 +18,22 @@ class Swarm(IExecutorPlugin):
 
         self.docker_client = Client(base_url=self.cfg.docker_url, version=self.cfg.docker_api_version)
 
+
+    def run_all_tasks(self, tasks, callback=None):
+        '''
+        Execute all task list on executor system, all tasks must be executed together
+
+        NOT IMPLEMENTED, will reject all tasks
+
+        :param tasks: list of tasks to run
+        :type tasks: list
+        :param callback: callback function to update tasks status (running/rejected)
+        :type callback: func(running list,rejected list)
+        :return: tuple of submitted and rejected/errored tasks
+        '''
+        self.logger.error('run_all_tasks not implemented')
+        return ([],tasks)
+
     def run_tasks(self, tasks, callback=None):
         '''
         Execute task list on executor system

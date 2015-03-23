@@ -37,6 +37,18 @@ class IExecutorPlugin(IGoDockerPlugin):
         '''
         return (None,None)
 
+    def run_all_tasks(self, tasks, callback=None):
+        '''
+        Execute all task list on executor system, all tasks must be executed together
+
+        :param tasks: list of tasks to run
+        :type tasks: list
+        :param callback: callback function to update tasks status (running/rejected)
+        :type callback: func(running list,rejected list)
+        :return: tuple of submitted and rejected/errored tasks
+        '''
+        return (None,None)
+
     def kill_task(self, task):
         '''
         Kills a running task

@@ -8,6 +8,7 @@ import signal
 import os
 import datetime
 import time
+from copy import deepcopy
 from pymongo import MongoClient
 from pymongo import DESCENDING as pyDESCENDING
 from bson.json_util import dumps
@@ -18,7 +19,7 @@ from godocker.iSchedulerPlugin import ISchedulerPlugin
 from godocker.iExecutorPlugin import IExecutorPlugin
 from godocker.iAuthPlugin import IAuthPlugin
 from godocker.pairtreeStorage import PairtreeStorage
-
+from godocker.utils import is_array_child_task, is_array_task
 
 class GoDScheduler(Daemon):
     '''
@@ -68,7 +69,7 @@ class GoDScheduler(Daemon):
                         self.r.rpush(cfg.redis_prefix+':jobs:suspend', dumps(task))
                     if task['status']['secondary'] == 'resume requested':
                         self.r.rpush(cfg.redis_prefix+':jobs:resume', dumps(task))
-                        
+
                     if task['status']['primary'] == 'pending':
                         self.r.incr(self.cfg.redis_prefix+':jobs:queued')
                         continue
@@ -161,6 +162,34 @@ class GoDScheduler(Daemon):
         task['id'] = task_id
         if not task['status']['primary']:
             task['status']['primary'] = 'pending'
+
+        if is_array_task(task):
+            task['requirements']['array']['nb_tasks'] = 0
+            task['requirements']['array']['nb_tasks_over'] = 0
+            task['requirements']['array']['tasks'] = []
+            array_req = task['requirements']['array']['values'].split(':')
+            array_first = 0
+            array_last = 0
+            array_step = 1
+            if len(array_req) == 1:
+                array_first = 1
+                array_last = int(array_req[0])
+                array_step = 1
+            else:
+                array_first = int(array_req[0])
+                array_last = int(array_req[1])
+                if len(array_req) == 3:
+                    array_step = int(array_req[2])
+            for i in xrange(array_first, array_last + array_step, array_step):
+                subtask = deepcopy(task)
+                subtask['requirements']['array']['nb_tasks'] = 0
+                subtask['requirements']['array']['tasks'] = []
+                subtask['requirements']['array']['task_id'] = i
+                subtask['parent_task_id'] = task['id']
+                subtask['requirements']['array']['values'] = None
+                subtask_id = self.add_task(subtask)
+                task['requirements']['array']['nb_tasks'] += 1
+                task['requirements']['array']['tasks'].append(subtask_id)
         self.db_jobs.insert(task)
         return task_id
 
@@ -179,6 +208,8 @@ class GoDScheduler(Daemon):
     def _update_scheduled_task_status(self, running_tasks, rejected_tasks):
         if running_tasks:
             for r in running_tasks:
+                if is_array_child_task(r):
+                    self.r.incr(self.cfg.redis_prefix+':job:'+str(r['parent_task_id'])+':subtaskrunning')
                 self.r.rpush(self.cfg.redis_prefix+':jobs:running', r['id'])
                 #self.r.set('god:job:'+str(r['id'])+':container', r['container']['id'])
                 r['status']['primary'] = 'running'
@@ -210,8 +241,13 @@ class GoDScheduler(Daemon):
         script_file = self.store.add_file(task, 'cmd.sh', task['command']['cmd'])
         os.chmod(script_file, 0755)
         task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
-            # Add task directory
+        # Add task directory
         task_dir = self.store.get_task_dir(task)
+        if is_array_child_task(task):
+            task_dir = os.path.join(task_dir, str(task['requirements']['array']['task_id']))
+            if not os.path.exists(task_dir):
+                os.makedirs(task_dir)
+                os.chmod(task_dir, 0777)
         task['container']['volumes'].append({
             'name': 'go-docker',
             'acl': 'rw',
@@ -243,6 +279,29 @@ class GoDScheduler(Daemon):
         cmd += "fi\n"
         cmd += "sed -i  \"s/Defaults\\s\\+requiretty/#/g\" /etc/sudoers\n"
         cmd += "cd /mnt/go-docker\n"
+        array_cmd = ""
+        if 'array' in task['requirements'] and task['requirements']['array']['values']:
+            array_req = task['requirements']['array']['values'].split(':')
+            array_first = 0
+            array_last = 0
+            array_step = 1
+            if len(array_req) == 1:
+                array_first = 1
+                array_last = int(array_req[0])
+                array_step = 1
+            else:
+                array_first = int(array_req[0])
+                array_last = int(array_req[1])
+                if len(array_req) == 3:
+                    array_step = int(array_req[2])
+            cmd += "export GOGOCKER_TASK_ID="+str(task['requirements']['array']['task_id'])
+            array_cmd += " ; export GOGOCKER_TASK_ID="+str(task['requirements']['array']['task_id'])
+            cmd += "export GOGOCKER_TASK_FIRST="+str(array_first)
+            array_cmd += " ; export GOGOCKER_TASK_FIRST="+str(array_first)
+            cmd += "export GOGOCKER_TASK_LAST="+str(array_last)
+            array_cmd += " ; export GOGOCKER_TASK_LAST="+str(array_last)
+            cmd += "export GOGOCKER_TASK_STEP="+str(array_step)
+            array_cmd += " ; export GOGOCKER_TASK_STEP="+str(array_step)
         cmd += "export GODOCKER_JID="+str(task['id'])+"\n"
         cmd += "export GODOCKER_PWD=/mnt/go-docker\n"
         vol_home = "export GODOCKER_HOME=/mnt/go-docker"
@@ -270,7 +329,7 @@ class GoDScheduler(Daemon):
             cmd +="/usr/sbin/sshd -f /etc/ssh/sshd_config -D\n"
         else:
             if not task['container']['root']:
-                cmd += "sudo -u "+user_id+" bash -c \""+vol_home+" ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\"\n"
+                cmd += "sudo -u "+user_id+" bash -c \""+vol_home + array_cmd + " ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\"\n"
             else:
                 cmd += "/mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\n"
         cmd += "ret_code=$?\n"
@@ -287,8 +346,8 @@ class GoDScheduler(Daemon):
         for task in queued_list:
             # Create run script
             self._create_command(task)
-            self.logger.debug("Execute:Task:Run:Try")
-            self.logger.debug(str(task))
+            #self.logger.debug("Execute:Task:Run:Try")
+            #self.logger.debug(str(task))
 
         (running_tasks, rejected_tasks) = self.executor.run_tasks(queued_list, self._update_scheduled_task_status)
         self._update_scheduled_task_status(running_tasks, rejected_tasks)
