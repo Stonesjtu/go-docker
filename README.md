@@ -25,11 +25,11 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 * job submission
 * job watch (check if job is over)
 * kill job
+* suspend/resume job
 
 ### TODO
 
 * API documentation
-* suspend/resume jobs
 * Reschedule a job
 
 ## LICENSE
