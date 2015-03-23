@@ -1,5 +1,6 @@
 from godocker.iAuthPlugin import IAuthPlugin
 import logging
+import pwd
 
 import ldap
 
@@ -23,25 +24,17 @@ class FakeAuth(IAuthPlugin):
                   'homeDirectory': userHomeDirectory
                   }
         '''
-
-        users = {}
-        users['osallou'] = {
-                 'id' : 'osallou',
-                 'uidNumber': 1001,
-                 'gidNumber': 1001,
-                 'email': 'olivier.sallou@irisa.fr',
-                 'homeDirectory': '/home/osallou'
-               }
-        users['www-data'] = {
-                 'id' : 'www-data',
-                 'uidNumber': 33,
-                 'gidNumber': 33,
-                 'email': 'olivier.sallou@irisa.fr',
-                 'homeDirectory': '/tmp'
-               }
-        if login not in users:
+        if login == 'fake':
             return None
-        return users[login]
+        user = {
+                 'id' :login,
+                 'uidNumber': pwd.getpwnam( login ).pw_uid,
+                 'gidNumber': pwd.getpwnam( login ).pw_gid,
+                 'email': login+'@fake.org',
+                 'homeDirectory': '/home/'+login
+               }
+        print str(user)
+        return user
 
 
 
