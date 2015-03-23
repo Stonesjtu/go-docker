@@ -36,6 +36,11 @@ class FakeExecutor(IExecutorPlugin):
         rejected_tasks = []
         i = 0
         for task in tasks:
+            if task['parent_task_id']:
+                # Virtual task for a task array, do not really execute
+                running_tasks.append(task)
+                self.logger.debug('Execute:Job:'+str(task['id'])+':Skip:Array')
+                continue
             if i < 5:
                 self.logger.debug("Run:Fake:task:run:"+str(task['id']))
                 running_tasks.append(task)

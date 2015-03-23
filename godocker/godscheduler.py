@@ -241,6 +241,7 @@ class GoDScheduler(Daemon):
 
         # Add task directory
         task_dir = self.store.get_task_dir(task)
+        parent_task = None
         if is_array_child_task(task):
             parent_task = self.db_jobs.find_one({'id': task['parent_task_id']})
             task_dir = self.store.get_task_dir(parent_task)
@@ -248,7 +249,7 @@ class GoDScheduler(Daemon):
             if not os.path.exists(task_dir):
                 os.makedirs(task_dir)
                 os.chmod(task_dir, 0777)
-            script_file = self.store.add_file(task, 'cmd.sh', task['command']['cmd'], str(task['requirements']['array']['task_id']))
+            script_file = self.store.add_file(parent_task, 'cmd.sh', task['command']['cmd'], str(task['requirements']['array']['task_id']))
             os.chmod(script_file, 0755)
             task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
         else:
@@ -288,8 +289,8 @@ class GoDScheduler(Daemon):
         cmd += "sed -i  \"s/Defaults\\s\\+requiretty/#/g\" /etc/sudoers\n"
         cmd += "cd /mnt/go-docker\n"
         array_cmd = ""
-        if 'array' in task['requirements'] and task['requirements']['array']['values']:
-            array_req = task['requirements']['array']['values'].split(':')
+        if parent_task:
+            array_req = parent_task['requirements']['array']['values'].split(':')
             array_first = 0
             array_last = 0
             array_step = 1
@@ -310,6 +311,7 @@ class GoDScheduler(Daemon):
             array_cmd += " ; export GOGOCKER_TASK_LAST="+str(array_last)
             cmd += "export GOGOCKER_TASK_STEP="+str(array_step)
             array_cmd += " ; export GOGOCKER_TASK_STEP="+str(array_step)
+
         cmd += "export GODOCKER_JID="+str(task['id'])+"\n"
         cmd += "export GODOCKER_PWD=/mnt/go-docker\n"
         vol_home = "export GODOCKER_HOME=/mnt/go-docker"
@@ -345,9 +347,9 @@ class GoDScheduler(Daemon):
         cmd += "exit $ret_code\n"
 
         if is_array_child_task(task):
-            script_file = self.store.add_file(task, 'godocker.sh', cmd)
+            script_file = self.store.add_file(parent_task, 'godocker.sh', cmd, str(task['requirements']['array']['task_id']))
             os.chmod(script_file, 0755)
-            task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file), str(task['requirements']['array']['task_id']))
+            task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
         else:
             script_file = self.store.add_file(task, 'godocker.sh', cmd)
             os.chmod(script_file, 0755)

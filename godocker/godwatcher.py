@@ -125,9 +125,10 @@ class GoDWatcher(Daemon):
             if task['status']['primary'] != 'pending':
 
                 if is_array_task(task):
+                    print str(task)
                     # If an array parent, only checks if some child tasks are still running
-                    nb_subtasks_running = int(self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtaskrunning'))
-                    if nb_subtasks_running > 0:
+                    nb_subtasks_running = self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtaskrunning')
+                    if nb_subtasks_running and int(nb_subtasks_running) > 0:
                         over = False
                         # kill sub tasks
                         for subtask_id in task['requirements']['array']['tasks']:
@@ -180,7 +181,9 @@ class GoDWatcher(Daemon):
                     self.r.decr(self.cfg.redis_prefix+':job:'+str(task['parent_task_id'])+':subtaskrunning')
                     self.db_jobs.update({'id': task['parent_task_id']}, {'$inc': {'requirements.array.nb_tasks_over': 1}})
                     task['requirements']['array']['nb_tasks_over']
-                self.update_user_usage(task)
+
+                if not is_array_task(task):
+                    self.update_user_usage(task)
 
                 if not is_array_child_task(task):
                     self.notify_msg(task)
@@ -410,8 +413,9 @@ class GoDWatcher(Daemon):
                     self.db_jobsover.insert(task)
                     #self.r.del('god:job:'+str(task['id'])+':container'
                     self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
-                    self.update_user_usage(task)
-                    self._add_to_stats(task)
+                    if not is_array_task(task):
+                        self.update_user_usage(task)
+                        self._add_to_stats(task)
                     if not is_array_child_task(task):
                         self.notify_msg(task)
                 else:

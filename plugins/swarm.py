@@ -47,6 +47,11 @@ class Swarm(IExecutorPlugin):
         running_tasks = []
         error_tasks = []
         for task in tasks:
+            if task['parent_task_id']:
+                # Virtual task for a task array, do not really execute
+                running_tasks.append(task)
+                self.logger.debug('Execute:Job:'+str(task['id'])+':Skip:Array')
+                continue
             container = None
             try:
                 #job  = json.loads(task)
