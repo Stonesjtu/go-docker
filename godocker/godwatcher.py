@@ -376,6 +376,7 @@ class GoDWatcher(Daemon):
 
                     if is_array_task(task):
                         self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtaskrunning')
+                        task['requirements']['array']['nb_tasks_over'] = task['requirements']['array']['nb_tasks']
                     if is_array_child_task(task):
                         self.r.decr(self.cfg.redis_prefix+':job:'+str(task['parent_task_id'])+':subtaskrunning')
                         self.db_jobs.update({'id': task['parent_task_id']}, {'$inc': {'requirements.array.nb_tasks_over': 1}})

@@ -327,7 +327,6 @@ class SchedulerTest(unittest.TestCase):
         over_tasks = self.watcher.db_jobsover.find()
         self.assertTrue(over_tasks.count() == 4)
 
-
     def test_kill_task_running(self):
         running_tasks = self.test_run_task_array()
         task_to_kill = None
@@ -342,8 +341,6 @@ class SchedulerTest(unittest.TestCase):
         self.watcher.kill_tasks(subtasks_to_kill)
         self.watcher.kill_tasks([task_to_kill])
         running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
-        for task in running_tasks:
-            print str(task)
         self.assertTrue(running_tasks.count() == 0)
         over_tasks = self.scheduler.db_jobsover.find()
         self.assertTrue(over_tasks.count() == 4)
