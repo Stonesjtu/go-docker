@@ -140,9 +140,24 @@ class GoDWatcher(Daemon):
 
                 self._set_task_exitcode(task, 137)
             else:
-                over = True
-                self._set_task_exitcode(task, 137)
-                self.r.decr(self.cfg.redis_prefix+':jobs:queued')
+
+                if is_array_task(task):
+                    # If an array parent, only checks if some child tasks are still running
+                    nb_subtasks_running = int(self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtaskrunning'))
+                    if nb_subtasks_running > 0:
+                        over = False
+                        # kill sub tasks
+                        for subtask_id in task['requirements']['array']['tasks']:
+                            task_to_kill = self.r.get(self.cfg.redis_prefix+':job:'+str(task['id']))
+                            self.r.rpush(self.cfg.redis_prefix+':jobs:kill', task_to_kill)
+                    else:
+                        over = True
+                        self._set_task_exitcode(task, 137)
+                        self.r.decr(self.cfg.redis_prefix+':jobs:queued')
+                else:
+                    over = True
+                    self._set_task_exitcode(task, 137)
+                    self.r.decr(self.cfg.redis_prefix+':jobs:queued')
             # If not over, executor could not kill the task
             if over:
                 self.logger.debug('Executor:Kill:Success:'+str(task['id']))

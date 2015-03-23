@@ -25,7 +25,7 @@ class PairtreeStorage(IStorage):
         task_dir = os.path.join(self.cfg.shared_dir,'tasks','pairtree_root',pairtree.id2path(str(task['id'])),'task')
         return task_dir
 
-    def add_file(self, task, name, content):
+    def add_file(self, task, name, content, path=''):
         '''
         Add content to a file with content in task directory
 
@@ -35,6 +35,8 @@ class PairtreeStorage(IStorage):
         :type name: str
         :param content: file content
         :type content: str
+        :param path: relative sub path
+        :type path: str
         :return: path to the file
         '''
         task_dir = self.get_task_dir(task)
@@ -43,6 +45,9 @@ class PairtreeStorage(IStorage):
         else:
             task_obj = self.store.get_object(str(task['id']))
 
-        task_obj.add_bytestream(name, content, path='task')
+        subpath = 'task'
+        if path:
+            subpath = os.path.join(subpath, path)
+        task_obj.add_bytestream(name, content, path=subpath)
         os.chmod(task_dir, 0777)
-        return os.path.join(task_dir, name)
+        return os.path.join(task_dir, path, name)
