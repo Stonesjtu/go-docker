@@ -158,6 +158,10 @@ Mapped port will be available in task description.
 
 The user public key will be copied in the container for access. If not set, user can cannot using his user id and his API Key as password.
 
+It is possible to get SSH connection to the container via a Web SSH proxy such as GateOne (https://registry.hub.docker.com/u/liftoff/gateone/), running on a public IP (https).
+Nodes name should be known in the network (dns) to access them through the proxy.
+
+
 ## Job arrays
 
 Job arrays allows to execute multiple jobs with same parameters. A
