@@ -79,7 +79,7 @@ class Swarm(IExecutorPlugin):
                     # If using 1 Docker instance, for tests, intead of swarm,
                     # some fields are not present, or not at the same place
                     # Use required fields and place them like in swarm
-                    job['container']['meta']['Node'] = {'Name': job['container']['meta']['Config']['Hostname']}
+                    job['container']['meta']['Node'] = {'Name': 'localhost'}
 
                 port_mapping = {}
                 for port in port_list:
