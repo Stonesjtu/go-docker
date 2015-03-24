@@ -343,7 +343,7 @@ class GoDScheduler(Daemon):
             cmd +="echo \"" + task['user']['credentials']['public'] + "\" > "+ssh_dir+"/authorized_keys\n"
             cmd +="chmod 600 " + ssh_dir +"/authorized_keys\n"
             if not task['container']['root']:
-                cmd +="chown -R "+user_id+":"+user_id+" /home/godocker\n"
+                cmd +="chown -R "+user_id+":"+user_id+" /home/"+user_id+"\n"
                 cmd +="chmod 644 /home/"+user_id+"/.ssh/authorized_keys\n"
             cmd +="/usr/sbin/sshd -f /etc/ssh/sshd_config -D\n"
         else:
