@@ -1,6 +1,7 @@
 godshared
 nosetests.xml
 coverage.xml
+go-d.ini
 
 # log files
 *.log
