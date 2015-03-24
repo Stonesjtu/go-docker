@@ -156,6 +156,8 @@ For interactive sessions, the selected image MUST have the openssh server packag
 
 Mapped port will be available in task description.
 
+The user public key will be copied in the container for access. If not set, user can cannot using his user id and his API Key as password.
+
 ## Job arrays
 
 Job arrays allows to execute multiple jobs with same parameters. A
