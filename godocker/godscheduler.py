@@ -278,13 +278,22 @@ class GoDScheduler(Daemon):
         cmd += "if [ -n \"$(command -v sudo)\" ]; then\n"
         cmd += " echo \"sudo installed\"\n"
         cmd += "else\n"
-        cmd += "if [ -n \"$(command -v yum)\" ]; then\n"
-        cmd += "  yum -y install sudo\n"
-        cmd += "fi\n"
-        cmd += "if [ -n \"$(command -v apt-get)\" ]; then\n"
-        cmd += "  export DEBIAN_FRONTEND=noninteractive\n"
-        cmd += "  apt-get -y install sudo\n"
-        cmd += "fi\n"
+
+        if not self.cfg.network_disabled:
+            # If deps not installed and we have network access
+            cmd += "if [ -n \"$(command -v yum)\" ]; then\n"
+            cmd += "  yum -y install sudo\n"
+            cmd += "fi\n"
+            cmd += "if [ -n \"$(command -v apt-get)\" ]; then\n"
+            cmd += "  export DEBIAN_FRONTEND=noninteractive\n"
+            cmd += "  apt-get -y install sudo\n"
+            cmd += "fi\n"
+        else:
+            # If deps are not installed and we have no network access
+            cmd += "echo \"sudo not installed, exiting!\" > /mnt/go-docker/god.log"
+            cmd += "chown -R "+user_id+":"+user_id+" /mnt/go-docker/*\n"
+            cmd += "exit 1"
+
         cmd += "fi\n"
         cmd += "sed -i  \"s/Defaults\\s\\+requiretty/#/g\" /etc/sudoers\n"
         cmd += "cd /mnt/go-docker\n"
