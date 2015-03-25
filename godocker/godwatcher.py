@@ -8,6 +8,7 @@ import signal
 import datetime
 import time
 import os
+import socket
 from pymongo import MongoClient
 from bson.json_util import dumps
 from bson.objectid import ObjectId
@@ -492,14 +493,35 @@ class GoDWatcher(Daemon):
         GoDWatcher.SIGINT = True
         self.logger.warn('User request to exit')
 
+    def update_status(self):
+        dt = datetime.datetime.now()
+        timestamp = time.mktime(dt.timetuple())
+        if not self.hostname:
+            hostname = socket.gethostbyaddr(socket.gethostname())[0]
+            host_exists = True
+            index = 1
+            if os.getenv('GOD_PROCID'):
+                index = os.environ['GOD_PROCID']
+            else:
+                while host_exists:
+                    if self.r.get(self.cfg.redis_prefix+':procs:'+hostname+'-'+str(index)) is not None:
+                        index += 1
+                    else:
+                        host_exists = False
+            self.hostname = hostname + '-' + str(index)
+        self.r.hset(self.cfg.redis_prefix+':procs', self.hostname, 'watcher')
+        self.r.set(self.cfg.redis_prefix+':procs:'+self.hostname, timestamp)
+
     def run(self, loop=True):
         '''
         Main executor loop
 
         '''
+        self.hostname = None
         infinite = True
         while infinite and True and not GoDWatcher.SIGINT:
             # Schedule timer
+            self.update_status()
             self.manage_tasks()
             time.sleep(2)
             if not loop:

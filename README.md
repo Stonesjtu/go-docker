@@ -98,6 +98,23 @@ Once application is configured, it is necessary, the first time, to initialize t
 
   python go-d-scheduler.py init
 
+
+## Running
+
+To identify processes, each process must have a unique id. It is possible to set this id with the environment variable GOD_PROCID.
+This variable is needed when multiple processes are executed on the same server and to set a process id (one watcher for example) identical after each restart.
+If not set, an incremental PROCID will be set.
+
+    export GOD_PROCID = 1
+    python go-d-scheduler start
+
+    export GOD_PROCID = 2
+    python go-d-watcher start
+
+
+For debug, it is possible to run processes in foreground with run option, or only one time (no loop) with option once.
+
+
 ## Plugins
 
 Tool support plugins for Authorization, Scheduling and Execution. A few ones are provided but it is easy to create new one, following existing ones using Yapsy.
