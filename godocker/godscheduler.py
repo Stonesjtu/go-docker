@@ -21,6 +21,7 @@ from godocker.iExecutorPlugin import IExecutorPlugin
 from godocker.iAuthPlugin import IAuthPlugin
 from godocker.pairtreeStorage import PairtreeStorage
 from godocker.utils import is_array_child_task, is_array_task
+import godocker.utils as godutils
 
 class GoDScheduler(Daemon):
     '''
@@ -64,17 +65,17 @@ class GoDScheduler(Daemon):
                 self.r.set(self.cfg.redis_prefix+':jobs', max_task_id)
                 # Set running and kill tasks
                 for task in jobs_mongo:
-                    if task['status']['secondary'] == 'kill requested':
+                    if task['status']['secondary'] == godutils.STATUS_SECONDARY_KILL_REQUESTED:
                         self.r.rpush(cfg.redis_prefix+':jobs:kill', dumps(task))
-                    if task['status']['secondary'] == 'suspend requested':
+                    if task['status']['secondary'] == godutils.STATUS_SECONDARY_SUSPEND_REQUESTED:
                         self.r.rpush(cfg.redis_prefix+':jobs:suspend', dumps(task))
-                    if task['status']['secondary'] == 'resume requested':
+                    if task['status']['secondary'] == godutils.STATUS_SECONDARY_RESUME_REQUESTED:
                         self.r.rpush(cfg.redis_prefix+':jobs:resume', dumps(task))
 
-                    if task['status']['primary'] == 'pending':
+                    if task['status']['primary'] == godutils.STATUS_PENDING:
                         self.r.incr(self.cfg.redis_prefix+':jobs:queued')
                         continue
-                    if task['status']['primary'] == 'running':
+                    if task['status']['primary'] == godutils.STATUS_RUNNING:
                         self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
                         self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
                         continue
@@ -162,7 +163,7 @@ class GoDScheduler(Daemon):
         self.r.incr(self.cfg.redis_prefix+':jobs:queued')
         task['id'] = task_id
         if not task['status']['primary']:
-            task['status']['primary'] = 'pending'
+            task['status']['primary'] = godutils.STATUS_PENDING
 
         if is_array_task(task):
             task['requirements']['array']['nb_tasks'] = 0
@@ -213,7 +214,7 @@ class GoDScheduler(Daemon):
                     self.r.incr(self.cfg.redis_prefix+':job:'+str(r['parent_task_id'])+':subtaskrunning')
                 self.r.rpush(self.cfg.redis_prefix+':jobs:running', r['id'])
                 #self.r.set('god:job:'+str(r['id'])+':container', r['container']['id'])
-                r['status']['primary'] = 'running'
+                r['status']['primary'] = godutils.STATUS_RUNNING
                 r['status']['secondary'] = None
                 dt = datetime.datetime.now()
                 r['status']['date_running'] = time.mktime(dt.timetuple())
@@ -399,7 +400,7 @@ class GoDScheduler(Daemon):
         #for i in range(min(pending_tasks_length, self.cfg.max_job_pop)):
         #    pending_tasks.append(self.r.lpop('jobs:pending'))
 
-        pending_tasks = self.db_jobs.find({'status.primary': 'pending'})
+        pending_tasks = self.db_jobs.find({'status.primary': godutils.STATUS_PENDING})
         task_list = []
         for p in pending_tasks:
             if self.stop_daemon:

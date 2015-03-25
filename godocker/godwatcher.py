@@ -19,6 +19,7 @@ from godocker.iSchedulerPlugin import ISchedulerPlugin
 from godocker.iExecutorPlugin import IExecutorPlugin
 from godocker.iAuthPlugin import IAuthPlugin
 from godocker.utils import is_array_task, is_array_child_task
+import godocker.utils as godutils
 
 
 
@@ -121,9 +122,9 @@ class GoDWatcher(Daemon):
         for task in task_list:
             if self.stop_daemon:
                 return
-            if task['status']['primary'] == 'over':
+            if task['status']['primary'] == godutils.STATUS_OVER:
                 continue
-            if task['status']['primary'] != 'pending':
+            if task['status']['primary'] != godutils.STATUS_PENDING:
 
                 if is_array_task(task):
                     print str(task)
@@ -169,8 +170,8 @@ class GoDWatcher(Daemon):
                     self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                 task['container']['ports'] = []
                 self.db_jobs.remove({'id': task['id']})
-                task['status']['primary'] = 'over'
-                task['status']['secondary'] = 'killed'
+                task['status']['primary'] = godutils.STATUS_OVER
+                task['status']['secondary'] = godutils.STATUS_SECONDARY_KILLED
                 dt = datetime.datetime.now()
                 task['status']['date_over'] = time.mktime(dt.timetuple())
                 del task['_id']
@@ -205,20 +206,20 @@ class GoDWatcher(Daemon):
 
             status = None
             over = False
-            if task['status']['primary'] == 'pending' or task['status']['primary'] == 'over':
-                status = "suspend rejected"
+            if task['status']['primary'] == godutils.STATUS_PENDING or task['status']['primary'] == godutils.STATUS_OVER:
+                status = godutils.STATUS_SECONDARY_SUSPEND_REJECTED
                 over = True
             elif is_array_task(task):
                 # suspend not supported for array_tasks
-                status = "suspend rejected"
+                status = godutils.STATUS_SECONDARY_SUSPEND_REJECTED
                 over = True
             else:
                 (task, over) = self.executor.suspend_task(task)
-                status = "suspended"
+                status = godutils.STATUS_SECONDARY_SUSPENDED
             if over:
                 task['status']['secondary'] = status
                 self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
-                if task['status']['primary'] != 'over':
+                if task['status']['primary'] != godutils.STATUS_OVER:
                     self.db_jobs.update({'id' : task['id']},{'$set': {'status.secondary': status}})
             else:
                 # Could not kill, put back in queue
@@ -238,16 +239,16 @@ class GoDWatcher(Daemon):
                 return
             status = None
             over = False
-            if task['status']['primary'] == 'pending' or task['status']['primary'] == 'over' or task['status']['secondary'] != 'resume requested':
-                status = "resume rejected"
+            if task['status']['primary'] == godutils.STATUS_PENDING or task['status']['primary'] == godutils.STATUS_OVER or task['status']['secondary'] != 'resume requested':
+                status = godutils.STATUS_SECONDARY_RESUME_REJECTED
                 over = True
             else:
                 (task, over) = self.executor.resume_task(task)
-                status = "resumed"
+                status = godutils.STATUS_SECONDARY_RESUMED
             if over:
                 task['status']['secondary'] = status
                 self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
-                if task['status']['primary'] != 'over':
+                if task['status']['primary'] != godutils.STATUS_OVER:
                     self.db_jobs.update({'id' : task['id']},{'$set': {'status.secondary': status}})
             else:
                 # Could not resumed, put back in queue
@@ -346,8 +347,8 @@ class GoDWatcher(Daemon):
         if not self.cfg.live_events:
             return
         status = task['status']['primary']
-        if task['status']['secondary'] == 'killed':
-            status = 'killed'
+        if task['status']['secondary'] == godutils.STATUS_SECONDARY_KILLED:
+            status = godutils.STATUS_SECONDARY_KILLED
         self.r.publish(self.cfg.redis_prefix+':jobs:pubsub', dumps({
             'user': task['user']['id'],
             'id': task['id'],
@@ -405,7 +406,7 @@ class GoDWatcher(Daemon):
                         # Not present anymore, may have been removed already
                         # Remove from jobs over to replace it
                         self.db_jobsover.remove({'id': task['id']})
-                    task['status']['primary'] = 'over'
+                    task['status']['primary'] = godutils.STATUS_OVER
                     task['status']['secondary'] = ''
                     dt = datetime.datetime.now()
                     task['status']['date_over'] = time.mktime(dt.timetuple())
