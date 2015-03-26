@@ -10,6 +10,63 @@ class GoAuth(IAuthPlugin):
     def get_type(self):
         return "Auth"
 
+    def get_user(self, login):
+        '''
+        Get user information
+
+        Returns a user dict:
+                 {
+                  'id' : userId,
+                  'uidNumber': systemUserid,
+                  'gidNumber': systemGroupid,
+                  'email': userEmail,
+                  'homeDirectory': userHomeDirectory
+                  }
+        '''
+        user = None
+        try:
+            ldap_host = self.cfg.ldap_host
+            ldap_port = self.cfg.ldap_port
+            con = ldap.initialize('ldap://' + ldap_host + ':' + str(ldap_port))
+        except Exception, err:
+            self.logger.error(str(err))
+            return None
+        ldap_dn = self.cfg.ldap_dn
+        base_dn = 'ou=People,' + ldap_dn
+        filter = "(&""(|(uid=" + login + ")(mail=" + login + ")))"
+        try:
+            con.simple_bind_s()
+            attrs = ['mail', 'uid', 'uidNumber', 'gidNumber', 'homeDirectory']
+            results = con.search_s(base_dn, ldap.SCOPE_SUBTREE, filter, attrs)
+            if results:
+                ldapMail = None
+                userId = None
+                uidNumber = None
+                gidNumber = None
+                homeDirectory = None
+                user_dn = None
+                for dn, entry in results:
+                  user_dn = str(dn)
+                  if 'uid' not in entry:
+                    self.logger.error('Uid not set for user '+user)
+                  userId = entry['uid'][0]
+                  uidNumber = entry['uidNumber'][0]
+                  gidNumber = entry['gidNumber'][0]
+                  homeDirectory = entry['homeDirectory'][0]
+                  if 'mail' in entry:
+                    ldapMail = entry['mail'][0]
+
+                user = {
+                      'id' : userId,
+                      'uidNumber': uidNumber,
+                      'gidNumber': gidNumber,
+                      'email': ldapMail,
+                      'homeDirectory': homeDirectory
+                    }
+        except Exception as err:
+            self.logger.error(str(err))
+        return user
+
     def bind_credentials(self, login, password):
         '''
         Check user credentials and return user info

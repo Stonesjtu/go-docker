@@ -17,6 +17,21 @@ class IAuthPlugin(IGoDockerPlugin):
         '''
         return None
 
+    def get_user(self, login):
+        '''
+        Get user information
+
+        Returns a user dict:
+                 {
+                  'id' : userId,
+                  'uidNumber': systemUserid,
+                  'gidNumber': systemGroupid,
+                  'email': userEmail,
+                  'homeDirectory': userHomeDirectory
+                  }
+        '''
+        return None
+
     def bind_api(self, apikey):
         '''
         Check api key and return user info (same than bind_credentials)

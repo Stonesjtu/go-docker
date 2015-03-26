@@ -33,10 +33,31 @@ class FakeAuth(IAuthPlugin):
                  'email': login+'@fake.org',
                  'homeDirectory': '/home/'+login
                }
-        print str(user)
         return user
 
+    def get_user(self, login):
+        '''
+        Get user information
 
+        Returns a user dict:
+                 {
+                  'id' : userId,
+                  'uidNumber': systemUserid,
+                  'gidNumber': systemGroupid,
+                  'email': userEmail,
+                  'homeDirectory': userHomeDirectory
+                  }
+        '''
+        if login == 'fake':
+            return None
+        user = {
+                 'id' :login,
+                 'uidNumber': pwd.getpwnam( login ).pw_uid,
+                 'gidNumber': pwd.getpwnam( login ).pw_gid,
+                 'email': login+'@fake.org',
+                 'homeDirectory': '/home/'+login
+               }
+        return user
 
     def bind_api(self, apikey):
         '''
