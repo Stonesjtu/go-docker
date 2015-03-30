@@ -1,5 +1,5 @@
 
-
+STATUS_CREATED = 'created'
 STATUS_PENDING = 'pending'
 STATUS_RUNNING = 'running'
 STATUS_RESCHEDULE = 'reschedule'
