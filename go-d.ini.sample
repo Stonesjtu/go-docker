@@ -21,6 +21,14 @@ network_disabled: False
 # Number of days of inactivity after which user usage should be reset
 user_reset_usage_duration: 30
 
+# Constraints #########################
+
+constraints: [
+    { name: 'storage', value: 'ssd,disk' },
+    { name: 'device', value: 'gpu' }
+]
+
+
 # Live notifications ##################
 # Use live notifications on tasks, needs Go-D-Live server
 live_events: False

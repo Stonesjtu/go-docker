@@ -52,7 +52,8 @@ for i in range(10):
                 'nb_tasks': 0,
                 'nb_tasks_over': 0,
                 'tasks': []
-            }
+            },
+            'label': None
         },
         'container': {
             'image': 'centos:latest',
