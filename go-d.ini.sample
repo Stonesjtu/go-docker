@@ -22,7 +22,7 @@ network_disabled: False
 user_reset_usage_duration: 30
 
 # Constraints #########################
-
+# See Docker labels
 constraints: [
     { name: 'storage', value: 'ssd,disk' },
     { name: 'device', value: 'gpu' }
