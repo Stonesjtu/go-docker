@@ -43,6 +43,22 @@ class IGoDockerPlugin(IPlugin):
         return self.users_handler.find({'id': {'$in' : user_id_list}})
 
 
+    def get_running_tasks(self, start=0, stop=-1):
+        '''
+        Get all tasks running
+
+        :param start: first task index
+        :type start: int
+        :param stop: last task index (-1 = all)
+        :type stop: int
+        '''
+        running_tasks = []
+        tasks = self.redis_handler.lrange(self.cfg.redis_prefix+':jobs:running', start, stop)
+        for task in tasks:
+            running_tasks.append(json.loads(task))
+        return running_tasks
+
+
     def kill_tasks(self, task_list):
         '''
         Set input tasks in kill queue
