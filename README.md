@@ -67,6 +67,8 @@ container nodes.
 
 In development
 
+Documentation: http://go-docker.readthedocs.org/en/latest/index.html
+
 [![Build Status](https://drone.io/bitbucket.org/osallou/go-docker/status.png)](https://drone.io/bitbucket.org/osallou/go-docker/latest)
 
 [![codecov.io](https://codecov.io/bitbucket/osallou/go-docker/coverage.svg?branch=master)](https://codecov.io/bitbucket/osallou/go-docker?branch=master)
