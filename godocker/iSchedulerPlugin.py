@@ -1,6 +1,9 @@
 from godocker.IGoDockerPlugin import IGoDockerPlugin
 
 class ISchedulerPlugin(IGoDockerPlugin):
+    '''
+    Scheduler plugins interface
+    '''
 
 
     def schedule(self, tasks, users):

@@ -1,6 +1,9 @@
 from godocker.IGoDockerPlugin import IGoDockerPlugin
 
 class IAuthPlugin(IGoDockerPlugin):
+    '''
+    ACL plugins interface
+    '''
 
     def bind_credentials(self, login, password):
         '''

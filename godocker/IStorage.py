@@ -1,6 +1,9 @@
 
 
 class IStorage(object):
+    '''
+    Storage base interface
+    '''
 
     def __init__(self, cfg):
         pass

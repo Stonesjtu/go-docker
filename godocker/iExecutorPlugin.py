@@ -1,6 +1,9 @@
 from godocker.IGoDockerPlugin import IGoDockerPlugin
 
 class IExecutorPlugin(IGoDockerPlugin):
+    '''
+    Executor plugins interface
+    '''
 
 
     def suspend_task(self, task):

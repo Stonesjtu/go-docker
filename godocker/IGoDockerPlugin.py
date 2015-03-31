@@ -3,6 +3,9 @@ from bson.json_util import dumps
 import json
 
 class IGoDockerPlugin(IPlugin):
+    '''
+    Base plugin reference
+    '''
 
     def set_redis_handler(self, redis_handler):
         self.redis_handler = redis_handler
@@ -57,6 +60,47 @@ class IGoDockerPlugin(IPlugin):
         for task in tasks:
             running_tasks.append(json.loads(task))
         return running_tasks
+
+    def is_task_running(self, task_id):
+        '''
+        Checks if task is running
+
+        :param task_id: task identifier
+        :type task_id: int
+        :return: bool
+        '''
+        task = self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
+        if task is not None:
+            return True
+        return False
+
+    def is_task_over(self, task_id):
+        '''
+        Checks if task is over
+
+        :param task_id: task identifier
+        :type task_id: int
+        :return: bool
+        '''
+        task = self.db_jobsover.find_one({'id': task_id})
+        if task is not None:
+            return True
+        return False
+
+    def is_task_running_or_over(self, task_id):
+        '''
+        Checks if task is running or over
+
+        :param task_id: task identifier
+        :type task_id: int
+        :return: bool
+        '''
+        if self.is_task_running(task_id):
+            return True
+        if self.is_task_over(task_id):
+            return True
+        return False
+
 
 
     def kill_tasks(self, task_list):
