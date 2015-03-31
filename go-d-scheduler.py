@@ -17,7 +17,7 @@ if __name__ == "__main__":
                 if 'start' == sys.argv[1]:
                         daemon.start()
                 elif 'stop' == sys.argv[1]:
-                        daemin.stop_daemon = True
+                        daemon.stop_daemon = True
                         daemon.stop()
                 elif 'restart' == sys.argv[1]:
                         daemon.restart()
