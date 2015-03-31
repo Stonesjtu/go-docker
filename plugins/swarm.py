@@ -66,6 +66,10 @@ class Swarm(IExecutorPlugin):
                         v['mount'] = v['path']
                     vol_list.append(v['mount'])
 
+                constraints = []
+                if 'label' in job['requirements'] and job['requirements']['label']:
+                    for label in job['requirements']['label']:
+                        constraints.append('constraint:'+label)
 
                 container = self.docker_client.create_container(image=job['container']['image'],
                                                                 command=job['command']['script'],
@@ -73,6 +77,7 @@ class Swarm(IExecutorPlugin):
                                                                 mem_limit=str(job['requirements']['ram'])+'g',
                                                                 ports=port_list,
                                                                 network_disabled=self.cfg.network_disabled,
+                                                                environment=constraints,
                                                                 volumes=vol_list)
                 job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
                 if 'Node' not in job['container']['meta']:
