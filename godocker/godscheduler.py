@@ -96,6 +96,16 @@ class GoDScheduler(Daemon):
         self.db_jobsover = self.db.jobsover
         self.db_users = self.db.users
 
+        self.db_influx = None
+        if self.cfg.influxdb_host:
+            host = self.cfg.influxdb_host
+            port = self.cfg.influxdb_port
+            username = self.cfg.influxdb_user
+            password = self.cfg.influxdb_password
+            database = self.cfg.influxdb_db
+            self.db_influx = influxdb.InfluxDBClient(host, port, username, password, database)
+
+
         self.logger = logging.getLogger('godocker')
         self.logger.setLevel(logging.DEBUG)
         fh = logging.FileHandler('god_scheduler.log')
@@ -204,7 +214,23 @@ class GoDScheduler(Daemon):
         #for pending_job in pending_list:
         #  job  = json.loads(pending_job)
         #return None
-        return self.scheduler.schedule(pending_list, None)
+        dt = datetime.datetime.now()
+        start_time = time.mktime(dt.timetuple())
+        tasks = self.scheduler.schedule(pending_list, None)
+        dt = datetime.datetime.now()
+        end_time = time.mktime(dt.timetuple())
+        nb_pending = self.r.get(self.cfg.redis_prefix+':jobs:queued')
+        if nb_pending is None:
+            nb_pending = 0
+        else:
+            nb_pending = int(nb_pending)
+        nb_running = self.r.llen(self.cfg.redis_prefix+':jobs:running')
+        if nb_running is None:
+            nb_running = 0
+        else:
+            nb_running = int(nb_running)
+        self._add_to_stats(nb_pending, nb_running, end_time - start_time)
+        return tasks
 
 
     def _update_scheduled_task_status(self, running_tasks, rejected_tasks):
@@ -386,6 +412,30 @@ class GoDScheduler(Daemon):
         '''
         #TODO
         pass
+
+    def _add_to_stats(self, nb_pending, nb_running, duration_scheduler):
+        '''
+        Add scheduler stats
+        '''
+        if self.db_influx is None:
+            return
+
+        #dt = datetime.datetime.now()
+        #current_timestamp = time.mktime(dt.timetuple())
+        data = [{
+            'points': [[
+                nb_pending,
+                nb_running,
+                duration_scheduler
+            ]],
+            'name':'god_scheduler',
+            'columns': ["nb_pending", "nb_running", "duration_scheduler"]
+        }]
+        try:
+            self.db_influx.write_points(data)
+        except Exception as e:
+            # Do not fail on stat writing
+            self.logger.error('Stat:Error:'+str(e))
 
 
     def manage_tasks(self):
