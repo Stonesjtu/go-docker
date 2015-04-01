@@ -15,6 +15,7 @@ from pymongo import DESCENDING as pyDESCENDING
 from bson.json_util import dumps
 from config import Config
 from yapsy.PluginManager import PluginManager
+from influxdb import client as influxdb
 
 from godocker.iSchedulerPlugin import ISchedulerPlugin
 from godocker.iExecutorPlugin import IExecutorPlugin
@@ -471,8 +472,10 @@ class GoDScheduler(Daemon):
         reschedule_task_list = []
         reschedule_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:reschedule')
         for i in range(min(reschedule_task_length, self.cfg.max_job_pop)):
-            reschedule_task_list.append(json.loads(self.r.lpop(self.cfg.redis_prefix+':jobs:rechedule')))
-        self.reschedule_tasks(task_list)
+            task = self.r.lpop(self.cfg.redis_prefix+':jobs:reschedule')
+            if task:
+                reschedule_task_list.append(json.loads(task))
+        self.reschedule_tasks(reschedule_task_list)
 
     def signal_handler(self, signum, frame):
         GoDScheduler.SIGINT = True
