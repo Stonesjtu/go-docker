@@ -355,6 +355,23 @@ class GoDWatcher(Daemon):
                 }
 
             })
+        dt = datetime.datetime.now()
+        timestamp = time.mktime(dt.timetuple())
+        group_last = self.r.get(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':last')
+        if group_last is None:
+            group_last = timestamp
+        else:
+            group_last = float(group_last)
+        last_delta = (timestamp - group_last) * 3600 * 24 # In days
+        if last_delta > self.cfg.user_reset_usage_duration:
+            self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':cpu', task['requirements']['cpu'])
+            self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':ram', task['requirements']['ram'])
+            self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':time', task_duration)
+        else:
+            self.r.incr(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':cpu', task['requirements']['cpu'])
+            self.r.incr(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':ram', task['requirements']['ram'])
+            self.r.incrbyfloat(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':time', task_duration)
+        group_last = self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':last', timestamp)
 
     def notify_msg(self, task):
         if not self.cfg.live_events:
