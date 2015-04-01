@@ -45,6 +45,18 @@ class IGoDockerPlugin(IPlugin):
         '''
         return self.users_handler.find({'id': {'$in' : user_id_list}})
 
+    def get_group_usage(self, group_id):
+        '''
+        Get cpu/ram/time usage for last period for a group
+
+        :param group_id: group identifier
+        :type group_id: int
+        :return: list (cpu,ram,duration)
+        '''
+        cpu = self.redis_handler.get(self.cfg.redis_prefix+':group:'+str(group_id)+':cpu')
+        ram = self.redis_handler.get(self.cfg.redis_prefix+':group:'+str(group_id)+':ram')
+        duration = self.redis_handler.get(self.cfg.redis_prefix+':group:'+str(group_id)+':time')
+        return (cpu, ram, duration)
 
     def get_running_tasks(self, start=0, stop=-1):
         '''
