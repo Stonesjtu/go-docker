@@ -111,7 +111,7 @@ class IGoDockerPlugin(IPlugin):
         :type task_list: list
         '''
         for task in task_list:
-            self.users_handler.update({'id': task['id']},
+            self.jobs_handler.update({'id': task['id']},
                 {'$set': {
                         'status.secondary': 'kill requested'
                         }
