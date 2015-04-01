@@ -169,7 +169,11 @@ class GoDWatcher(Daemon):
                     self.logger.debug('Port:Back:'+host+':'+str(port))
                     self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                 task['container']['ports'] = []
-                self.db_jobs.remove({'id': task['id']})
+                remove_result = self.db_jobs.remove({'id': task['id']})
+                if remove_result['n'] == 0:
+                    # Not present anymore, may have been removed already
+                    # Remove from jobs over to replace it
+                    self.db_jobsover.remove({'id': task['id']})
                 task['status']['primary'] = godutils.STATUS_OVER
                 task['status']['secondary'] = godutils.STATUS_SECONDARY_KILLED
                 dt = datetime.datetime.now()
