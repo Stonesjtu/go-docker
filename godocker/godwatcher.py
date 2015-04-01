@@ -173,11 +173,12 @@ class GoDWatcher(Daemon):
                 # Check for reschedule request
                 original_task = self.db_jobs.find_one({'id': task['id']})
                 if original_task and original_task['status']['secondary'] == godutils.STATUS_SECONDARY_RESCHEDULE_REQUESTED:
+                    self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
                     self.db_jobs.update({'id': task['id']}, {'$set': {
-                        'status.primary' : godutils.STATUS_PENDING
+                        'status.primary' : godutils.STATUS_PENDING,
+                        'status.secondary': godutils.STATUS_SECONDARY_RESCHEDULED
                     }})
                     continue
-
                 remove_result = self.db_jobs.remove({'id': task['id']})
                 if remove_result['n'] == 0:
                     # Not present anymore, may have been removed already
@@ -195,7 +196,6 @@ class GoDWatcher(Daemon):
                 if is_array_child_task(task):
                     self.r.decr(self.cfg.redis_prefix+':job:'+str(task['parent_task_id'])+':subtaskrunning')
                     self.db_jobs.update({'id': task['parent_task_id']}, {'$inc': {'requirements.array.nb_tasks_over': 1}})
-                    task['requirements']['array']['nb_tasks_over']
 
                 if not is_array_task(task):
                     self.update_user_usage(task)
@@ -388,6 +388,9 @@ class GoDWatcher(Daemon):
                 if not elt:
                     return
                 task = json.loads(elt)
+                # Has been killed in the meanwhile, already managed
+                if not self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':task'):
+                    continue
                 if is_array_task(task):
                     # If an array parent, only checks if some child tasks are still running
                     nb_subtasks_running = int(self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtaskrunning'))
@@ -462,7 +465,9 @@ class GoDWatcher(Daemon):
         kill_task_list = []
         kill_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:kill')
         for i in range(min(kill_task_length, self.cfg.max_job_pop)):
-            kill_task_list.append(json.loads(self.r.lpop(self.cfg.redis_prefix+':jobs:kill')))
+            task = self.r.lpop(self.cfg.redis_prefix+':jobs:kill')
+            if task:
+                kill_task_list.append(json.loads(task))
 
         #kill_task_list = self.db_jobs.find({'status.primary': 'kill'})
         #task_list = []
@@ -476,7 +481,9 @@ class GoDWatcher(Daemon):
         suspend_task_list = []
         suspend_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:suspend')
         for i in range(min(suspend_task_length, self.cfg.max_job_pop)):
-            suspend_task_list.append(json.loads(self.r.lpop(self.cfg.redis_prefix+':jobs:suspend')))
+            task = self.r.lpop(self.cfg.redis_prefix+':jobs:suspend')
+            if task:
+                suspend_task_list.append(json.loads(task))
 
         #suspend_task_list = self.db_jobs.find({'status.primary': 'suspend'})
         #task_list = []
@@ -490,7 +497,9 @@ class GoDWatcher(Daemon):
         resume_task_list = []
         resume_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:resume')
         for i in range(min(resume_task_length, self.cfg.max_job_pop)):
-            resume_task_list.append(json.loads(self.r.lpop(self.cfg.redis_prefix+':jobs:resume')))
+            task = self.r.lpop(self.cfg.redis_prefix+':jobs:resume')
+            if task:
+                resume_task_list.append(json.loads(task))
 
         #resume_task_list = self.db_jobs.find({'status.primary': 'resume'})
         #task_list = []
