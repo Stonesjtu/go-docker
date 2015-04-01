@@ -202,6 +202,20 @@ class SchedulerTest(unittest.TestCase):
         over_tasks = self.scheduler.db_jobsover.find()
         self.assertTrue(over_tasks.count() == 1)
 
+    def test_reschedule(self):
+        running_tasks = self.test_run_task()
+        task_to_reschedule = running_tasks[0]
+        pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
+        self.assertTrue(pending_tasks.count() == 0)
+        self.scheduler.reschedule_tasks([task_to_reschedule])
+        self.watcher.kill_tasks([task_to_reschedule])
+        pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
+        self.assertTrue(pending_tasks.count() == 1)
+        running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
+        self.assertTrue(running_tasks.count() == 0)
+        over_tasks = self.scheduler.db_jobsover.find()
+        self.assertTrue(over_tasks.count() == 0)
+
 
     def test_suspend_task_running(self):
         running_tasks = self.test_run_task()

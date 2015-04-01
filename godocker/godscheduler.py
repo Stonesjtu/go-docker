@@ -410,8 +410,14 @@ class GoDScheduler(Daemon):
         '''
         Restart/reschedule running tasks in list
         '''
-        #TODO
-        pass
+        for task in resched_list:
+            self.db_jobs.update({'id': task['id']},
+                {'$set': {
+                        'status.secondary': godutils.STATUS_SECONDARY_RESCHEDULE_REQUESTED
+                        }
+            })
+            self.r.rpush(self.cfg.redis_prefix+':jobs:kill',dumps(task))
+
 
     def _add_to_stats(self, nb_pending, nb_running, duration_scheduler):
         '''
@@ -462,15 +468,10 @@ class GoDScheduler(Daemon):
         print 'Get tasks to reschedule'
         if self.stop_daemon:
             return
-        #reschedule_task_list = []
-        #reschedule_task_length = self.r.llen('jobs:reschedule')
-        #for i in range(min(reschedule_task_length, self.cfg.max_job_pop)):
-        #    reschedule_task_list.append(self.r.lpop('jobs:rechedule'))
-
-        reschedule_task_list = self.db_jobs.find({'status.primary': 'reschedule'})
-        task_list = []
-        for p in pending_tasks:
-            task_list.append(p)
+        reschedule_task_list = []
+        reschedule_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:reschedule')
+        for i in range(min(reschedule_task_length, self.cfg.max_job_pop)):
+            reschedule_task_list.append(json.loads(self.r.lpop(self.cfg.redis_prefix+':jobs:rechedule')))
         self.reschedule_tasks(task_list)
 
     def signal_handler(self, signum, frame):

@@ -169,6 +169,15 @@ class GoDWatcher(Daemon):
                     self.logger.debug('Port:Back:'+host+':'+str(port))
                     self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                 task['container']['ports'] = []
+
+                # Check for reschedule request
+                original_task = self.db_jobs.find_one({'id': task['id']})
+                if original_task and original_task['status']['secondary'] == godutils.STATUS_SECONDARY_RESCHEDULE_REQUESTED:
+                    self.db_jobs.update({'id': task['id']}, {'$set': {
+                        'status.primary' : godutils.STATUS_PENDING
+                    }})
+                    continue
+
                 remove_result = self.db_jobs.remove({'id': task['id']})
                 if remove_result['n'] == 0:
                     # Not present anymore, may have been removed already
