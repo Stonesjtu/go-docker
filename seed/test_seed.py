@@ -32,7 +32,8 @@ for i in range(10):
         'user': {
             'id': 'osallou',
             'uid': 1001,
-            'gid': 1001
+            'gid': 1001,
+            'projects': []
         },
         'date': time.mktime(dt.timetuple()),
         'meta': {

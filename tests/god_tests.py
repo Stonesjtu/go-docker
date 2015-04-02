@@ -79,7 +79,8 @@ class SchedulerTest(unittest.TestCase):
                 'credentials': {
                     'apikey': '123',
                     'public': ''
-                }
+                },
+                'projects': []
             },
             'date': time.mktime(dt.timetuple()),
             'meta': {

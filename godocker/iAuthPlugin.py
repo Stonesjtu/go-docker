@@ -20,6 +20,17 @@ class IAuthPlugin(IGoDockerPlugin):
         '''
         return None
 
+    def get_projects(self, login):
+        '''
+        Get user projects, a "default" project is always available.
+
+        :param login: user id
+        :type login: str
+        :return: list
+        '''
+        return []
+
+
     def get_user(self, login):
         '''
         Get user information
