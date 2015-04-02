@@ -80,7 +80,7 @@ class SchedulerTest(unittest.TestCase):
                     'apikey': '123',
                     'public': ''
                 },
-                'projects': []
+                'project': 'default'
             },
             'date': time.mktime(dt.timetuple()),
             'meta': {
