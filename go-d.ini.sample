@@ -18,6 +18,9 @@ defaults_ram: 2
 # In this case, you should make sure container contains required packages.
 network_disabled: False
 
+# Allow root access to containers
+allow_root: True
+
 # Number of days of inactivity after which user usage should be reset
 user_reset_usage_duration: 30
 
