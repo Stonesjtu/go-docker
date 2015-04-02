@@ -318,6 +318,10 @@ class GoDWatcher(Daemon):
         '''
         Add to user usage task consumption (cpu,ram,time)
         '''
+        task_duration = 0
+        if 'date_running' in task['status'] and task['status']['date_running'] and task['status']['date_over']:
+            task_duration = task['status']['date_over'] - task['status']['date_running']
+        '''
         task_user = self.db_users.find_one({'id': task['user']['id']})
         last_update = datetime.datetime.now()
         if not 'usage' in task_user:
@@ -327,9 +331,6 @@ class GoDWatcher(Daemon):
         else:
             last_delta = (last_update - task_user['usage']['last']).days
 
-        task_duration = 0
-        if 'date_running' in task['status'] and task['status']['date_running'] and task['status']['date_over']:
-            task_duration = task['status']['date_over'] - task['status']['date_running']
 
         if last_delta > self.cfg.user_reset_usage_duration:
             self.db_users.update({'id': task['user']['id']},{
@@ -355,23 +356,51 @@ class GoDWatcher(Daemon):
                 }
 
             })
+
         dt = datetime.datetime.now()
         timestamp = time.mktime(dt.timetuple())
-        group_last = self.r.get(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':last')
+        group_last = self.r.get(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':last')
         if group_last is None:
             group_last = timestamp
         else:
             group_last = float(group_last)
         last_delta = (timestamp - group_last) / (3600 * 24) # In days
         if last_delta > self.cfg.user_reset_usage_duration:
-            self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':cpu', task['requirements']['cpu'])
-            self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':ram', task['requirements']['ram'])
-            self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':time', task_duration)
+            self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':cpu', task['requirements']['cpu'])
+            self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':ram', task['requirements']['ram'])
+            self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':time', task_duration)
         else:
-            self.r.incr(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':cpu', task['requirements']['cpu'])
-            self.r.incr(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':ram', task['requirements']['ram'])
-            self.r.incrbyfloat(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':time', task_duration)
-        group_last = self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['gid'])+':last', timestamp)
+            self.r.incr(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':cpu', task['requirements']['cpu'])
+            self.r.incr(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':ram', task['requirements']['ram'])
+            self.r.incrbyfloat(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':time', task_duration)
+        group_last = self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':last', timestamp)
+        '''
+        # Set an RDD like over a time window of self.cfg.user_reset_usage_duration days
+        dt = datetime.datetime.now()
+        date_key = str(dt.year)+'_'+str(dt.month)+'_'+str(dt.day)
+        set_expire = True
+        if self.r.exists(self.cfg.redis_prefix+':user:'+str(task['user']['id'])+':cpu:'+date_key):
+            set_expire = False
+        self.r.incr(self.cfg.redis_prefix+':user:'+str(task['user']['id'])+':cpu:'+date_key, task['requirements']['cpu'])
+        self.r.incr(self.cfg.redis_prefix+':user:'+str(task['user']['id'])+':ram:'+date_key, task['requirements']['ram'])
+        self.r.incrbyfloat(self.cfg.redis_prefix+':user:'+str(task['user']['id'])+':time:'+date_key, task_duration)
+        if set_expire:
+            expiration_time = self.cfg.user_reset_usage_duration * 24 * 3600
+            self.r.expire(self.cfg.redis_prefix+':user:'+str(task['user']['id'])+':cpu:'+date_key, expiration_time)
+            self.r.expire(self.cfg.redis_prefix+':user:'+str(task['user']['id'])+':ram:'+date_key, expiration_time)
+            self.r.expire(self.cfg.redis_prefix+':user:'+str(task['user']['id'])+':time:'+date_key, expiration_time)
+
+        set_expire = True
+        if self.r.exists(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':cpu:'+date_key):
+            set_expire = False
+        self.r.incr(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':cpu:'+date_key, task['requirements']['cpu'])
+        self.r.incr(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':ram:'+date_key, task['requirements']['ram'])
+        self.r.incrbyfloat(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':time:'+date_key, task_duration)
+        if set_expire:
+            expiration_time = self.cfg.user_reset_usage_duration * 24 * 3600
+            self.r.expire(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':cpu:'+date_key, expiration_time)
+            self.r.expire(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':ram:'+date_key, expiration_time)
+            self.r.expire(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':time:'+date_key, expiration_time)
 
     def notify_msg(self, task):
         if not self.cfg.live_events:
