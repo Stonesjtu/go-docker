@@ -98,6 +98,10 @@ executor: 'swarm'
 # Authentication #######################
 auth_policy: 'fake'
 
+ldap_host: None
+ldap_port: None
+ldap_dn: None
+
 # Docker ###############################
 docker_url: 'tcp://127.0.0.1:2376'
 # API version from docker version command
