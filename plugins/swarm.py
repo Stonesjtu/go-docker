@@ -88,7 +88,10 @@ class Swarm(IExecutorPlugin):
 
                 port_mapping = {}
                 for port in port_list:
-                    mapped_port = self.get_mapping_port(job['container']['meta']['Node']['Name'], job)
+                    if self.cfg.port_allocate:
+                        mapped_port = self.get_mapping_port(job['container']['meta']['Node']['Name'], job)
+                    else:
+                        mapped_port = port
                     port_mapping[port] = mapped_port
                 vol_binds = {}
                 for v in job['container']['volumes']:
