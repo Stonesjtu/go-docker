@@ -81,7 +81,7 @@ redis_db: 0
 redis_prefix: 'god'
 
 # INFLUXDB ############################
-influxdb_host: 'localhost'
+influxdb_host: 'localhost' # or None if not required
 influxdb_port: 8086
 influxdb_user: 'root'
 influxdb_password: 'root'
