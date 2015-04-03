@@ -193,11 +193,15 @@ class GoAuth(IAuthPlugin):
             if req['name'] == 'home':
                 req['path'] = user['homeDirectory']
                 req['mount'] = '/mnt/home'
+                if root_access:
+                    req['acl'] = 'ro'
                 volumes.append(req)
                 continue
             if req['name'] == 'omaha':
                 req['path'] = '/omaha-beach/'+user['id']
                 req['mount'] = None
+                if root_access:
+                    req['acl'] = 'ro'
                 volumes.append(req)
                 continue
             if req['name'] == 'db':
