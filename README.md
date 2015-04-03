@@ -38,9 +38,9 @@ See COPYRIGHT file. Go-Docker is developped at IRISA.
 
 ## Dependencies
 
-apt-get install libldap2-dev gcc libsasl2-dev (Debian/Ubuntu)
+apt-get install python-dev libldap2-dev gcc libsasl2-dev (Debian/Ubuntu)
 
-yum install libldap-devel gcc cyrus-sasl-devel (Fedora/CentOS)
+yum install python-devel libldap-devel gcc cyrus-sasl-devel (Fedora/CentOS)
 
 pip install -r requirements.txt
 
