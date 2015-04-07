@@ -96,6 +96,7 @@ class GoDScheduler(Daemon):
         self.db_jobs = self.db.jobs
         self.db_jobsover = self.db.jobsover
         self.db_users = self.db.users
+        self.db_projects = self.db.projects
 
         self.db_influx = None
         if self.cfg.influxdb_host:
@@ -144,6 +145,7 @@ class GoDScheduler(Daemon):
              self.scheduler.set_redis_handler(self.r)
              self.scheduler.set_jobs_handler(self.db_jobs)
              self.scheduler.set_users_handler(self.db_users)
+             self.scheduler.set_projects_handler(self.db_projects)
              print "Loading scheduler: "+self.scheduler.get_name()
         self.executor = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Executor"):
@@ -155,6 +157,7 @@ class GoDScheduler(Daemon):
              self.executor.set_redis_handler(self.r)
              self.executor.set_jobs_handler(self.db_jobs)
              self.executor.set_users_handler(self.db_users)
+             self.executor.set_projects_handler(self.db_projects)
              print "Loading executor: "+self.executor.get_name()
 
         self.check_redis()
@@ -175,6 +178,13 @@ class GoDScheduler(Daemon):
         task['id'] = task_id
         if not task['status']['primary']:
             task['status']['primary'] = godutils.STATUS_PENDING
+
+        dt = datetime.datetime.now()
+        if 'date' not in task:
+            task['date'] = time.mktime(dt.timetuple())
+        if 'project' not in task['user']:
+            task['user']['project'] = 'default'
+
 
         if is_array_task(task):
             task['requirements']['array']['nb_tasks'] = 0
@@ -217,7 +227,7 @@ class GoDScheduler(Daemon):
         #return None
         dt = datetime.datetime.now()
         start_time = time.mktime(dt.timetuple())
-        tasks = self.scheduler.schedule(pending_list, None)
+        tasks = self.scheduler.schedule(pending_list)
         dt = datetime.datetime.now()
         end_time = time.mktime(dt.timetuple())
         nb_pending = self.r.get(self.cfg.redis_prefix+':jobs:queued')

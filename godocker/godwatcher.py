@@ -43,6 +43,7 @@ class GoDWatcher(Daemon):
         self.db_jobs = self.db.jobs
         self.db_jobsover = self.db.jobsover
         self.db_users = self.db.users
+        self.db_projects = self.db.projects
 
         self.db_influx = None
         if self.cfg.influxdb_host:
@@ -88,6 +89,7 @@ class GoDWatcher(Daemon):
              self.scheduler.set_redis_handler(self.r)
              self.scheduler.set_jobs_handler(self.db_jobs)
              self.scheduler.set_users_handler(self.db_users)
+             self.scheduler.set_projects_handler(self.db_projects)
              print "Loading scheduler: "+self.scheduler.get_name()
         self.executor = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Executor"):
@@ -99,6 +101,7 @@ class GoDWatcher(Daemon):
              self.executor.set_redis_handler(self.r)
              self.executor.set_jobs_handler(self.db_jobs)
              self.executor.set_users_handler(self.db_users)
+             self.executor.set_projects_handler(self.db_projects)
              print "Loading executor: "+self.executor.get_name()
 
 

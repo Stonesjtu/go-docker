@@ -7,11 +7,10 @@ class FiFo(ISchedulerPlugin):
     def get_type(self):
         return "Scheduler"
 
-    def schedule(self, tasks, users):
+    def schedule(self, tasks):
         '''
         Schedule list of tasks to be ran according to user list
 
         :return: list of sorted tasks
         '''
-        #TODO
         return tasks

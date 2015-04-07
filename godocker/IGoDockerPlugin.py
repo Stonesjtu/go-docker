@@ -16,6 +16,9 @@ class IGoDockerPlugin(IPlugin):
     def set_users_handler(self, users_handler):
         self.users_handler = users_handler
 
+    def set_projects_handler(self, projects_handler):
+        self.projects_handler = projects_handler
+
     def get_name(self):
         '''
         Get name of plugin
