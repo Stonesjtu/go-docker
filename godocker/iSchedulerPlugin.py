@@ -20,7 +20,7 @@ class ISchedulerPlugin(IGoDockerPlugin):
             if not user or 'prio' not in user['usage']:
                 prio = 0.5
             else:
-                prio = float(user['usage']['prio'])
+                prio = float(user['usage']['prio']/100)
                 self.redis_handler.set(self.cfg.redis_prefix+':user:'+user_id+':prio',str(prio))
         return prio
 
@@ -34,7 +34,7 @@ class ISchedulerPlugin(IGoDockerPlugin):
             if not project or 'prio' not in project['usage']:
                 prio = 0.5
             else:
-                prio = float(project['usage']['prio'])
+                prio = float(project['usage']['prio']/100)
                 self.redis_handler.set(self.cfg.redis_prefix+':project:'+project_id+':prio',str(prio))
         return prio
 

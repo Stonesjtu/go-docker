@@ -102,7 +102,8 @@ user = {
         'time': 0,
         'cpu': 0,
         'ram': 0
-    }
+    },
+    'projects': []
 }
 
 users.append(user)

@@ -67,7 +67,8 @@ class SchedulerTest(unittest.TestCase):
                 'time': 0,
                 'cpu': 0,
                 'ram': 0
-            }
+            },
+            'projects': []
         }
         self.sample_task = {
             'id': None,
