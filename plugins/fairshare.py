@@ -153,6 +153,7 @@ class FairShare(ISchedulerPlugin):
             project_usage = (self.projects_usage[project_id]['total_cpu'], self.projects_usage[project_id]['total_ram'], self.projects_usage[project_id]['total_time'], project_prio)
             task['requirements']['ticket_share'] = self.get_ticket_share(user_usage, project_usage, task)
 
-        tasks.sort(key=lambda x: x['requirements']['ticket_share'], reverse=True)
+        #tasks.sort(key=lambda x: x['requirements']['ticket_share'], reverse=True)
+        tasks.sort(key=lambda x: x['requirements']['ticket_share'])
 
         return tasks
