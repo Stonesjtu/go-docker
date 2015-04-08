@@ -28,6 +28,8 @@ class ISchedulerPlugin(IGoDockerPlugin):
         '''
         Get project priority (between 0 and 1)
         '''
+        if project_id == 'default':
+            return 0.5
         prio = self.redis_handler.get(self.cfg.redis_prefix+':project:'+project_id+':prio')
         if prio is None:
             project = self.projects_handler.find_one({'id': project_id})
