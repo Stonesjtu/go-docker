@@ -122,6 +122,7 @@ class SchedulerTest(unittest.TestCase):
         self.scheduler.db.drop_collection('jobs')
         self.scheduler.db.drop_collection('jobsover')
         self.scheduler.db.drop_collection('users')
+        self.scheduler.db.drop_collection('projects')
         self.scheduler.db_users.insert(self.sample_user)
         self.scheduler.r.flushdb()
 
