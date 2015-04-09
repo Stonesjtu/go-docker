@@ -101,6 +101,14 @@ class FairShare(ISchedulerPlugin):
 
         self.load()
 
+
+        # Init default to avoid caculations
+        self.projects_usage['default'] = {
+                'total_time': 0,
+                'total_cpu': 0,
+                'total_ram': 0,
+                }
+
         for task in tasks:
             user_id = task['user']['id']
             project_id = task['user']['project']
@@ -143,6 +151,8 @@ class FairShare(ISchedulerPlugin):
         self.min_group_cpu = max_usages['min_cpu']
         self.max_group_ram = max_usages['max_ram']
         self.min_group_ram = max_usages['min_ram']
+        # Default project is the worst one regading bounds
+        self.projects_usage['default'] = max_usages
 
         for task in tasks:
             user_id = task['user']['id']
