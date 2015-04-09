@@ -270,7 +270,7 @@ class GoDScheduler(Daemon):
                     host = r['container']['meta']['Node']['Name']
                     for port in r['container']['ports']:
                         self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
-                self.db_jobs.update({'id': r['id']}, {'$set': {'status.secondary': 'rejected by scheduler', 'container.ports': []}})
+                self.db_jobs.update({'id': r['id']}, {'$set': {'status.secondary': godutils.STATUS_SECONDARY_SCHEDULER_REJECTED, 'container.ports': []}})
 
 
     def _create_command(self, task):
@@ -408,14 +408,61 @@ class GoDScheduler(Daemon):
         '''
         Execute tasks on Docker scheduler in order
         '''
+        users_usage = {}
+        projects_usage = {}
+        filtered_list = []
         for task in queued_list:
-            # Create run script
-            self._create_command(task)
-            #self.logger.debug("Execute:Task:Run:Try")
-            #self.logger.debug(str(task))
+            reject =  False
+            if task['requirements']['user_quota_time'] > 0 or task['requirements']['user_quota_cpu'] > 0 or task['requirements']['user_quota_ram'] > 0:
+                user_usage = None
+                if task['user']['id'] not in users_usage:
+                    user_usage = self.scheduler.get_user_usage(self, task['user']['id'], 'user')
+                else:
+                    user_usage = users_usage[task['user']['id']]
+                if (not reject) and (task['requirements']['user_quota_time'] > 0 and task['requirements']['user_quota_time'] >= user_usage['total_time']):
+                    reject = True
+                if (not reject) and (task['requirements']['user_quota_cpu'] > 0 and task['requirements']['user_quota_cpu'] >= user_usage['total_cpu']+task['requirements']['cpu']):
+                    reject = True
+                if (not reject) and (task['requirements']['user_quota_ram'] > 0 and task['requirements']['user_quota_ram'] >= user_usage['total_ram']+task['requirements']['ram']):
+                    reject = True
+            if (not reject) and task['user']['project'] != 'default' and (task['requirements']['project_quota_time'] > 0 or task['requirements']['project_quota_cpu'] > 0 or task['requirements']['project_quota_ram'] > 0):
+                project_usage = None
+                if task['user']['project'] not in projects_usage:
+                    project_usage = self.scheduler.get_user_usage(self, task['user']['project'], 'group')
+                else:
+                    project_usage = users_usage[task['user']['project']]
+                if (not reject) and (task['requirements']['project_quota_time'] > 0 and task['requirements']['project_quota_time'] >= project_usage['total_time']):
+                    reject = True
+                if (not reject) and (task['requirements']['project_quota_cpu'] > 0 and task['requirements']['project_quota_cpu'] >= project_usage['total_cpu']+task['requirements']['cpu']):
+                    reject = True
+                if (not reject) and (task['requirements']['project_quota_ram'] > 0 and task['requirements']['project_quota_ram'] >= project_usage['total_ram']+task['requirements']['ram']):
+                    reject = True
+            if reject:
+                self.reject_quota(task)
+            else:
+                # Create run script
+                self._create_command(task)
+                filtered_list.append(task)
 
-        (running_tasks, rejected_tasks) = self.executor.run_tasks(queued_list, self._update_scheduled_task_status)
+        (running_tasks, rejected_tasks) = self.executor.run_tasks(filtered_list, self._update_scheduled_task_status)
         self._update_scheduled_task_status(running_tasks, rejected_tasks)
+
+    def reject_quota(self, task):
+        '''
+        Reject a task because user or project reached quota limits
+        '''
+        remove_result = self.db_jobs.remove({'id': task['id']})
+        if remove_result['n'] == 0:
+            # Not present anymore, may have been removed already
+            # Remove from jobs over to replace it
+            self.db_jobsover.remove({'id': task['id']})
+        task['status']['primary'] = godutils.STATUS_OVER
+        task['status']['secondary'] = godutils.STATUS_SECONDARY_QUOTA_REACHED
+        dt = datetime.datetime.now()
+        task['status']['date_over'] = time.mktime(dt.timetuple())
+        del task['_id']
+        self.db_jobsover.insert(task)
+        self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
 
     def reschedule_tasks(self, resched_list):
         '''

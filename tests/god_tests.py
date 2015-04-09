@@ -98,7 +98,13 @@ class SchedulerTest(unittest.TestCase):
                     'nb_tasks_over': 0,
                     'tasks': []
                 },
-                'label': None
+                'label': None,
+                'user_quota_time': 0,
+                'user_quota_cpu': 0,
+                'user_quota_ram': 0,
+                'project_quota_time': 0,
+                'project_quota_cpu': 0,
+                'project_quota_ram': 0
             },
             'container': {
                 'image': 'centos:latest',
