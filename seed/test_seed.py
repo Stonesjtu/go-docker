@@ -98,10 +98,7 @@ user = {
     'email': 'fakeemail@no.mail',
     'usage':
     {
-        'last': datetime.datetime.now()
-        'time': 0,
-        'cpu': 0,
-        'ram': 0
+        'prio': 50
     }
 }
 

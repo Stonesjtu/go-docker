@@ -64,9 +64,7 @@ class SchedulerTest(unittest.TestCase):
             'email': 'fakeemail@no.mail',
             'usage':
             {
-                'time': 0,
-                'cpu': 0,
-                'ram': 0
+                'prio': 50
             }
         }
         self.sample_task = {
