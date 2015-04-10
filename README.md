@@ -26,11 +26,12 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 * job watch (check if job is over)
 * kill job
 * suspend/resume job
+* reschedule a job
+* quotas: user or project
 
 ### TODO
 
-* API documentation
-* Reschedule a job
+* fairshare policy scheduling
 
 ## LICENSE
 
@@ -190,6 +191,21 @@ additional environment variables (GOGOCKER_TASK_ID, ...).
 Main task has an id and refers the X sub tasks. Main task does not execute any
 command and ends when all sub tasks are over. Killing a main tasks also kills
 all the sub tasks.
+
+
+## Projects
+
+User can submit a task on a project. If not specified *default* is used.
+*default* project has no quota, and all users can submit to the project. In this
+case, only user quotas will apply.
+
+Only administrators can create projects and assign users to projects. Other
+projects can get a global quota applying to all members (cumulative usage of
+members).
+
+## Priority
+
+User and projects can have a priority between 0 and 100. This value *may* be used by schedulers to order the pending tasks. *default* project has a priority of 50.
 
 ## Tips
 
