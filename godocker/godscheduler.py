@@ -419,11 +419,11 @@ class GoDScheduler(Daemon):
                     user_usage = self.scheduler.get_user_usage(task['user']['id'], 'user')
                 else:
                     user_usage = users_usage[task['user']['id']]
-                if (not reject) and (task['requirements']['user_quota_time'] > 0 and task['requirements']['user_quota_time'] >= user_usage['total_time']):
+                if (not reject) and (task['requirements']['user_quota_time'] > 0 and task['requirements']['user_quota_time'] < user_usage['total_time']):
                     reject = True
-                if (not reject) and (task['requirements']['user_quota_cpu'] > 0 and task['requirements']['user_quota_cpu'] >= user_usage['total_cpu']+task['requirements']['cpu']):
+                if (not reject) and (task['requirements']['user_quota_cpu'] > 0 and task['requirements']['user_quota_cpu'] < user_usage['total_cpu']+task['requirements']['cpu']):
                     reject = True
-                if (not reject) and (task['requirements']['user_quota_ram'] > 0 and task['requirements']['user_quota_ram'] >= user_usage['total_ram']+task['requirements']['ram']):
+                if (not reject) and (task['requirements']['user_quota_ram'] > 0 and task['requirements']['user_quota_ram'] < user_usage['total_ram']+task['requirements']['ram']):
                     reject = True
             if (not reject) and task['user']['project'] != 'default' and (task['requirements']['project_quota_time'] > 0 or task['requirements']['project_quota_cpu'] > 0 or task['requirements']['project_quota_ram'] > 0):
                 project_usage = None
@@ -431,11 +431,11 @@ class GoDScheduler(Daemon):
                     project_usage = self.scheduler.get_user_usage(self, task['user']['project'], 'group')
                 else:
                     project_usage = users_usage[task['user']['project']]
-                if (not reject) and (task['requirements']['project_quota_time'] > 0 and task['requirements']['project_quota_time'] >= project_usage['total_time']):
+                if (not reject) and (task['requirements']['project_quota_time'] > 0 and task['requirements']['project_quota_time'] < project_usage['total_time']):
                     reject = True
-                if (not reject) and (task['requirements']['project_quota_cpu'] > 0 and task['requirements']['project_quota_cpu'] >= project_usage['total_cpu']+task['requirements']['cpu']):
+                if (not reject) and (task['requirements']['project_quota_cpu'] > 0 and task['requirements']['project_quota_cpu'] < project_usage['total_cpu']+task['requirements']['cpu']):
                     reject = True
-                if (not reject) and (task['requirements']['project_quota_ram'] > 0 and task['requirements']['project_quota_ram'] >= project_usage['total_ram']+task['requirements']['ram']):
+                if (not reject) and (task['requirements']['project_quota_ram'] > 0 and task['requirements']['project_quota_ram'] < project_usage['total_ram']+task['requirements']['ram']):
                     reject = True
             if reject:
                 self.reject_quota(task)
