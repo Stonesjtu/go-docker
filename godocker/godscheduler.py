@@ -416,7 +416,7 @@ class GoDScheduler(Daemon):
             if task['requirements']['user_quota_time'] > 0 or task['requirements']['user_quota_cpu'] > 0 or task['requirements']['user_quota_ram'] > 0:
                 user_usage = None
                 if task['user']['id'] not in users_usage:
-                    user_usage = self.scheduler.get_user_usage(self, task['user']['id'], 'user')
+                    user_usage = self.scheduler.get_user_usage(task['user']['id'], 'user')
                 else:
                     user_usage = users_usage[task['user']['id']]
                 if (not reject) and (task['requirements']['user_quota_time'] > 0 and task['requirements']['user_quota_time'] >= user_usage['total_time']):
