@@ -139,7 +139,7 @@ class Swarm(IExecutorPlugin):
             finished_date =  task['container']['meta']['State']['FinishedAt']
             finished_date = iso8601.parse_date(finished_date)
         except Exception:
-            self.logger.debug("Could not get container, may be already killed: "+task['container']['id'])
+            self.logger.debug("Could not get container, may be already killed: "+str(task['container']['id']))
             finished_date = datetime.datetime.now()
 
         if finished_date.year > 1:
@@ -150,7 +150,7 @@ class Swarm(IExecutorPlugin):
             try:
                 self.docker_client.remove_container(task['container']['id'])
             except Exception:
-                self.logger.debug('Could not remove container '+task['container']['id'])
+                self.logger.debug('Could not remove container '+str(task['container']['id']))
             over = True
         else:
             self.logger.debug('Container:'+task['container']['id']+':Running')
