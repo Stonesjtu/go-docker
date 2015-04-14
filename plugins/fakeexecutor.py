@@ -1,5 +1,6 @@
 from godocker.iExecutorPlugin import IExecutorPlugin
 import logging
+from godocker.utils import is_array_child_task, is_array_task
 
 class FakeExecutor(IExecutorPlugin):
     def get_name(self):
@@ -36,7 +37,7 @@ class FakeExecutor(IExecutorPlugin):
         rejected_tasks = []
         i = 0
         for task in tasks:
-            if task['parent_task_id']:
+            if is_array_task(task):
                 # Virtual task for a task array, do not really execute
                 running_tasks.append(task)
                 self.logger.debug('Execute:Job:'+str(task['id'])+':Skip:Array')

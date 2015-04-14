@@ -2,7 +2,7 @@ from godocker.iExecutorPlugin import IExecutorPlugin
 import json
 import datetime
 import iso8601
-
+from godocker.utils import is_array_child_task, is_array_task
 
 class Swarm(IExecutorPlugin):
     def get_name(self):
@@ -47,7 +47,7 @@ class Swarm(IExecutorPlugin):
         running_tasks = []
         error_tasks = []
         for task in tasks:
-            if task['parent_task_id']:
+            if is_array_task(task):
                 # Virtual task for a task array, do not really execute
                 running_tasks.append(task)
                 self.logger.debug('Execute:Job:'+str(task['id'])+':Skip:Array')
