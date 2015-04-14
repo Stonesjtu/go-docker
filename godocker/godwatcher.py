@@ -519,7 +519,7 @@ class GoDWatcher(Daemon):
         kill_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:kill')
         for i in range(min(kill_task_length, self.cfg.max_job_pop)):
             task = self.r.lpop(self.cfg.redis_prefix+':jobs:kill')
-            if task:
+            if task and task != 'None':
                 kill_task_list.append(json.loads(task))
 
         #kill_task_list = self.db_jobs.find({'status.primary': 'kill'})
