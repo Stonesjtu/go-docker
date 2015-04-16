@@ -169,11 +169,11 @@ class Swarm(IExecutorPlugin):
         try:
             self.docker_client.kill(task['container']['id'])
         except Exception as e:
-            self.logger.debug("Could not kill container: "+task['container']['id'])
+            self.logger.debug("Could not kill container: "+str(task['container']['id']))
         try:
             self.docker_client.remove_container(task['container']['id'])
         except Exception as e:
-            self.logger.debug("Could not kill/remove container: "+task['container']['id'])
+            self.logger.debug("Could not kill/remove container: "+str(task['container']['id']))
             if e.response.status_code == 404:
                 self.logger.debug('container not found, already deleted?')
                 over = True
