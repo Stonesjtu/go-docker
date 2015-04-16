@@ -117,7 +117,9 @@ class Swarm(IExecutorPlugin):
                 self.logger.debug('Execute:Job:'+str(job['id'])+':'+job['container']['id'])
             except Exception as e:
                 self.logger.error('Execute:Job:'+str(job['id'])+':'+str(e))
-                error_tasks.append(task)
+                if 'Node' not in job['container']['meta']:
+                    job['container']['meta']['Node'] = {'Name': 'localhost'}
+                error_tasks.append(job)
                 if container:
                     self.docker_client.remove_container(container.get('Id'))
         return (running_tasks,error_tasks)
