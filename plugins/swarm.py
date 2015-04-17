@@ -72,7 +72,7 @@ class Swarm(IExecutorPlugin):
                         constraints.append('constraint:'+label)
 
                 container = self.docker_client.create_container(image=job['container']['image'],
-                                                                command=job['command']['script'],
+                                                                entrypoint=[job['command']['script']],
                                                                 cpu_shares=job['requirements']['cpu'],
                                                                 mem_limit=str(job['requirements']['ram'])+'g',
                                                                 ports=port_list,
@@ -117,6 +117,8 @@ class Swarm(IExecutorPlugin):
                 self.logger.debug('Execute:Job:'+str(job['id'])+':'+job['container']['id'])
             except Exception as e:
                 self.logger.error('Execute:Job:'+str(job['id'])+':'+str(e))
+                if job['container']['meta'] is None:
+                    job['container']['meta'] = {}
                 if 'Node' not in job['container']['meta']:
                     job['container']['meta']['Node'] = {'Name': 'localhost'}
                 error_tasks.append(job)
