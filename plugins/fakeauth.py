@@ -120,6 +120,8 @@ class FakeAuth(IAuthPlugin):
         '''
         volumes = []
         for req in requested_volumes:
+            if root_access:
+                req['acl'] = 'ro'
             if req['name'] == 'home':
                 req['path'] = user['homeDirectory']
                 req['mount'] = '/mnt/home'
