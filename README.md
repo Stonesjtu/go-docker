@@ -136,14 +136,14 @@ Available plugins are:
 
 
 * Scheduler:
- * fifo: First In First Out basic strategy
- * fairshare: not yet implemented
+    * fifo: First In First Out basic strategy
+    * fairshare: not yet implemented
 * Executor:
- * swarm (Docker Swarm)
- * fake  (not be used, for test only, simulate a job execution)
+    * swarm (Docker Swarm)
+    * fake  (not be used, for test only, simulate a job execution)
 * Auth:
- * goauth: specific for our internal usage, but can be easily used as a template for ldap based authentications.
- * fakeauth: fake authentication for tests
+    * goauth: specific for our internal usage, but can be easily used as a template for ldap based authentications.
+    * fakeauth: fake authentication for tests
 
 
 
