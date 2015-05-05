@@ -117,6 +117,8 @@ If not set, an incremental PROCID will be set.
 
 For debug, it is possible to run processes in foreground with run option, or only one time (no loop) with option once.
 
+Log level can be modified with env variable GOD_LOGLEVEL (DEBUG, INFO, ERROR)
+
 
 ## Plugins
 

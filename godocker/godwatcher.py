@@ -13,6 +13,7 @@ from pymongo import MongoClient
 from bson.json_util import dumps
 from bson.objectid import ObjectId
 from influxdb import client as influxdb
+from logging.handlers import RotatingFileHandler
 
 from yapsy.PluginManager import PluginManager
 from godocker.iSchedulerPlugin import ISchedulerPlugin
@@ -55,9 +56,20 @@ class GoDWatcher(Daemon):
             self.db_influx = influxdb.InfluxDBClient(host, port, username, password, database)
 
         self.logger = logging.getLogger('godocker')
-        self.logger.setLevel(logging.DEBUG)
-        fh = logging.FileHandler('god_watcher.log')
-        fh.setLevel(logging.DEBUG)
+        loglevel = logging.DEBUG
+        if os.getenv('GOD_LOGLEVEL'):
+            loglevel = os.environ['GOD_LOGLEVEL']
+            if loglevel == 'DEBUG':
+                loglevel = logging.DEBUG
+            if loglevel == 'INFO':
+                loglevel = logging.INFO
+            if loglevel == 'ERROR':
+                loglevel = logging.ERROR
+        self.logger.setLevel(loglevel)
+        #fh = logging.FileHandler('god_scheduler.log')
+        fh = RotatingFileHandler('god_watcher.log', maxBytes=10000000,
+                                  backupCount=5)
+        fh.setLevel(loglevel)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)
         self.logger.addHandler(fh)
