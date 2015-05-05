@@ -31,7 +31,7 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 
 ### TODO
 
-* fairshare policy scheduling
+* fairshare policy scheduling (in progress, developped but to be tested)
 
 ## LICENSE
 
@@ -130,18 +130,24 @@ To create a new plugin, create a xx.yapsy-plugin file and a xx.py file following
 * iExecutor execute the job and checks its status
 * iAuth is used by the web interface, to authenticate a user (ldap bind for example), get some user information (uidnumber, home directory...) and ACLs (which volumes can be mounted for this user request for example).
 
+Base classes are documented here: http://go-docker.readthedocs.org/en/latest/
+
+The Utils class can also be used with a few helpers.
+
 Available plugins are:
 
 
 * Scheduler:
-  * fifo: First In First Out basic strategy
-  * fairshare: not yet implemented
+    * fifo: First In First Out basic strategy
+    * fairshare: not yet implemented
 * Executor:
-  * swarm (Docker Swarm)
-  * fake  (not be used, for test only, simulate a job execution)
+    * swarm (Docker Swarm)
+    * fake  (not be used, for test only, simulate a job execution)
 * Auth:
-  * goauth: specific for our internal usage, but can be easily used as a template for ldap based authentications.
-  * fakeauth: fake authentication for tests
+    * goauth: specific for our internal usage, but can be easily used as a template for ldap based authentications.
+    * fakeauth: fake authentication for tests
+
+
 
 
 ## User scripts
