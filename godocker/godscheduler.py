@@ -9,6 +9,8 @@ import os
 import datetime
 import time
 import socket
+import random
+import string
 from copy import deepcopy
 from pymongo import MongoClient
 from pymongo import DESCENDING as pyDESCENDING
@@ -388,9 +390,9 @@ class GoDScheduler(Daemon):
             ssh_dir = ""
             if task['container']['root']:
                 ssh_dir = "/root/.ssh"
+                cmd += "echo 'root:"+task['user']['credentials']['apikey']+"' | chpasswd\n"
             else:
                 ssh_dir = "/home/"+user_id+"/.ssh"
-
             cmd +="mkdir -p "+ssh_dir+"\n"
             cmd +="echo \"" + task['user']['credentials']['public'] + "\" > "+ssh_dir+"/authorized_keys\n"
             cmd +="chmod 600 " + ssh_dir +"/authorized_keys\n"
