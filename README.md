@@ -29,10 +29,6 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 * reschedule a job
 * quotas: user or project
 
-### TODO
-
-* fairshare policy scheduling (in progress, developped but to be tested)
-
 ## LICENSE
 
 See COPYRIGHT file. Go-Docker is developped at IRISA.
@@ -102,6 +98,23 @@ Once application is configured, it is necessary, the first time, to initialize t
   python go-d-scheduler.py init
 
 
+### Fairshare
+
+FairShare plugin adds additional, optional configuration to manage different weight to apply on paramerers:
+
+
+    fairshare_waiting_time_weight = 0.1  # weight apply to waiting time of tasks
+    fairshare_user_time_weight = 1       # weight to cpu time spent in previous tasks for defined duration user_reset_usage_duration
+    fairshare_user_cpu_weight = 0.2      # weight to number of cpu used in previous tasks for defined duration user_reset_usage_duration
+    fairshare_user_ram_weight = 0.2      # weight to quantity of ram used in previous tasks for defined duration user_reset_usage_duration
+    fairshare_group_time_weight = 0.1    # same as user but for user group
+    fairshare_group_cpu_weight = 0.01    # same as user but for user group
+    fairshare_group_ram_weight = 0.01    # same as user but for user group
+    fairshare_user_weight = 1            # weight to apply on user priority
+    fairshare_group_weight = 1           # weight to apply on group priority
+
+
+
 ## Running
 
 To identify processes, each process must have a unique id. It is possible to set this id with the environment variable GOD_PROCID.
@@ -139,7 +152,7 @@ Available plugins are:
 
 * Scheduler:
     * fifo: First In First Out basic strategy
-    * fairshare: not yet implemented
+    * fairshare: Fair share user tasks repartition (prio, previous usage, ...)
 * Executor:
     * swarm (Docker Swarm)
     * fake  (not be used, for test only, simulate a job execution)
