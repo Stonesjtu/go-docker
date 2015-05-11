@@ -16,10 +16,12 @@ import string
 import random
 from bson.json_util import dumps
 
+
 #from mock import patch
 
 from optparse import OptionParser
 
+import godocker.utils as godutils
 from godocker.godscheduler import GoDScheduler
 from godocker.godwatcher import GoDWatcher
 from godocker.pairtreeStorage import PairtreeStorage
@@ -31,6 +33,75 @@ class FairShareSchedulerTest(unittest.TestCase):
     Copy properties files to a temp directory and update properties to
     use a temp directory
     '''
+
+    def set_user_usage(self, identifier):
+        dt = datetime.datetime.now()
+
+        total_time = 0.0
+        total_cpu = 0
+        total_ram = 0
+
+        for i in range(0, 1):
+            previous = dt - timedelta(days=i)
+            date_key = str(previous.year)+'_'+str(previous.month)+'_'+str(previous.day)
+            self.scheduler.r.set(self.scheduler.cfg.redis_prefix+':user:'+identifier+':cpu:'+date_key, 1)
+            self.scheduler.r.set(self.scheduler.cfg.redis_prefix+':user:'+identifier+':ram:'+date_key, 1)
+            self.scheduler.r.set(self.scheduler.cfg.redis_prefix+':user:'+identifier+':time:'+date_key, 1)
+
+    def add_project(self, prio):
+            self.scheduler.r.delete(self.scheduler.cfg.redis_prefix+':project:test:prio')
+            self.scheduler.db.drop_collection('projects')
+            project = {
+                'id': 'test',
+                'usage':
+                {
+                    'prio': prio
+                }
+            }
+            self.scheduler.db_projects.insert(project)
+
+    def add_users(self, prio1, prio2):
+            self.scheduler.r.delete(self.scheduler.cfg.redis_prefix+':user:user1:prio')
+            self.scheduler.r.delete(self.scheduler.cfg.redis_prefix+':user:user2:prio')
+            self.scheduler.db.drop_collection('users')
+            user1 = {
+                'id': 'user1',
+                'last': datetime.datetime.now(),
+                'apikey': '1234',
+                'credentials': {
+                    'apikey': ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(10)),
+                    'private': '',
+                    'public': ''
+                },
+                'uidNumber': 1001,
+                'uidNumber': 1001,
+                'homeDirectory': '/home/osallou',
+                'email': 'fakeemail@no.mail',
+                'usage':
+                {
+                    'prio': prio1
+                }
+            }
+            self.scheduler.db_users.insert(user1)
+            user2 = {
+                'id': 'user2',
+                'last': datetime.datetime.now(),
+                'apikey': '1234',
+                'credentials': {
+                    'apikey': ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(10)),
+                    'private': '',
+                    'public': ''
+                },
+                'uidNumber': 1001,
+                'uidNumber': 1001,
+                'homeDirectory': '/home/osallou',
+                'email': 'fakeemail@no.mail',
+                'usage':
+                {
+                    'prio': prio2
+                }
+            }
+            self.scheduler.db_users.insert(user2)
 
     def setUp(self):
         # pairtree cleanup
@@ -205,3 +276,85 @@ class FairShareSchedulerTest(unittest.TestCase):
         queued_tasks = self.scheduler.schedule_tasks(task_list)
         self.assertTrue(len(queued_tasks) == 3)
         return queued_tasks
+
+
+    def test_schedule_equal(self):
+        self.add_users(50, 50)
+        task = copy.deepcopy(self.sample_task)
+        task['user']['id'] = 'user1'
+        task_id = self.scheduler.add_task(task)
+        task2 = copy.deepcopy(self.sample_task)
+        task2['user']['id'] = 'user2'
+        task2_id = self.scheduler.add_task(task2)
+        pending_tasks = self.scheduler.db_jobs.find({'status.primary': godutils.STATUS_PENDING})
+        task_list = []
+        for p in pending_tasks:
+            task_list.append(p)
+        queued_tasks = self.scheduler.schedule_tasks(task_list)
+        self.assertTrue(queued_tasks[0]['id'] == task_id)
+
+    def test_schedule_user_prio(self):
+        self.add_users(50, 60)
+        task = copy.deepcopy(self.sample_task)
+        task['user']['id'] = 'user1'
+        task_id = self.scheduler.add_task(task)
+        task2 = copy.deepcopy(self.sample_task)
+        task2['user']['id'] = 'user2'
+        task2_id = self.scheduler.add_task(task2)
+        pending_tasks = self.scheduler.db_jobs.find({'status.primary': godutils.STATUS_PENDING})
+        task_list = []
+        for p in pending_tasks:
+            task_list.append(p)
+        queued_tasks = self.scheduler.schedule_tasks(task_list)
+        self.assertTrue(queued_tasks[0]['id'] == task2_id)
+
+    def test_schedule_project_prio(self):
+        self.add_users(50, 60)
+        self.add_project(80)
+        task = copy.deepcopy(self.sample_task)
+        task['user']['id'] = 'user1'
+        task_id = self.scheduler.add_task(task)
+        task2 = copy.deepcopy(self.sample_task)
+        task2['user']['id'] = 'user2'
+        task2['user']['project'] = 'test'
+        task2_id = self.scheduler.add_task(task2)
+        pending_tasks = self.scheduler.db_jobs.find({'status.primary': godutils.STATUS_PENDING})
+        task_list = []
+        for p in pending_tasks:
+            task_list.append(p)
+        queued_tasks = self.scheduler.schedule_tasks(task_list)
+        self.assertTrue(queued_tasks[0]['id'] == task2_id)
+
+    def test_schedule_project_prio_inverse(self):
+        self.add_users(50, 60)
+        self.add_project(20)
+        task = copy.deepcopy(self.sample_task)
+        task['user']['id'] = 'user1'
+        task_id = self.scheduler.add_task(task)
+        task2 = copy.deepcopy(self.sample_task)
+        task2['user']['id'] = 'user2'
+        task2['user']['project'] = 'test'
+        task2_id = self.scheduler.add_task(task2)
+        pending_tasks = self.scheduler.db_jobs.find({'status.primary': godutils.STATUS_PENDING})
+        task_list = []
+        for p in pending_tasks:
+            task_list.append(p)
+        queued_tasks = self.scheduler.schedule_tasks(task_list)
+        self.assertTrue(queued_tasks[0]['id'] == task_id)
+
+    def test_schedule_user_usage(self):
+        self.add_users(50, 50)
+        task = copy.deepcopy(self.sample_task)
+        task['user']['id'] = 'user1'
+        task_id = self.scheduler.add_task(task)
+        task2 = copy.deepcopy(self.sample_task)
+        task2['user']['id'] = 'user2'
+        task2['user']['project'] = 'test'
+        task2_id = self.scheduler.add_task(task2)
+        pending_tasks = self.scheduler.db_jobs.find({'status.primary': godutils.STATUS_PENDING})
+        task_list = []
+        for p in pending_tasks:
+            task_list.append(p)
+        self.set_user_usage('user1')
+        queued_tasks = self.scheduler.schedule_tasks(task_list)
+        self.assertTrue(queued_tasks[0]['id'] == task2_id)

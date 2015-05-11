@@ -50,7 +50,7 @@ class FairShare(ISchedulerPlugin):
         if max - min < 1:
             result = 0.5
         else:
-            result = (value - min)/( max - min);
+            result = (value - min)/float( max - min);
         return result;
 
     def get_ticket_share(self, user, group, task):
@@ -75,8 +75,8 @@ class FairShare(ISchedulerPlugin):
                         group_time*self.group_time_weight + \
                         group_cpu*self.group_cpu_weight + \
                         group_ram*self.group_ram_weight + \
-                        (1-user_prio)*(1-self.user_weight) + \
-                        (1-group_prio)*(1-self.group_weight)
+                        (1-user_prio)*(self.user_weight) + \
+                        (1-group_prio)*(self.group_weight)
         return ticket_share
 
     def get_name(self):
