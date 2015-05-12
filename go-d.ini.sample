@@ -112,3 +112,7 @@ docker_api_version: '1.17'
 cadvisor_port: 8080
 # /containers/docker/ to map to /containers/docker/container_id
 cadvisor_url_part: '/containers/docker/'
+
+# Logging ###############################
+log_location: ''
+log_level: 'DEBUG'

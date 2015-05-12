@@ -4,6 +4,7 @@ import time, sys
 import redis
 import json
 import logging
+import logging.config
 import signal
 import os
 import datetime
@@ -112,7 +113,15 @@ class GoDScheduler(Daemon):
 
 
         self.logger = logging.getLogger('godocker')
-        loglevel = logging.DEBUG
+        loglevel = logging.ERROR
+        if 'log_level' in self.cfg:
+            loglevel = self.cfg['log_level']
+            if loglevel == 'DEBUG':
+                loglevel = logging.DEBUG
+            if loglevel == 'INFO':
+                loglevel = logging.INFO
+            if loglevel == 'ERROR':
+                loglevel = logging.ERROR
         if os.getenv('GOD_LOGLEVEL'):
             loglevel = os.environ['GOD_LOGLEVEL']
             if loglevel == 'DEBUG':
@@ -123,8 +132,12 @@ class GoDScheduler(Daemon):
                 loglevel = logging.ERROR
         self.logger.setLevel(loglevel)
         #fh = logging.FileHandler('god_scheduler.log')
-        fh = RotatingFileHandler('god_scheduler.log', maxBytes=10000000,
-                                  backupCount=5)
+        log_file_path = 'god_watcher.log'
+        if 'log_location' in self.cfg:
+            log_file_path = os.path.join(self.cfg['log_location'], log_file_path)
+
+        fh = RotatingFileHandler(log_file_path, maxBytes=10000000,
+                                      backupCount=5)
         fh.setLevel(loglevel)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)
