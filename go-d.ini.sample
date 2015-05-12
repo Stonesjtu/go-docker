@@ -116,3 +116,7 @@ cadvisor_url_part: '/containers/docker/'
 # Logging ###############################
 log_location: ''
 log_level: 'DEBUG'
+log_graylog_host: None
+log_graylog_port: None
+log_logstash_host: None
+log_logstash_port: None

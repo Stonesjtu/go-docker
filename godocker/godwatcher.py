@@ -10,6 +10,10 @@ import datetime
 import time
 import os
 import socket
+
+from gelfHandler import gelfHandler
+import logstash
+
 from pymongo import MongoClient
 from bson.json_util import dumps
 from bson.objectid import ObjectId
@@ -88,6 +92,13 @@ class GoDWatcher(Daemon):
         fh.setFormatter(formatter)
         self.logger.addHandler(fh)
 
+        if 'log_graylog_host' in self.cfg and self.cfg['log_graylog_host']:
+            graypy_handler = gelfHandler(host=self.cfg['log_graylog_host'],port=self.cfg['log_graylog_port'], proto='UDP')
+            graypy_handler.setLevel(loglevel)
+            self.logger.addHandler(graypy_handler)
+
+        if 'log_logstash_host' in self.cfg and self.cfg['log_logstash_host']:
+            self.logger.addHandler(logstash.LogstashHandler(self.cfg['log_logstash_host'], self.cfg['log_logstash_port'], version=1))
 
         if not self.cfg.plugins_dir:
             dirname, filename = os.path.split(os.path.abspath(__file__))
@@ -539,6 +550,7 @@ class GoDWatcher(Daemon):
         Schedule and run tasks / kill tasks
 
         '''
+        self.logger.debug('Watcher:'+str(self.hostname)+':Run')
         print "Get tasks to kill"
         if self.stop_daemon:
             return

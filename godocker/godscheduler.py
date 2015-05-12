@@ -13,6 +13,12 @@ import socket
 import random
 import string
 from copy import deepcopy
+
+from gelfHandler import gelfHandler
+import logstash
+
+
+
 from pymongo import MongoClient
 from pymongo import DESCENDING as pyDESCENDING
 from bson.json_util import dumps
@@ -142,6 +148,15 @@ class GoDScheduler(Daemon):
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)
         self.logger.addHandler(fh)
+
+        if 'log_graylog_host' in self.cfg and self.cfg['log_graylog_host']:
+            #graypy_handler = graypy.GELFHandler(self.cfg['log_graylog_host'], self.cfg['log_graylog_port'])
+            graypy_handler = gelfHandler(host=self.cfg['log_graylog_host'],port=self.cfg['log_graylog_port'], proto='UDP')
+            graypy_handler.setLevel(loglevel)
+            self.logger.addHandler(graypy_handler)
+
+        if 'log_logstash_host' in self.cfg and self.cfg['log_logstash_host']:
+            self.logger.addHandler(logstash.LogstashHandler(self.cfg['log_logstash_host'], self.cfg['log_logstash_port'], version=1))
 
         if not self.cfg.plugins_dir:
             dirname, filename = os.path.split(os.path.abspath(__file__))

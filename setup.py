@@ -21,6 +21,8 @@ config = {
                             'yapsy',
                             'iso8601',
                             'mock',
+                            'gelfHandler',
+                            'python-logstash',
                             'config' ],
     'packages': find_packages(),
     'include_package_data': True,
