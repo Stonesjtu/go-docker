@@ -217,6 +217,7 @@ class GoDWatcher(Daemon):
                 original_task = self.db_jobs.find_one({'id': task['id']})
                 if original_task and original_task['status']['secondary'] == godutils.STATUS_SECONDARY_RESCHEDULE_REQUESTED:
                     self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
+                    self.r.incr(self.cfg.redis_prefix+':jobs:queued')
                     self.db_jobs.update({'id': task['id']}, {'$set': {
                         'status.primary' : godutils.STATUS_PENDING,
                         'status.secondary': godutils.STATUS_SECONDARY_RESCHEDULED
