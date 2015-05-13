@@ -112,6 +112,8 @@ docker_api_version: '1.17'
 cadvisor_port: 8080
 # /containers/docker/ to map to /containers/docker/container_id
 cadvisor_url_part: '/containers/docker/'
+# Number of samples (seconds) to display , according to cAdvisor launch option -storage_duration
+cadvisor_samples: 60
 
 # Logging ###############################
 log_location: ''
