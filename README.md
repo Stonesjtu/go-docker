@@ -71,9 +71,10 @@ Documentation: http://go-docker.readthedocs.org/en/latest/index.html
 [![codecov.io](https://codecov.io/bitbucket/osallou/go-docker/coverage.svg?branch=master)](https://codecov.io/bitbucket/osallou/go-docker?branch=master)
 
 [![Dependency Status](https://www.versioneye.com/user/projects/5501ce724a10640f8c000097/badge.svg?style=flat)](https://www.versioneye.com/user/projects/5501ce724a10640f8c000097)
+
 ## Scheduler
 
-scheduler is in charge of scheduling pending jobs and running them on an
+The scheduler is in charge of scheduling pending jobs and running them on an
 executor.
 
 There is only one scheduler running. At startup, scheduler will check if Redis
@@ -85,11 +86,9 @@ automatic check prevents Redis flushes or loss of data.
 watcher checks job status and manage jobs kill/suspend/resume. There can be
 multiple watchers running in parallel
 
-## Conf
+## Configuration
 
-Config is in go-d.ini. One can define the scheduler and executor to use. It must
-be one of the classes defined in plugins. One can easily add new ones following
-godocker/iExecutorPlugin and iSchedulterPlugin interfaces
+Configuration is in file go-d.ini. One can define the scheduler and executor to use. It must be one of the classes defined in plugins. One can easily add new ones following godocker/iExecutorPlugin and iSchedulterPlugin interfaces
 
 One can set environment variable GOD_CONFIG to specify go-d.ini location for go-d-scheduler and go-d-watcher.
 
@@ -227,6 +226,14 @@ members).
 ## Priority
 
 User and projects can have a priority between 0 and 100. This value *may* be used by schedulers to order the pending tasks. *default* project has a priority of 50.
+
+## DRMAA support
+
+A drmaa library is available at https://bitbucket.org/osallou/go-docker-drmaa.
+It is a C implementation of DRMAA v1. Not all methods are implemented but basic
+use to submit/check jobs are present.
+
+Python DRMAA modules can work with this library.
 
 ## Tips
 
