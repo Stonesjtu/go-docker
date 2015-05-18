@@ -49,6 +49,7 @@ default_images: [
     { name: 'ubuntu', url: 'rastasheep/ubuntu-sshd', interactive: True}
 ]
 
+# Needs swarm >= 0.2
 allow_user_images: False
 
 # VOLUMES ##############################
