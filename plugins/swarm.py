@@ -200,7 +200,10 @@ class Swarm(IExecutorPlugin):
         except Exception as e:
             self.logger.debug(str(e))
             self.logger.debug("Could not pause container: "+task['container']['id'])
-            over = False
+            if e.response.status_code == 404:
+                over = True
+            else:
+                over = False
 
         return (task, over)
 
@@ -219,6 +222,9 @@ class Swarm(IExecutorPlugin):
         except Exception as e:
             self.logger.debug(str(e))
             self.logger.debug("Could not pause container: "+task['container']['id'])
-            over = False
+            if e.response.status_code == 404:
+                over = True
+            else:
+                over = False
 
         return (task, over)
