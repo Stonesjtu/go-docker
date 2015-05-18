@@ -49,6 +49,8 @@ default_images: [
     { name: 'ubuntu', url: 'rastasheep/ubuntu-sshd', interactive: True}
 ]
 
+allow_user_images: False
+
 # VOLUMES ##############################
 
 volumes: [
