@@ -372,6 +372,7 @@ class GoDScheduler(Daemon):
             cmd += "fi\n"
             cmd += "if [ -n \"$(command -v apt-get)\" ]; then\n"
             cmd += "  export DEBIAN_FRONTEND=noninteractive\n"
+            cmd += "  apt-get update\n"
             cmd += "  apt-get -y install sudo\n"
             cmd += "fi\n"
         else:
