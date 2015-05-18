@@ -122,3 +122,11 @@ log_graylog_host: None
 log_graylog_port: None
 log_logstash_host: None
 log_logstash_port: None
+
+# Email SMTP ################################
+email_from: 'godocker@do-no-reply.fr'
+email_smtp_tls: False
+email_smtp_user: None
+email_smtp_password: None
+email_smtp_host: None
+email_smtp_port: 25

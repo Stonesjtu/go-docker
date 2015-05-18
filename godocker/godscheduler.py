@@ -33,6 +33,7 @@ from godocker.iAuthPlugin import IAuthPlugin
 from godocker.pairtreeStorage import PairtreeStorage
 from godocker.utils import is_array_child_task, is_array_task
 import godocker.utils as godutils
+from godocker.notify import Notify
 
 class GoDScheduler(Daemon):
     '''
@@ -163,6 +164,9 @@ class GoDScheduler(Daemon):
             self.cfg.plugins_dir = os.path.join(dirname, '..', 'plugins')
 
         self.store = PairtreeStorage(self.cfg)
+
+        Notify.set_config(self.cfg)
+        Notify.set_logger(self.logger)
 
         # Build the manager
         simplePluginManager = PluginManager()
@@ -305,6 +309,7 @@ class GoDScheduler(Daemon):
                                         'status.secondary': r['status']['secondary'],
                                         'status.date_running': r['status']['date_running'],
                                         'container': r['container']}})
+                Notify.notify_email(r)
         if rejected_tasks:
             for r in rejected_tasks:
                 # Put back mapping allocated ports

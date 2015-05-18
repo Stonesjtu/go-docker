@@ -26,6 +26,7 @@ from godocker.iExecutorPlugin import IExecutorPlugin
 from godocker.iAuthPlugin import IAuthPlugin
 from godocker.utils import is_array_task, is_array_child_task
 import godocker.utils as godutils
+from godocker.notify import Notify
 
 
 
@@ -103,6 +104,10 @@ class GoDWatcher(Daemon):
         if not self.cfg.plugins_dir:
             dirname, filename = os.path.split(os.path.abspath(__file__))
             self.cfg.plugins_dir = os.path.join(dirname, '..', 'plugins')
+
+
+        Notify.set_config(self.cfg)
+        Notify.set_logger(self.logger)
 
         # Build the manager
         simplePluginManager = PluginManager()
@@ -248,6 +253,7 @@ class GoDWatcher(Daemon):
 
                 if not is_array_child_task(task):
                     self.notify_msg(task)
+                    Notify.notify_email(task)
             else:
                 # Could not kill, put back in queue
                 self.logger.warn('Executor:Kill:Error:'+str(task['id']))
@@ -275,6 +281,7 @@ class GoDWatcher(Daemon):
             else:
                 (task, over) = self.executor.suspend_task(task)
                 status = godutils.STATUS_SECONDARY_SUSPENDED
+                Notify.notify_email(task)
             if over:
                 task['status']['secondary'] = status
                 self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
@@ -304,6 +311,7 @@ class GoDWatcher(Daemon):
             else:
                 (task, over) = self.executor.resume_task(task)
                 status = godutils.STATUS_SECONDARY_RESUMED
+                Notify.notify_email(task)
             if over:
                 task['status']['secondary'] = status
                 self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
@@ -528,6 +536,7 @@ class GoDWatcher(Daemon):
                         self._add_to_stats(task)
                     if not is_array_child_task(task):
                         self.notify_msg(task)
+                        Notify.notify_email(task)
                 else:
                     self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
                     self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
