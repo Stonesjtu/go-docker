@@ -361,28 +361,28 @@ class GoDScheduler(Daemon):
         # docker has issues with kernel (need recent kernel) to apply su (and others)
         # in container.
         # https://github.com/docker/docker/issues/5899
-        cmd += "if [ -n \"$(command -v sudo)\" ]; then\n"
-        cmd += " echo \"sudo installed\"\n"
-        cmd += "else\n"
+        #cmd += "if [ -n \"$(command -v sudo)\" ]; then\n"
+        #cmd += " echo \"sudo installed\"\n"
+        #cmd += "else\n"
 
-        if not self.cfg.network_disabled:
+        #if not self.cfg.network_disabled:
             # If deps not installed and we have network access
-            cmd += "if [ -n \"$(command -v yum)\" ]; then\n"
-            cmd += "  yum -y install sudo\n"
-            cmd += "fi\n"
-            cmd += "if [ -n \"$(command -v apt-get)\" ]; then\n"
-            cmd += "  export DEBIAN_FRONTEND=noninteractive\n"
-            cmd += "  apt-get update\n"
-            cmd += "  apt-get -y install sudo\n"
-            cmd += "fi\n"
-        else:
+        #    cmd += "if [ -n \"$(command -v yum)\" ]; then\n"
+        #    cmd += "  yum -y install sudo\n"
+        #    cmd += "fi\n"
+        #    cmd += "if [ -n \"$(command -v apt-get)\" ]; then\n"
+        #    cmd += "  export DEBIAN_FRONTEND=noninteractive\n"
+        #    cmd += "  apt-get update\n"
+        #    cmd += "  apt-get -y install sudo\n"
+        #    cmd += "fi\n"
+        #else:
             # If deps are not installed and we have no network access
-            cmd += "echo \"sudo not installed, exiting!\" > /mnt/go-docker/god.log"
-            cmd += "chown -R "+user_id+":"+user_id+" /mnt/go-docker/*\n"
-            cmd += "exit 1"
+        #    cmd += "echo \"sudo not installed, exiting!\" > /mnt/go-docker/god.log"
+        #    cmd += "chown -R "+user_id+":"+user_id+" /mnt/go-docker/*\n"
+        #    cmd += "exit 1"
 
-        cmd += "fi\n"
-        cmd += "sed -i  \"s/Defaults\\s\\+requiretty/#/g\" /etc/sudoers\n"
+        #cmd += "fi\n"
+        #cmd += "sed -i  \"s/Defaults\\s\\+requiretty/#/g\" /etc/sudoers\n"
         cmd += "cd /mnt/go-docker\n"
         array_cmd = ""
         if parent_task:
@@ -435,7 +435,8 @@ class GoDScheduler(Daemon):
             cmd +="/usr/sbin/sshd -f /etc/ssh/sshd_config -D\n"
         else:
             if not task['container']['root']:
-                cmd += "sudo -u "+user_id+" bash -c \""+vol_home + array_cmd + " ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\"\n"
+                #cmd += "sudo -u "+user_id+" bash -c \""+vol_home + array_cmd + " ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\"\n"
+                cmd += "su - "+user_id+" -c \""+vol_home + array_cmd + " ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\"\n"
             else:
                 cmd += "/mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\n"
         cmd += "ret_code=$?\n"
