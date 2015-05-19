@@ -133,3 +133,9 @@ email_smtp_user: None
 email_smtp_password: None
 email_smtp_host: None
 email_smtp_port: 25
+
+# Clean up ##################################
+# Number of days after which job directory
+# can be deleted by cleanup script
+# Default: 30
+clean_old: 30
