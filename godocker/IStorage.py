@@ -27,3 +27,12 @@ class IStorage(object):
         :return: path to the file
         '''
         return None
+
+    def clean(self, task):
+        '''
+        Cleanup task directory
+
+        :param task: current task
+        :type task: dict
+        '''
+        pass

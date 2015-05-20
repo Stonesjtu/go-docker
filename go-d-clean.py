@@ -55,11 +55,7 @@ if __name__ == "__main__":
         old_jobs = db_jobsover.find({'status.date_over': {'$lte': old_time, '$gte': last_run}})
         for job in old_jobs:
             job_dir = store.get_task_dir(job)
-            if os.path.exists(job_dir):
-                logging.debug('Delete '+job_dir)
-                shutil.rmtree(job_dir)
-            else:
-                logging.debug('Dir not present: '+job_dir)
+            store.clean(job)
 
         # Update last_run
         db.cleanup.update({'id': 'pairtree'},{'$set': {'last': new_run}})

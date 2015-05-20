@@ -1,5 +1,6 @@
 import os
 import pairtree
+import shutil
 from godocker.IStorage import IStorage
 
 class PairtreeStorage(IStorage):
@@ -51,3 +52,15 @@ class PairtreeStorage(IStorage):
         task_obj.add_bytestream(name, content, path=subpath)
         os.chmod(task_dir, 0777)
         return os.path.join(task_dir, path, name)
+
+
+    def clean(self, task):
+        '''
+        Cleanup task directory
+
+        :param task: current task
+        :type task: dict
+        '''
+        job_dir = self.get_task_dir(task)
+        if os.path.exists(task):
+            shutil.rmtree(job_dir)
