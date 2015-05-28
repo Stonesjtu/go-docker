@@ -1,0 +1,9 @@
+[Core]
+Name = Mesos
+Module = mesos
+
+[Documentation]
+Author = Olivier Sallou
+Version = 0.1
+Website =
+Description = Mesos executor

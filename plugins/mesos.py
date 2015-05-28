@@ -1,0 +1,361 @@
+from godocker.iExecutorPlugin import IExecutorPlugin
+import json
+import datetime
+import time
+import iso8601
+import os
+import sys
+import threading
+import redis
+
+from bson.json_util import dumps
+
+from godocker.utils import is_array_child_task, is_array_task
+
+import mesos.interface
+from mesos.interface import mesos_pb2
+import mesos.native
+
+class MesosThread(threading.Thread):
+
+    def set_driver(self, driver):
+        self.driver = driver
+
+    def run(self):
+        self.driver.run()
+
+    def stop(self):
+        self.driver.stop()
+
+class MesosScheduler(mesos.interface.Scheduler):
+
+    def __init__(self, implicitAcknowledgements, executor):
+        self.implicitAcknowledgements = implicitAcknowledgements
+        self.executor = executor
+        self.Terminated = False
+
+    def set_config(self, config):
+        self.config = config
+        self.redis_handler = redis.StrictRedis(host=self.config.redis_host, port=self.config.redis_port, db=self.config.redis_db)
+
+    def set_logger(self, logger):
+        self.logger = logger
+
+    def registered(self, driver, frameworkId, masterInfo):
+        self.logger.info("Registered with framework ID %s" % frameworkId.value)
+
+    def resourceOffers(self, driver, offers):
+        '''
+        Basic placement strategy (loop over offers and try to push as possible)
+        '''
+        if self.Terminated:
+            self.logger.info("Stop requested")
+            driver.stop()
+            return
+        self.logger.debug('Mesos:Offers:Begin')
+        # Get tasks
+        tasks = []
+        redis_task = self.redis_handler.lpop(self.config.redis_prefix+':mesos:pending')
+        while redis_task is not None:
+            task = json.loads(redis_task)
+            task['mesos_offer'] = False
+            tasks.append(task)
+            redis_task = self.redis_handler.lpop(self.config.redis_prefix+':mesos:pending')
+
+        for offer in offers:
+            if not tasks:
+                self.logger.debug('Mesos:Offer:NoTask')
+                driver.declineOffer(offer.id)
+                continue
+            offer_tasks = []
+            offerCpus = 0
+            offerMem = 0
+            for resource in offer.resources:
+                if resource.name == "cpus":
+                    offerCpus += resource.scalar.value
+                elif resource.name == "mem":
+                    offerMem += resource.scalar.value
+            self.logger.debug("Mesos:Received offer %s with cpus: %s and mem: %s" \
+                  % (offer.id.value, offerCpus, offerMem))
+            for task in tasks:
+                if not task['mesos_offer'] and task['requirements']['cpu'] <= offerCpus and task['requirements']['ram'] <= offerMem:
+                    offer_tasks.append(self.new_task(offer, task))
+                    offerCpus -= task['requirements']['cpu']
+                    offerMem -= task['requirements']['ram']
+                    task['mesos_offer'] = True
+                    if 'meta' not in task or task['container']['meta'] is None:
+                        task['container']['meta'] = {}
+                    if 'Node' not in task['container']['meta'] or task['container']['meta']['Node'] is None:
+                        task['container']['meta']['Node'] = {}
+                    task['container']['meta']['Node']['Name'] = offer.slave_id.value
+                    self.logger.debug('Mesos:Task:Running:'+str(task['id']))
+                    self.redis_handler.rpush(self.config.redis_prefix+':mesos:running', dumps(task))
+                    self.redis_handler.set(self.config.redis_prefix+':mesos:over:'+str(task['id']),0)
+            driver.launchTasks(offer.id, offer_tasks)
+            #tasks = [self.new_task(offer)]
+        for task in tasks:
+            if not task['mesos_offer']:
+                self.logger.debug('Mesos:Task:Rejected:'+str(task['id']))
+                self.redis_handler.rpush(self.config.redis_prefix+':mesos:rejected', dumps(task))
+            #driver.launchTasks(offer.id, tasks)
+            #driver.declineOffer(offer.id)
+        if tasks:
+            self.redis_handler.set(self.config.redis_prefix+':mesos:offer', 1)
+        self.logger.debug('Mesos:Offers:End')
+
+    def new_task(self, offer, job):
+        '''
+        Creates a task for mesos
+        '''
+        task = mesos_pb2.TaskInfo()
+        container = mesos_pb2.ContainerInfo()
+        container.type = 1 # mesos_pb2.ContainerInfo.Type.DOCKER
+
+        for v in job['container']['volumes']:
+            if v['mount'] is None:
+                v['mount'] = v['path']
+            volume = container.volumes.add()
+            volume.container_path = v['mount']
+            volume.host_path = v['path']
+            if v['acl'] == 'rw':
+                volume.mode = 1 # mesos_pb2.Volume.Mode.RW
+            else:
+                volume.mode = 2 # mesos_pb2.Volume.Mode.RO
+
+        docker = mesos_pb2.ContainerInfo.DockerInfo()
+        docker.image = job['container']['image']
+        docker.network = 2 # mesos_pb2.ContainerInfo.DockerInfo.Network.BRIDGE
+        docker.force_pull_image = True
+
+        tid = str(job['id'])
+
+        container.docker.MergeFrom(docker)
+
+        task.container.MergeFrom(container)
+
+        command = mesos_pb2.CommandInfo()
+        command.value = job['command']['script']
+        task.command.MergeFrom(command)
+        task.task_id.value = tid
+        task.slave_id.value = offer.slave_id.value
+        task.name = job['meta']['name']
+
+        cpus = task.resources.add()
+        cpus.name = "cpus"
+        cpus.type = mesos_pb2.Value.SCALAR
+        cpus.scalar.value = job['requirements']['cpu']
+
+        mem = task.resources.add()
+        mem.name = "mem"
+        mem.type = mesos_pb2.Value.SCALAR
+        mem.scalar.value = job['requirements']['ram']
+
+        #TODO add port bindings
+
+        return task
+
+
+
+    def statusUpdate(self, driver, update):
+        self.logger.debug("Task %s is in state %s" % \
+            (update.task_id.value, mesos_pb2.TaskState.Name(update.state)))
+
+        self.logger.debug('Mesos:Task:Over:'+str(update.task_id.value))
+
+        self.redis_handler.set(self.config.redis_prefix+':mesos:over:'+str(update.task_id.value),update.state)
+
+    def frameworkMessage(self, driver, executorId, slaveId, message):
+        self.logger.debug("Received framework message")
+
+class Mesos(IExecutorPlugin):
+    def get_name(self):
+        return "mesos"
+
+    def get_type(self):
+        return "Executor"
+
+    def set_config(self, cfg):
+        self.cfg = cfg
+        self.Terminated = False
+
+        executor = mesos_pb2.ExecutorInfo()
+        executor.executor_id.value = "go-docker"
+        #executor.command.value = "/bin/echo hello # $MESOS_SANDBOX #"
+        executor.name = "Go-Docker executor"
+
+        framework = mesos_pb2.FrameworkInfo()
+        framework.user = "" # Have Mesos fill in the current user.
+        framework.name = "Go-Docker Mesos"
+
+        if os.getenv("MESOS_CHECKPOINT"):
+            self.logger.info("Enabling checkpoint for the framework")
+            framework.checkpoint = True
+
+        implicitAcknowledgements = 1
+        if os.getenv("MESOS_EXPLICIT_ACKNOWLEDGEMENTS"):
+            self.logger.info("Enabling explicit status update acknowledgements")
+            implicitAcknowledgements = 0
+
+        if os.getenv("MESOS_AUTHENTICATE"):
+            self.logger.info("Enabling authentication for the framework")
+            if not os.getenv("DEFAULT_PRINCIPAL"):
+                self.logger.error("Expecting authentication principal in the environment")
+                sys.exit(1);
+
+            if not os.getenv("DEFAULT_SECRET"):
+                self.logger.error("Expecting authentication secret in the environment")
+                sys.exit(1);
+
+            credential = mesos_pb2.Credential()
+            credential.principal = os.getenv("DEFAULT_PRINCIPAL")
+            credential.secret = os.getenv("DEFAULT_SECRET")
+
+            framework.principal = os.getenv("DEFAULT_PRINCIPAL")
+
+            mesosScheduler = MesosScheduler(implicitAcknowledgements, executor)
+            mesosScheduler.set_logger(self.logger)
+            mesosScheduler.set_config(self.cfg)
+
+            driver = mesos.native.MesosSchedulerDriver(
+                mesosScheduler,
+                framework,
+                self.cfg.mesos_master,
+                credential)
+        else:
+            framework.principal = "godocker-mesos-framework"
+            mesosScheduler = MesosScheduler(implicitAcknowledgements, executor)
+            mesosScheduler.set_logger(self.logger)
+            mesosScheduler.set_config(self.cfg)
+            driver = mesos.native.MesosSchedulerDriver(
+                mesosScheduler,
+                framework,
+                self.cfg.mesos_master)
+
+
+        self.mesosthread = MesosThread()
+        self.mesosthread.set_driver(driver)
+        self.mesosthread.start()
+
+
+    def close(self):
+        '''
+        Request end of executor if needed
+        '''
+        self.mesosthread.stop()
+        self.Terminated = True
+
+    def run_all_tasks(self, tasks, callback=None):
+        '''
+        Execute all task list on executor system, all tasks must be executed together
+
+        NOT IMPLEMENTED, will reject all tasks
+
+        :param tasks: list of tasks to run
+        :type tasks: list
+        :param callback: callback function to update tasks status (running/rejected)
+        :type callback: func(running list,rejected list)
+        :return: tuple of submitted and rejected/errored tasks
+        '''
+        self.logger.error('run_all_tasks not implemented')
+        return ([],tasks)
+
+    def run_tasks(self, tasks, callback=None):
+        '''
+        Execute task list on executor system
+
+        :param tasks: list of tasks to run
+        :type tasks: list
+        :param callback: callback function to update tasks status (running/rejected)
+        :type callback: func(running list,rejected list)
+        :return: tuple of submitted and rejected/errored tasks
+        '''
+        self.logger.error('Not yet implemented: port bindings')
+        # Add tasks in redis to be managed by mesos
+        self.redis_handler.set(self.cfg.redis_prefix+':mesos:offer', 0)
+        for task in tasks:
+            self.redis_handler.rpush(self.cfg.redis_prefix+':mesos:pending', dumps(task))
+        # Wait for offer receival and treatment
+        self.logger.debug('Mesos:WaitForOffer:Begin')
+        mesos_offer = int(self.redis_handler.get(self.cfg.redis_prefix+':mesos:offer'))
+        while mesos_offer != 1 and not self.Terminated:
+            self.logger.debug('Mesos:WaitForOffer:Wait')
+            time.sleep(1)
+            mesos_offer = int(self.redis_handler.get(self.cfg.redis_prefix+':mesos:offer'))
+        self.logger.debug('Mesos:WaitForOffer:End')
+        # Get result
+        rejected_tasks = []
+        running_tasks = []
+        redis_task = self.redis_handler.lpop(self.cfg.redis_prefix+':mesos:running')
+        while redis_task is not None:
+            task = json.loads(redis_task)
+            running_tasks.append(task)
+            redis_task = self.redis_handler.lpop(self.cfg.redis_prefix+':mesos:running')
+        redis_task = self.redis_handler.lpop(self.cfg.redis_prefix+':mesos:rejected')
+        while redis_task is not None:
+            task = json.loads(redis_task)
+            rejected_tasks.append(task)
+            redis_task = self.redis_handler.lpop(self.cfg.redis_prefix+':mesos:rejected')
+        return (running_tasks,rejected_tasks)
+
+    def watch_tasks(self, task):
+        '''
+        Get task status
+
+        :param task: current task
+        :type task: Task
+        :param over: is task over
+        :type over: bool
+        '''
+        self.logger.debug('Mesos:Task:Check:Running:'+str(task['id']))
+        mesos_task = self.redis_handler.get(self.cfg.redis_prefix+':mesos:over:'+str(task['id']))
+        if mesos_task is not None and int(mesos_task) in [2,3,4,5,7]:
+            self.logger.debug('Mesos:Task:Check:IsOver:'+str(task['id']))
+            exit_code = int(mesos_task)
+            if 'State' not in task['container']['meta']:
+                task['container']['meta']['State'] = {}
+            if exit_code == 2:
+                task['container']['meta']['State']['ExitCode'] = 0
+            elif exit_code == 4:
+                task['container']['meta']['State']['ExitCode'] = 137
+            else:
+                task['container']['meta']['State']['ExitCode'] = 1
+            self.redis_handler.delete(self.cfg.redis_prefix+':mesos:over:'+str(task['id']))
+            return (task, True)
+        else:
+            self.logger.debug('Mesos:Task:Check:IsRunning:'+str(task['id']))
+            return (task,False)
+
+
+    def kill_task(self, task):
+        '''
+        Kills a running task
+
+        :param tasks: task to kill
+        :type tasks: Task
+        :return: (Task, over) over is True if task could be killed
+        '''
+        self.logger.error('Not yet implemented')
+        return (task, True)
+
+
+    def suspend_task(self, task):
+        '''
+        Suspend/pause a task
+
+        :param tasks: task to suspend
+        :type tasks: Task
+        :return: (Task, over) over is True if task could be suspended
+        '''
+        self.logger.error('Not yet implemented')
+        return (task, False)
+
+    def resume_task(self, task):
+        '''
+        Resume/restart a task
+
+        :param tasks: task to resumed
+        :type tasks: Task
+        :return: (Task, over) over is True if task could be resumed
+        '''
+        self.logger.error('Not yet implemented')
+        return (task, False)
