@@ -44,6 +44,34 @@ class MesosScheduler(mesos.interface.Scheduler):
     def registered(self, driver, frameworkId, masterInfo):
         self.logger.info("Registered with framework ID %s" % frameworkId.value)
 
+    def get_mapping_port(self, offer, host, task):
+        '''
+        Get a port mapping for interactive tasks
+
+        Duplicate of iExecutorPlugin
+
+        :param host: hostname of the container
+        :type host: str
+        :param task: task
+        :type task: int
+        :return: available port
+        '''
+        #port_min = self.config.port_start
+        #port_max = self.config.port_start + self.config.port_range
+
+        if not self.redis_handler.exists(self.config.redis_prefix+':ports:'+host):
+            for resource in offer.resources:
+                if resource.name == "ports":
+                    for mesos_range in resource.ranges.range:
+                        for port in range(mesos_range.end - mesos_range.begin):
+                            self.redis_handler.rpush(self.config.redis_prefix+':ports:'+host, mesos_range.begin + port)
+        port = self.redis_handler.lpop(self.config.redis_prefix+':ports:'+host)
+        self.logger.debug('Port:Give:'+task['container']['meta']['Node']['Name']+':'+str(port))
+        if not 'ports' in task['container']:
+            task['container']['ports'] = []
+        task['container']['ports'].append(port)
+        return int(port)
+
     def resourceOffers(self, driver, offers):
         '''
         Basic placement strategy (loop over offers and try to push as possible)
@@ -52,6 +80,19 @@ class MesosScheduler(mesos.interface.Scheduler):
             self.logger.info("Stop requested")
             driver.stop()
             return
+
+        self.logger.debug('Mesos:Offers:Kill:Begin')
+        redis_task_id = self.redis_handler.lpop(self.config.redis_prefix+':mesos:kill')
+        while redis_task_id is not None:
+            is_over = self.redis_handler.get(self.config.redis_prefix+':mesos:over:'+redis_task_id)
+            if is_over is not None:
+                task_id = mesos_pb2.TaskID()
+                task_id.value = redis_task_id
+                self.logger.debug('Mesos:Offers:Kill:Task:'+redis_task_id)
+                driver.killTask(task_id)
+            redis_task_id = self.redis_handler.lpop(self.config.redis_prefix+':mesos:kill')
+        self.logger.debug('Mesos:Offers:Kill:End')
+
         self.logger.debug('Mesos:Offers:Begin')
         # Get tasks
         tasks = []
@@ -83,11 +124,6 @@ class MesosScheduler(mesos.interface.Scheduler):
                     offerCpus -= task['requirements']['cpu']
                     offerMem -= task['requirements']['ram']
                     task['mesos_offer'] = True
-                    if 'meta' not in task or task['container']['meta'] is None:
-                        task['container']['meta'] = {}
-                    if 'Node' not in task['container']['meta'] or task['container']['meta']['Node'] is None:
-                        task['container']['meta']['Node'] = {}
-                    task['container']['meta']['Node']['Name'] = offer.slave_id.value
                     self.logger.debug('Mesos:Task:Running:'+str(task['id']))
                     self.redis_handler.rpush(self.config.redis_prefix+':mesos:running', dumps(task))
                     self.redis_handler.set(self.config.redis_prefix+':mesos:over:'+str(task['id']),0)
@@ -122,16 +158,7 @@ class MesosScheduler(mesos.interface.Scheduler):
             else:
                 volume.mode = 2 # mesos_pb2.Volume.Mode.RO
 
-        docker = mesos_pb2.ContainerInfo.DockerInfo()
-        docker.image = job['container']['image']
-        docker.network = 2 # mesos_pb2.ContainerInfo.DockerInfo.Network.BRIDGE
-        docker.force_pull_image = True
-
         tid = str(job['id'])
-
-        container.docker.MergeFrom(docker)
-
-        task.container.MergeFrom(container)
 
         command = mesos_pb2.CommandInfo()
         command.value = job['command']['script']
@@ -150,10 +177,37 @@ class MesosScheduler(mesos.interface.Scheduler):
         mem.type = mesos_pb2.Value.SCALAR
         mem.scalar.value = job['requirements']['ram']
 
-        #TODO add port bindings
+        if 'meta' not in job or job['container']['meta'] is None:
+            job['container']['meta'] = {}
+        if 'Node' not in job['container']['meta'] or job['container']['meta']['Node'] is None:
+            job['container']['meta']['Node'] = {}
+        job['container']['meta']['Node']['Name'] = offer.slave_id.value
 
+        docker = mesos_pb2.ContainerInfo.DockerInfo()
+        docker.image = job['container']['image']
+        docker.network = 2 # mesos_pb2.ContainerInfo.DockerInfo.Network.BRIDGE
+        docker.force_pull_image = True
+
+        port_list = []
+        if job['command']['interactive']:
+            port_list = [22]
+            mesos_ports = task.resources.add()
+            mesos_ports.name = "ports"
+            mesos_ports.type = mesos_pb2.Value.RANGES
+            for port in port_list:
+                if self.config.port_allocate:
+                    mapped_port = self.get_mapping_port(offer, job['container']['meta']['Node']['Name'], job)
+                else:
+                    mapped_port = port
+                docker_port = docker.port_mappings.add()
+                docker_port.host_port = mapped_port
+                docker_port.container_port = port
+                port_range = mesos_ports.ranges.range.add()
+                port_range.begin = mapped_port
+                port_range.end = mapped_port
+            container.docker.MergeFrom(docker)
+            task.container.MergeFrom(container)
         return task
-
 
 
     def statusUpdate(self, driver, update):
@@ -173,6 +227,14 @@ class Mesos(IExecutorPlugin):
 
     def get_type(self):
         return "Executor"
+
+    def features(self):
+        '''
+        Get supported features
+
+        :return: list of features within ['kill', 'pause']
+        '''
+        return ['kill']
 
     def set_config(self, cfg):
         self.cfg = cfg
@@ -269,7 +331,6 @@ class Mesos(IExecutorPlugin):
         :type callback: func(running list,rejected list)
         :return: tuple of submitted and rejected/errored tasks
         '''
-        self.logger.error('Not yet implemented: port bindings')
         # Add tasks in redis to be managed by mesos
         self.redis_handler.set(self.cfg.redis_prefix+':mesos:offer', 0)
         for task in tasks:
@@ -295,6 +356,7 @@ class Mesos(IExecutorPlugin):
             task = json.loads(redis_task)
             rejected_tasks.append(task)
             redis_task = self.redis_handler.lpop(self.cfg.redis_prefix+':mesos:rejected')
+
         return (running_tasks,rejected_tasks)
 
     def watch_tasks(self, task):
@@ -335,6 +397,30 @@ class Mesos(IExecutorPlugin):
         :return: (Task, over) over is True if task could be killed
         '''
         self.logger.error('Not yet implemented')
+        self.logger.debug('Mesos:Task:Kill:Check:'+str(task['id']))
+        mesos_task = self.redis_handler.get(self.cfg.redis_prefix+':mesos:over:'+str(task['id']))
+        if mesos_task is not None and int(mesos_task) in [2,3,4,5,7]:
+            self.logger.debug('Mesos:Task:Kill:IsOver:'+str(task['id']))
+            exit_code = int(mesos_task)
+            if 'State' not in task['container']['meta']:
+                task['container']['meta']['State'] = {}
+            if exit_code == 2:
+                task['container']['meta']['State']['ExitCode'] = 0
+            elif exit_code == 4:
+                task['container']['meta']['State']['ExitCode'] = 137
+            else:
+                task['container']['meta']['State']['ExitCode'] = 1
+            self.redis_handler.delete(self.cfg.redis_prefix+':mesos:over:'+str(task['id']))
+            return (task, True)
+        else:
+            # TODO manage in driver the kill queue
+            # if :mesos:over present, send kill request
+            # else skip message
+            self.redis_handler.rpush(self.cfg.redis_prefix+':mesos:kill', str(task['id']))
+            self.logger.debug('Mesos:Task:Kill:IsRunning:'+str(task['id']))
+            return (task,False)
+
+
         return (task, True)
 
 
@@ -346,7 +432,7 @@ class Mesos(IExecutorPlugin):
         :type tasks: Task
         :return: (Task, over) over is True if task could be suspended
         '''
-        self.logger.error('Not yet implemented')
+        self.logger.error('Not supported')
         return (task, False)
 
     def resume_task(self, task):
@@ -357,5 +443,5 @@ class Mesos(IExecutorPlugin):
         :type tasks: Task
         :return: (Task, over) over is True if task could be resumed
         '''
-        self.logger.error('Not yet implemented')
+        self.logger.error('Not supported')
         return (task, False)
