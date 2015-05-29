@@ -127,8 +127,8 @@ class GoDWatcher(Daemon):
            #simplePluginManager.activatePluginByName(pluginInfo.name)
            if pluginInfo.plugin_object.get_name() == self.cfg.scheduler_policy:
              self.scheduler = pluginInfo.plugin_object
-             self.scheduler.set_config(self.cfg)
              self.scheduler.set_logger(self.logger)
+             self.scheduler.set_config(self.cfg)
              self.scheduler.set_redis_handler(self.r)
              self.scheduler.set_jobs_handler(self.db_jobs)
              self.scheduler.set_users_handler(self.db_users)
@@ -139,8 +139,8 @@ class GoDWatcher(Daemon):
            #simplePluginManager.activatePluginByName(pluginInfo.name)
            if pluginInfo.plugin_object.get_name() == self.cfg.executor:
              self.executor = pluginInfo.plugin_object
-             self.executor.set_config(self.cfg)
              self.executor.set_logger(self.logger)
+             self.executor.set_config(self.cfg)
              self.executor.set_redis_handler(self.r)
              self.executor.set_jobs_handler(self.db_jobs)
              self.executor.set_users_handler(self.db_users)
@@ -171,7 +171,6 @@ class GoDWatcher(Daemon):
             if task['status']['primary'] == godutils.STATUS_OVER:
                 continue
             if task['status']['primary'] != godutils.STATUS_PENDING:
-
                 if is_array_task(task):
                     # If an array parent, only checks if some child tasks are still running
                     #nb_subtasks_running = self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtaskrunning')
@@ -265,12 +264,14 @@ class GoDWatcher(Daemon):
         '''
         if self.stop_daemon:
             return
+
         for task in suspend_list:
             if self.stop_daemon:
                 return
 
             status = None
             over = False
+
             if task['status']['primary'] == godutils.STATUS_PENDING or task['status']['primary'] == godutils.STATUS_OVER:
                 status = godutils.STATUS_SECONDARY_SUSPEND_REJECTED
                 over = True
@@ -304,7 +305,8 @@ class GoDWatcher(Daemon):
             if self.stop_daemon:
                 return
             status = None
-            over = False
+            over = Fals
+
             if task['status']['primary'] == godutils.STATUS_PENDING or task['status']['primary'] == godutils.STATUS_OVER or task['status']['secondary'] != 'resume requested':
                 status = godutils.STATUS_SECONDARY_RESUME_REJECTED
                 over = True
@@ -575,7 +577,8 @@ class GoDWatcher(Daemon):
         #task_list = []
         #for p in kill_task_list:
         #    task_list.append(p)
-        self.kill_tasks(kill_task_list)
+        if 'kill' in self.executor.features():
+            self.kill_tasks(kill_task_list)
 
         print 'Get tasks to suspend'
         if self.stop_daemon:
@@ -591,7 +594,8 @@ class GoDWatcher(Daemon):
         #task_list = []
         #for p in suspend_task_list:
         #    task_list.append(p)
-        self.suspend_tasks(suspend_task_list)
+        if 'pause' in self.executor.features():
+            self.suspend_tasks(suspend_task_list)
 
         print 'Get tasks to resume'
         if self.stop_daemon:
@@ -607,7 +611,8 @@ class GoDWatcher(Daemon):
         #task_list = []
         #for p in resume_task_list:
         #    task_list.append(p)
-        self.resume_tasks(resume_task_list)
+        if 'pause' in self.executor.features():
+            self.resume_tasks(resume_task_list)
 
         print 'Look for terminated jobs'
         if self.stop_daemon:
@@ -617,6 +622,7 @@ class GoDWatcher(Daemon):
     def signal_handler(self, signum, frame):
         GoDWatcher.SIGINT = True
         self.logger.warn('User request to exit')
+        self.executor.close()
 
     def update_status(self):
         dt = datetime.datetime.now()
@@ -651,3 +657,4 @@ class GoDWatcher(Daemon):
             time.sleep(2)
             if not loop:
                 infinite = False
+        self.executor.close()

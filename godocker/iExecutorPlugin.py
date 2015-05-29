@@ -5,6 +5,19 @@ class IExecutorPlugin(IGoDockerPlugin):
     Executor plugins interface
     '''
 
+    def features(self):
+        '''
+        Get supported features
+
+        :return: list of features within ['kill', 'pause']
+        '''
+        return []
+
+    def close(self):
+        '''
+        Request end of executor if needed
+        '''
+        pass
 
     def suspend_task(self, task):
         '''
@@ -86,7 +99,7 @@ class IExecutorPlugin(IGoDockerPlugin):
         :return: available port
         '''
         if not self.redis_handler.exists(self.cfg.redis_prefix+':ports:'+host):
-            for i in range(self.cfg.port_start):
+            for i in range(self.cfg.port_range):
                 self.redis_handler.rpush(self.cfg.redis_prefix+':ports:'+host, self.cfg.port_start + i)
         port = self.redis_handler.lpop(self.cfg.redis_prefix+':ports:'+host)
         self.logger.debug('Port:Give:'+task['container']['meta']['Node']['Name']+':'+str(port))
