@@ -11,6 +11,14 @@ class Swarm(IExecutorPlugin):
     def get_type(self):
         return "Executor"
 
+    def features(self):
+        '''
+        Get supported features
+
+        :return: list of features within ['kill', 'pause']
+        '''
+        return ['kill', 'pause']
+
     def set_config(self, cfg):
         self.cfg = cfg
 

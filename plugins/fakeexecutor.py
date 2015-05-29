@@ -9,6 +9,14 @@ class FakeExecutor(IExecutorPlugin):
     def get_type(self):
         return "Executor"
 
+    def features(self):
+        '''
+        Get supported features
+
+        :return: list of features within ['kill', 'pause']
+        '''
+        return ['kill', 'pause']
+
     def run_all_tasks(self, tasks, callback=None):
         '''
         Execute all task list on executor system, all tasks must be executed together
