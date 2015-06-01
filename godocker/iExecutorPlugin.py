@@ -9,7 +9,7 @@ class IExecutorPlugin(IGoDockerPlugin):
         '''
         Get supported features
 
-        :return: list of features within ['kill', 'pause']
+        :return: list of features within ['kill', 'pause','resources.port']
         '''
         return []
 

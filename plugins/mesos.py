@@ -59,13 +59,22 @@ class MesosScheduler(mesos.interface.Scheduler):
         #port_min = self.config.port_start
         #port_max = self.config.port_start + self.config.port_range
 
-        if not self.redis_handler.exists(self.config.redis_prefix+':ports:'+host):
-            for resource in offer.resources:
-                if resource.name == "ports":
-                    for mesos_range in resource.ranges.range:
-                        for port in range(mesos_range.end - mesos_range.begin):
-                            self.redis_handler.rpush(self.config.redis_prefix+':ports:'+host, mesos_range.begin + port)
-        port = self.redis_handler.lpop(self.config.redis_prefix+':ports:'+host)
+        #if not self.redis_handler.exists(self.config.redis_prefix+':ports:'+host):
+        #    for resource in offer.resources:
+        #        if resource.name == "ports":
+        #            for mesos_range in resource.ranges.range:
+        #                for port in range(mesos_range.end - mesos_range.begin):
+        #                    self.redis_handler.rpush(self.config.redis_prefix+':ports:'+host, mesos_range.begin + port)
+        #port = self.redis_handler.lpop(self.config.redis_prefix+':ports:'+host)
+
+        # Get first free port
+        for resource in offer.resources:
+            if resource.name == "ports":
+                for mesos_range in resource.ranges.range:
+                    if mesos_range.begin <= mesos_range.end:
+                        port = str(mesos_range.begin)
+                        mesos_range.begin += 1
+                        break
         self.logger.debug('Port:Give:'+task['container']['meta']['Node']['Name']+':'+str(port))
         if not 'ports' in task['container']:
             task['container']['ports'] = []
@@ -177,7 +186,7 @@ class MesosScheduler(mesos.interface.Scheduler):
         mem.type = mesos_pb2.Value.SCALAR
         mem.scalar.value = job['requirements']['ram']
 
-        if 'meta' not in job or job['container']['meta'] is None:
+        if 'meta' not in job['container'] or job['container']['meta'] is None:
             job['container']['meta'] = {}
         if 'Node' not in job['container']['meta'] or job['container']['meta']['Node'] is None:
             job['container']['meta']['Node'] = {}
@@ -205,8 +214,8 @@ class MesosScheduler(mesos.interface.Scheduler):
                 port_range = mesos_ports.ranges.range.add()
                 port_range.begin = mapped_port
                 port_range.end = mapped_port
-            container.docker.MergeFrom(docker)
-            task.container.MergeFrom(container)
+        container.docker.MergeFrom(docker)
+        task.container.MergeFrom(container)
         return task
 
 
@@ -232,9 +241,9 @@ class Mesos(IExecutorPlugin):
         '''
         Get supported features
 
-        :return: list of features within ['kill', 'pause']
+        :return: list of features within ['kill', 'pause','resources.port']
         '''
-        return ['kill']
+        return ['kill', 'resources.port']
 
     def set_config(self, cfg):
         self.cfg = cfg
@@ -396,7 +405,6 @@ class Mesos(IExecutorPlugin):
         :type tasks: Task
         :return: (Task, over) over is True if task could be killed
         '''
-        self.logger.error('Not yet implemented')
         self.logger.debug('Mesos:Task:Kill:Check:'+str(task['id']))
         mesos_task = self.redis_handler.get(self.cfg.redis_prefix+':mesos:over:'+str(task['id']))
         if mesos_task is not None and int(mesos_task) in [2,3,4,5,7]:
@@ -413,9 +421,6 @@ class Mesos(IExecutorPlugin):
             self.redis_handler.delete(self.cfg.redis_prefix+':mesos:over:'+str(task['id']))
             return (task, True)
         else:
-            # TODO manage in driver the kill queue
-            # if :mesos:over present, send kill request
-            # else skip message
             self.redis_handler.rpush(self.cfg.redis_prefix+':mesos:kill', str(task['id']))
             self.logger.debug('Mesos:Task:Kill:IsRunning:'+str(task['id']))
             return (task,False)

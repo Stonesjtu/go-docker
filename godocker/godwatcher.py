@@ -211,14 +211,16 @@ class GoDWatcher(Daemon):
             # If not over, executor could not kill the task
             if over:
                 self.logger.debug('Executor:Kill:Success:'+str(task['id']))
-                for port in task['container']['ports']:
-                    host = task['container']['meta']['Node']['Name']
+
+                original_task = self.db_jobs.find_one({'id': task['id']})
+                for port in original_task['container']['ports']:
+                    host = original_task['container']['meta']['Node']['Name']
                     self.logger.debug('Port:Back:'+host+':'+str(port))
                     self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
+
                 task['container']['ports'] = []
 
                 # Check for reschedule request
-                original_task = self.db_jobs.find_one({'id': task['id']})
                 if original_task and original_task['status']['secondary'] == godutils.STATUS_SECONDARY_RESCHEDULE_REQUESTED:
                     self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
                     self.r.incr(self.cfg.redis_prefix+':jobs:queued')
@@ -305,7 +307,7 @@ class GoDWatcher(Daemon):
             if self.stop_daemon:
                 return
             status = None
-            over = Fals
+            over = False
 
             if task['status']['primary'] == godutils.STATUS_PENDING or task['status']['primary'] == godutils.STATUS_OVER or task['status']['secondary'] != 'resume requested':
                 status = godutils.STATUS_SECONDARY_RESUME_REJECTED
@@ -505,11 +507,12 @@ class GoDWatcher(Daemon):
                 self.logger.debug("TASK:"+str(task['id'])+":"+str(over))
                 if over:
                     # Free ports
-                    # Put back mapping allocated ports
-                    for port in task['container']['ports']:
-                        host = task['container']['meta']['Node']['Name']
-                        self.logger.debug('Port:Back:'+host+':'+str(port))
-                        self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
+                    # Put back mapping allocated ports if not managed by executor
+                    if 'resources.port' not in self.executor.features():
+                        for port in task['container']['ports']:
+                            host = task['container']['meta']['Node']['Name']
+                            self.logger.debug('Port:Back:'+host+':'+str(port))
+                            self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                     task['container']['ports'] = []
 
                     if is_array_task(task):
