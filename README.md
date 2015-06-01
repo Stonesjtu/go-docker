@@ -154,12 +154,24 @@ Available plugins are:
     * fairshare: Fair share user tasks repartition (prio, previous usage, ...)
 * Executor:
     * swarm (Docker Swarm)
+    * mesos (Apache Mesos)
     * fake  (not be used, for test only, simulate a job execution)
 * Auth:
     * goauth: specific for our internal usage, but can be easily used as a template for ldap based authentications.
     * fakeauth: fake authentication for tests
 
+### Swarm
 
+To integrate with Swarm, swarm process needs to listen on a tcp socker (tcp://ip_address:2376 for example). Swarm is in charge of dispatching tasks to the Docker instances on slaves.
+
+### Mesos
+
+The Mesos plugin integrates go-docker in as a mesos framework (http://mesos.apache.org/). Framework is managed via the scheduler process.
+
+It does not manage for the moment Mesos master failover nor reoffers (offer rejected)/slave failure.
+Slave labels (go-docker constraints labels) are not yet managed either.
+
+Tasks are executed using Mesos executor with Docker. Port allocation (for interactive jobs) are managed via the port resources declared on slaves.
 
 
 ## User scripts

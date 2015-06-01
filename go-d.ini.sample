@@ -99,6 +99,9 @@ max_job_pop: 100
 executor: 'swarm'
 #executor: 'fake'
 
+# Mesos ##
+mesos_master: '127.0.0.1:5050'
+
 # Authentication #######################
 auth_policy: 'fake'
 
