@@ -168,11 +168,13 @@ To integrate with Swarm, swarm process needs to listen on a tcp socker (tcp://ip
 
 The Mesos plugin integrates go-docker in as a mesos framework (http://mesos.apache.org/). Framework is managed via the scheduler process.
 
-It does not manage for the moment Mesos master failover nor reoffers (offer rejected)/slave failure.
-Slave labels (go-docker constraints labels) are not yet managed either.
+It does not manage for the moment Mesos master failover nor reoffers (offer rejected)/slave failure. See bugs for remaining issues/missing feaures for Mesos.
 
 Tasks are executed using Mesos executor with Docker. Port allocation (for interactive jobs) are managed via the port resources declared on slaves.
 
+Slaves should be started with an attribute "hostname" matching the slave hostname or ip, for example:
+
+    mesos-slave.sh --master=10.0.0.1:5050 --containerizers=docker,mesos --attributes='hostname:10.0.0.2'
 
 ## User scripts
 

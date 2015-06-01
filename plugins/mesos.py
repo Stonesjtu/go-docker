@@ -44,14 +44,10 @@ class MesosScheduler(mesos.interface.Scheduler):
     def registered(self, driver, frameworkId, masterInfo):
         self.logger.info("Registered with framework ID %s" % frameworkId.value)
 
-    def get_mapping_port(self, offer, host, task):
+    def get_mapping_port(self, offer, task):
         '''
         Get a port mapping for interactive tasks
 
-        Duplicate of iExecutorPlugin
-
-        :param host: hostname of the container
-        :type host: str
         :param task: task
         :type task: int
         :return: available port
@@ -113,6 +109,7 @@ class MesosScheduler(mesos.interface.Scheduler):
             redis_task = self.redis_handler.lpop(self.config.redis_prefix+':mesos:pending')
 
         for offer in offers:
+            self.logger.debug(offer)
             if not tasks:
                 self.logger.debug('Mesos:Offer:NoTask')
                 driver.declineOffer(offer.id)
@@ -120,16 +117,32 @@ class MesosScheduler(mesos.interface.Scheduler):
             offer_tasks = []
             offerCpus = 0
             offerMem = 0
+            labels = {}
             for resource in offer.resources:
                 if resource.name == "cpus":
                     offerCpus += resource.scalar.value
                 elif resource.name == "mem":
                     offerMem += resource.scalar.value
+
+            for attr in offer.attributes:
+                if attr.type == 3:
+                    labels[attr.name] = attr.text.value
+
             self.logger.debug("Mesos:Received offer %s with cpus: %s and mem: %s" \
                   % (offer.id.value, offerCpus, offerMem))
             for task in tasks:
                 if not task['mesos_offer'] and task['requirements']['cpu'] <= offerCpus and task['requirements']['ram'] <= offerMem:
-                    offer_tasks.append(self.new_task(offer, task))
+                    # check for label constraints, if any
+                    if 'label' in task['requirements'] and task['requirements']['label']:
+                        is_ok = True
+                        for req in task['requirements']['label']:
+                            reqlabel = req.split('==')
+                            if reqlabel[0] not in labels or reqlabel[1] != labels[reqlabel[0]]:
+                                is_ok = False
+                                break
+                        if not is_ok:
+                            continue
+                    offer_tasks.append(self.new_task(offer, task, labels))
                     offerCpus -= task['requirements']['cpu']
                     offerMem -= task['requirements']['ram']
                     task['mesos_offer'] = True
@@ -148,7 +161,7 @@ class MesosScheduler(mesos.interface.Scheduler):
             self.redis_handler.set(self.config.redis_prefix+':mesos:offer', 1)
         self.logger.debug('Mesos:Offers:End')
 
-    def new_task(self, offer, job):
+    def new_task(self, offer, job, labels=None):
         '''
         Creates a task for mesos
         '''
@@ -190,7 +203,10 @@ class MesosScheduler(mesos.interface.Scheduler):
             job['container']['meta'] = {}
         if 'Node' not in job['container']['meta'] or job['container']['meta']['Node'] is None:
             job['container']['meta']['Node'] = {}
-        job['container']['meta']['Node']['Name'] = offer.slave_id.value
+        if labels is not None and 'hostname' in labels:
+            job['container']['meta']['Node']['Name'] = labels['hostname']
+        else:
+            job['container']['meta']['Node']['Name'] = offer.slave_id.value
 
         docker = mesos_pb2.ContainerInfo.DockerInfo()
         docker.image = job['container']['image']
@@ -205,7 +221,7 @@ class MesosScheduler(mesos.interface.Scheduler):
             mesos_ports.type = mesos_pb2.Value.RANGES
             for port in port_list:
                 if self.config.port_allocate:
-                    mapped_port = self.get_mapping_port(offer, job['container']['meta']['Node']['Name'], job)
+                    mapped_port = self.get_mapping_port(offer, job)
                 else:
                     mapped_port = port
                 docker_port = docker.port_mappings.add()

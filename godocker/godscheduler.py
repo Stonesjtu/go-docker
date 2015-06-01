@@ -313,10 +313,11 @@ class GoDScheduler(Daemon):
         if rejected_tasks:
             for r in rejected_tasks:
                 # Put back mapping allocated ports
-                if r['container']['meta'] and 'Node' in r['container']['meta'] and 'Name' in r['container']['meta']['Node']:
-                    host = r['container']['meta']['Node']['Name']
-                    for port in r['container']['ports']:
-                        self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
+                if 'resources.port' not in self.executor.features():
+                    if r['container']['meta'] and 'Node' in r['container']['meta'] and 'Name' in r['container']['meta']['Node']:
+                        host = r['container']['meta']['Node']['Name']
+                        for port in r['container']['ports']:
+                            self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                 self.db_jobs.update({'id': r['id']}, {'$set': {'status.secondary': godutils.STATUS_SECONDARY_SCHEDULER_REJECTED, 'container.ports': []}})
 
 
