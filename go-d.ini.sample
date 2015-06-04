@@ -109,6 +109,13 @@ ldap_host: None
 ldap_port: None
 ldap_dn: None
 
+# Watchers #############################
+# List of watchers, comma separated, example 'maxlifespan'
+watchers: None
+
+# Max job life duration expressed in d(days), h(hours), s(seconds) if not specified in task
+maxlifespan: '7d'
+
 # Docker ###############################
 docker_url: 'tcp://127.0.0.1:2376'
 # API version from docker version command

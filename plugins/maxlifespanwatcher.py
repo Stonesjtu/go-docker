@@ -46,11 +46,12 @@ class MaxLifespanWatcher(IWatcherPlugin):
             self.logger.error('maxlifespan not defined in config')
             return task
         maxlifespan = self.cfg.maxlifespan
+        if 'maxlifespan' in task['requirements'] and task['requirements']['maxlifespan'] is not None:
+            maxlifespan = task['requirements']['maxlifespan']
         dt = datetime.datetime.now()
         timestamp = time.mktime(dt.timetuple())
         running_date = task['status']['date_running']
         duration = self._get_duration(maxlifespan)
-        print "#"+str(task['id'])+":"+str(duration)
         if duration > -1 and timestamp - running_date > duration:
             self.logger.debug('MaxLifespanWatcher:MaxReached:Kill:'+str(task['id']))
             task['status']['reason'] = 'Max duration reached'

@@ -141,6 +141,7 @@ To create a new plugin, create a xx.yapsy-plugin file and a xx.py file following
 * iScheduler plugins look at pending jobs and basically reorder them according to their scheduling strategy.
 * iExecutor execute the job and checks its status
 * iAuth is used by the web interface, to authenticate a user (ldap bind for example), get some user information (uidnumber, home directory...) and ACLs (which volumes can be mounted for this user request for example).
+* iWatcher checks, once a job is running if it should continue or be killed, ...
 
 Base classes are documented here: http://go-docker.readthedocs.org/en/latest/
 
@@ -159,6 +160,8 @@ Available plugins are:
 * Auth:
     * goauth: specific for our internal usage, but can be easily used as a template for ldap based authentications.
     * fakeauth: fake authentication for tests
+* Watcher:
+    * maxlifespan: Checks max life duration of a job
 
 ### Swarm
 
