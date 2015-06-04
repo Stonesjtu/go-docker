@@ -629,7 +629,7 @@ class GoDScheduler(Daemon):
         '''
         self.hostname = None
         infinite = True
-        self.executor.open()
+        self.executor.open(0)
         while infinite and True and not GoDScheduler.SIGINT:
             # Schedule timer
             self.update_status()

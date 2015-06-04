@@ -24,6 +24,7 @@ from yapsy.PluginManager import PluginManager
 from godocker.iSchedulerPlugin import ISchedulerPlugin
 from godocker.iExecutorPlugin import IExecutorPlugin
 from godocker.iAuthPlugin import IAuthPlugin
+from godocker.iWatcherPlugin import IWatcherPlugin
 from godocker.utils import is_array_task, is_array_child_task
 import godocker.utils as godutils
 from godocker.notify import Notify
@@ -116,7 +117,8 @@ class GoDWatcher(Daemon):
         simplePluginManager.setCategoriesFilter({
            "Scheduler": ISchedulerPlugin,
            "Executor": IExecutorPlugin,
-           "Auth": IAuthPlugin
+           "Auth": IAuthPlugin,
+           "Watcher": IWatcherPlugin
          })
         # Load all plugins
         simplePluginManager.collectPlugins()
@@ -146,6 +148,25 @@ class GoDWatcher(Daemon):
              self.executor.set_users_handler(self.db_users)
              self.executor.set_projects_handler(self.db_projects)
              print "Loading executor: "+self.executor.get_name()
+
+        self.watchers = []
+        if 'watchers' in self.cfg and self.cfg.watchers is not None:
+            watchers = self.cfg.watchers.split(',')
+        else:
+            watchers = []
+        for pluginInfo in simplePluginManager.getPluginsOfCategory("Watcher"):
+           #simplePluginManager.activatePluginByName(pluginInfo.name)
+           if pluginInfo.plugin_object.get_name() in watchers:
+             watcher = pluginInfo.plugin_object
+             watcher.set_logger(self.logger)
+             watcher.set_config(self.cfg)
+             watcher.set_redis_handler(self.r)
+             watcher.set_jobs_handler(self.db_jobs)
+             watcher.set_users_handler(self.db_users)
+             watcher.set_projects_handler(self.db_projects)
+             self.watchers.append(watcher)
+             print "Add watcher: "+watcher.get_name()
+
 
 
     def _set_task_exitcode(self, task, exitcode):
@@ -226,9 +247,14 @@ class GoDWatcher(Daemon):
                 if original_task and original_task['status']['secondary'] == godutils.STATUS_SECONDARY_RESCHEDULE_REQUESTED:
                     self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
                     self.r.incr(self.cfg.redis_prefix+':jobs:queued')
+                    reason = ''
+                    if 'reason' in task['status']:
+                        reason = task['status']['reason']
                     self.db_jobs.update({'id': task['id']}, {'$set': {
                         'status.primary' : godutils.STATUS_PENDING,
-                        'status.secondary': godutils.STATUS_SECONDARY_RESCHEDULED
+                        'status.secondary': godutils.STATUS_SECONDARY_RESCHEDULED,
+                        'status.reason': reason
+
                     }})
                     continue
                 remove_result = self.db_jobs.remove({'id': task['id']})
@@ -550,8 +576,14 @@ class GoDWatcher(Daemon):
                         self.notify_msg(task)
                         Notify.notify_email(task)
                 else:
-                    self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
-                    self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
+                    can_run = True
+                    for watcher in self.watchers:
+                        if watcher.can_run(task) is None:
+                            can_run = False
+                            break
+                    if can_run:
+                        self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
+                        self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
             except KeyboardInterrupt:
                 self.logger.warn('Interrupt received, exiting after cleanup')
                 self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
@@ -664,7 +696,7 @@ class GoDWatcher(Daemon):
         '''
         self.hostname = None
         infinite = True
-        self.executor.open()
+        self.executor.open(1)
         while infinite and True and not GoDWatcher.SIGINT:
             # Schedule timer
             self.update_status()

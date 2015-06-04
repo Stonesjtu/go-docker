@@ -325,13 +325,16 @@ class Mesos(IExecutorPlugin):
         #    self.driver.start()
 
 
-    def open(self):
+    def open(self, proc_type):
         '''
         Request start of executor if needed
         '''
         #self.mesosthread = MesosThread()
         #self.mesosthread.set_driver(self.driver)
         #self.mesosthread.start()
+        if proc_type is not None and proc_type ==1:
+            # do not start framework on watchers
+            return
         self.driver.start()
 
     def close(self):

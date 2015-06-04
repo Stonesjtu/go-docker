@@ -13,9 +13,12 @@ class IExecutorPlugin(IGoDockerPlugin):
         '''
         return []
 
-    def open(self):
+    def open(self, proc_type=None):
         '''
         Request start of executor if needed
+
+        :param proc_type: type of process requesting open, 0 for scheduler, 1 for watcher
+        :type proc_type:
         '''
         pass
 

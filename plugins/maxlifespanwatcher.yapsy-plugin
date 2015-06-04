@@ -1,0 +1,9 @@
+[Core]
+Name = MaxLifespanWatcher
+Module = maxlifespanwatcher
+
+[Documentation]
+Author = Olivier Sallou
+Version = 0.1
+Website =
+Description = Checks lifespan of a job, if it exceeds it, kill it
