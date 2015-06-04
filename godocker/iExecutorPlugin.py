@@ -13,6 +13,12 @@ class IExecutorPlugin(IGoDockerPlugin):
         '''
         return []
 
+    def open(self):
+        '''
+        Request start of executor if needed
+        '''
+        pass
+
     def close(self):
         '''
         Request end of executor if needed

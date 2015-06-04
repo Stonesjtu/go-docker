@@ -283,6 +283,7 @@ class Mesos(IExecutorPlugin):
             self.logger.info("Enabling explicit status update acknowledgements")
             implicitAcknowledgements = 0
 
+        driver = None
         if os.getenv("MESOS_AUTHENTICATE"):
             self.logger.info("Enabling authentication for the framework")
             if not os.getenv("DEFAULT_PRINCIPAL"):
@@ -318,17 +319,29 @@ class Mesos(IExecutorPlugin):
                 framework,
                 self.cfg.mesos_master)
 
+        self.driver = driver
+        #if driver is not None:
+        #    self.driver = driver
+        #    self.driver.start()
 
-        self.mesosthread = MesosThread()
-        self.mesosthread.set_driver(driver)
-        self.mesosthread.start()
 
+    def open(self):
+        '''
+        Request start of executor if needed
+        '''
+        #self.mesosthread = MesosThread()
+        #self.mesosthread.set_driver(self.driver)
+        #self.mesosthread.start()
+        self.driver.start()
 
     def close(self):
         '''
         Request end of executor if needed
         '''
-        self.mesosthread.stop()
+        #if self.mesosthread.isAlive():
+        #    self.mesosthread.stop()
+        if self.driver is not None:
+            self.driver.stop()
         self.Terminated = True
 
     def run_all_tasks(self, tasks, callback=None):

@@ -139,7 +139,7 @@ class GoDScheduler(Daemon):
                 loglevel = logging.ERROR
         self.logger.setLevel(loglevel)
         #fh = logging.FileHandler('god_scheduler.log')
-        log_file_path = 'god_watcher.log'
+        log_file_path = 'god_scheduler.log'
         if 'log_location' in self.cfg:
             log_file_path = os.path.join(self.cfg['log_location'], log_file_path)
 
@@ -567,6 +567,7 @@ class GoDScheduler(Daemon):
         task_list = []
         for p in pending_tasks:
             if self.stop_daemon:
+                self.executor.close()
                 return
             task_list.append(p)
         queued_tasks = self.schedule_tasks(task_list)
@@ -615,6 +616,7 @@ class GoDScheduler(Daemon):
         '''
         self.hostname = None
         infinite = True
+        self.executor.open()
         while infinite and True and not GoDScheduler.SIGINT:
             # Schedule timer
             self.update_status()

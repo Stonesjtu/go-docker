@@ -167,6 +167,7 @@ class GoDWatcher(Daemon):
         '''
         for task in task_list:
             if self.stop_daemon:
+                self.executor.close()
                 return
             if task['status']['primary'] == godutils.STATUS_OVER:
                 continue
@@ -266,10 +267,12 @@ class GoDWatcher(Daemon):
         Suspend/pause tasks in list
         '''
         if self.stop_daemon:
+            self.executor.close()
             return
 
         for task in suspend_list:
             if self.stop_daemon:
+                self.executor.close()
                 return
 
             status = None
@@ -303,9 +306,11 @@ class GoDWatcher(Daemon):
         Resume tasks in list
         '''
         if self.stop_daemon:
+            self.executor.close()
             return
         for task in resume_list:
             if self.stop_daemon:
+                self.executor.close()
                 return
             status = None
             over = False
@@ -336,6 +341,7 @@ class GoDWatcher(Daemon):
         :return: list of tasks ordered
         '''
         if self.stop_daemon:
+            self.executor.close()
             return
         #for pending_job in pending_list:
         #  job  = json.loads(pending_job)
@@ -569,6 +575,7 @@ class GoDWatcher(Daemon):
         self.logger.debug('Watcher:'+str(self.hostname)+':Run')
         print "Get tasks to kill"
         if self.stop_daemon:
+            self.executor.close()
             return
         kill_task_list = []
         kill_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:kill')
@@ -586,6 +593,7 @@ class GoDWatcher(Daemon):
 
         print 'Get tasks to suspend'
         if self.stop_daemon:
+            self.executor.close()
             return
         suspend_task_list = []
         suspend_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:suspend')
@@ -603,6 +611,7 @@ class GoDWatcher(Daemon):
 
         print 'Get tasks to resume'
         if self.stop_daemon:
+            self.executor.close()
             return
         resume_task_list = []
         resume_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:resume')
@@ -620,6 +629,7 @@ class GoDWatcher(Daemon):
 
         print 'Look for terminated jobs'
         if self.stop_daemon:
+            self.executor.close()
             return
         self.check_running_jobs()
 
@@ -654,6 +664,7 @@ class GoDWatcher(Daemon):
         '''
         self.hostname = None
         infinite = True
+        self.executor.open()
         while infinite and True and not GoDWatcher.SIGINT:
             # Schedule timer
             self.update_status()
