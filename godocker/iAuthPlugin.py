@@ -5,6 +5,16 @@ class IAuthPlugin(IGoDockerPlugin):
     ACL plugins interface
     '''
 
+    def can_run(self, task):
+        '''
+        Check if task can run (according to user etc...). If return False, then task is rejected
+
+        :param task: task to schedule
+        :type task: Task
+        :return: bool
+        '''
+        return True
+
     def bind_credentials(self, login, password):
         '''
         Check user credentials and return user info

@@ -206,6 +206,14 @@ class GoDScheduler(Daemon):
              self.executor.set_projects_handler(self.db_projects)
              print "Loading executor: "+self.executor.get_name()
 
+        self.auth_policy = None
+        for pluginInfo in simplePluginManager.getPluginsOfCategory("Auth"):
+            if pluginInfo.plugin_object.get_name() == self.cfg.auth_policy:
+                 self.auth_policy = pluginInfo.plugin_object
+                 self.auth_policy.set_logger(self.logger)
+                 self.auth_policy.set_config(self.cfg)
+                 print "Loading auth policy: "+self.auth_policy.get_name()
+
         self.check_redis()
 
 
@@ -569,6 +577,11 @@ class GoDScheduler(Daemon):
             if self.stop_daemon:
                 self.executor.close()
                 return
+            if not self.auth_policy.can_run(p):
+                self.db_jobs.update({'id': p['id']}, {'status.primary': godutils.STATUS_OVER,
+                                                     'status.secondary': STATUS_SECONDARY_SCHEDULER_REJECTED,
+                                                     'status.reason': 'Not authorized'})
+                continue
             task_list.append(p)
         queued_tasks = self.schedule_tasks(task_list)
         if queued_tasks:

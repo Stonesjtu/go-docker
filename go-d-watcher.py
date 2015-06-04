@@ -5,7 +5,10 @@ import os
 from godocker.godwatcher import GoDWatcher
 
 if __name__ == "__main__":
-        daemon = GoDWatcher('/tmp/godwatcher.pid')
+        pid_file = '/tmp/godwatcher.pid'
+        if 'GOD_PID' in os.environ:
+            pid_file = os.environ['GOD_PID']
+        daemon = GoDWatcher(pid_file)
         config_file = 'go-d.ini'
         if 'GOD_CONFIG' in os.environ:
             config_file = os.environ['GOD_CONFIG']
