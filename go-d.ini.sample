@@ -116,6 +116,14 @@ watchers: None
 # Max job life duration expressed in d(days), h(hours), s(seconds) if not specified in task
 maxlifespan: '7d'
 
+# Requirement dynamic fields (optional) ##########
+# fields that can be updated after task submission in requirements, string type only
+#dynamic_fields: [
+#    { name: 'maxlifespan',
+#      admin_only: False
+#    }
+#]
+
 # Docker ###############################
 docker_url: 'tcp://127.0.0.1:2376'
 # API version from docker version command

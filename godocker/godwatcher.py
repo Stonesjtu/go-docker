@@ -528,6 +528,13 @@ class GoDWatcher(Daemon):
                 # Has been killed in the meanwhile, already managed
                 if not self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':task'):
                     continue
+
+                # If some dynamic fields are present, check for changes
+                if 'dynamic_fields' in self.cfg and self.cfg.dynamic_fields:
+                    mongo_task = self.db_jobs.find_one({'id': task['id']})
+                    for dynamic_field in self.cfg.dynamic_fields:
+                        task['requirements'][dynamic_field['name']] = mongo_task['requirements'][dynamic_field['name']]
+
                 if is_array_task(task):
                     # If an array parent, only checks if some child tasks are still running
                     nb_subtasks_running = int(self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtaskrunning'))
