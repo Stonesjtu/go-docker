@@ -203,6 +203,7 @@ class MesosScheduler(mesos.interface.Scheduler):
             job['container']['meta'] = {}
         if 'Node' not in job['container']['meta'] or job['container']['meta']['Node'] is None:
             job['container']['meta']['Node'] = {}
+        job['container']['meta']['Node']['slave'] = offer.slave_id.value
         if labels is not None and 'hostname' in labels:
             job['container']['meta']['Node']['Name'] = labels['hostname']
         else:
