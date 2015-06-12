@@ -146,7 +146,7 @@ class MesosScheduler(mesos.interface.Scheduler):
                             continue
                     offer_tasks.append(self.new_task(offer, task, labels))
                     offerCpus -= task['requirements']['cpu']
-                    offerMem -= task['requirements']['ram']
+                    offerMem -= task['requirements']['ram']*1000
                     task['mesos_offer'] = True
                     self.logger.debug('Mesos:Task:Running:'+str(task['id']))
                     self.redis_handler.rpush(self.config.redis_prefix+':mesos:running', dumps(task))
@@ -199,7 +199,7 @@ class MesosScheduler(mesos.interface.Scheduler):
         mem = task.resources.add()
         mem.name = "mem"
         mem.type = mesos_pb2.Value.SCALAR
-        mem.scalar.value = job['requirements']['ram']
+        mem.scalar.value = job['requirements']['ram']*1000
 
         if 'meta' not in job['container'] or job['container']['meta'] is None:
             job['container']['meta'] = {}
