@@ -307,6 +307,7 @@ class GoDScheduler(Daemon):
                 #self.r.set('god:job:'+str(r['id'])+':container', r['container']['id'])
                 r['status']['primary'] = godutils.STATUS_RUNNING
                 r['status']['secondary'] = None
+                r['status']['reason'] = ''
                 dt = datetime.datetime.now()
                 r['status']['date_running'] = time.mktime(dt.timetuple())
                 self.r.set(self.cfg.redis_prefix+':job:'+str(r['id'])+':task', dumps(r))
@@ -315,6 +316,7 @@ class GoDScheduler(Daemon):
                                     {'$set': {
                                         'status.primary': r['status']['primary'],
                                         'status.secondary': r['status']['secondary'],
+                                        'status.reason': '',
                                         'status.date_running': r['status']['date_running'],
                                         'container': r['container']}})
                 Notify.notify_email(r)
@@ -326,7 +328,8 @@ class GoDScheduler(Daemon):
                         host = r['container']['meta']['Node']['Name']
                         for port in r['container']['ports']:
                             self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
-                self.db_jobs.update({'id': r['id']}, {'$set': {'status.secondary': godutils.STATUS_SECONDARY_SCHEDULER_REJECTED, 'container.ports': []}})
+                r['status']['reason'] = 'Not enough resources available'
+                self.db_jobs.update({'id': r['id']}, {'$set': {'status.reason': r['status']['reason'], 'status.secondary': godutils.STATUS_SECONDARY_SCHEDULER_REJECTED, 'container.ports': []}})
 
 
     def _create_command(self, task):
