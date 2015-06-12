@@ -7,6 +7,7 @@ import os
 import sys
 import threading
 import redis
+import urllib3
 
 from bson.json_util import dumps
 
@@ -33,6 +34,7 @@ class MesosScheduler(mesos.interface.Scheduler):
         self.implicitAcknowledgements = implicitAcknowledgements
         self.executor = executor
         self.Terminated = False
+        self.jobs_handler = None
 
     def set_config(self, config):
         self.config = config
@@ -240,6 +242,25 @@ class MesosScheduler(mesos.interface.Scheduler):
         self.logger.debug("Task %s is in state %s" % \
             (update.task_id.value, mesos_pb2.TaskState.Name(update.state)))
 
+        if update.state == 1:
+            #Switched to RUNNING, get container id
+            job = self.jobs_handler.find_one({'id': int(update.task_id.value)})
+            http = urllib3.PoolManager()
+            try:
+                r = http.urlopen('GET', 'http://'+job['container']['meta']['Node']['Name']+':5051/slave(1)/state.json')
+            except Exception as e:
+                self.logger.error('Failed to contact mesos slave:' + job['container']['meta']['Node']['Name'])
+            if r.status == 200:
+                slave = json.loads(r.data)
+                for f in slave['frameworks']:
+                    if f['name'] == "Go-Docker Mesos":
+                        for executor in f['executors']:
+                            if str(executor['id']) == str(update.task_id.value):
+                                container = executor['container']
+                                self.jobs_handler.update({'id': int(update.task_id.value)},{'$set': {'container.id': container}})
+                                break
+                        break
+
         self.logger.debug('Mesos:Task:Over:'+str(update.task_id.value))
 
         self.redis_handler.set(self.config.redis_prefix+':mesos:over:'+str(update.task_id.value),update.state)
@@ -304,6 +325,7 @@ class Mesos(IExecutorPlugin):
             mesosScheduler = MesosScheduler(implicitAcknowledgements, executor)
             mesosScheduler.set_logger(self.logger)
             mesosScheduler.set_config(self.cfg)
+            mesosScheduler.jobs_handler = self.jobs_handler
 
             driver = mesos.native.MesosSchedulerDriver(
                 mesosScheduler,
@@ -315,6 +337,7 @@ class Mesos(IExecutorPlugin):
             mesosScheduler = MesosScheduler(implicitAcknowledgements, executor)
             mesosScheduler.set_logger(self.logger)
             mesosScheduler.set_config(self.cfg)
+            mesosScheduler.jobs_handler = self.jobs_handler
             driver = mesos.native.MesosSchedulerDriver(
                 mesosScheduler,
                 framework,

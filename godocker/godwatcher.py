@@ -130,11 +130,11 @@ class GoDWatcher(Daemon):
            if pluginInfo.plugin_object.get_name() == self.cfg.scheduler_policy:
              self.scheduler = pluginInfo.plugin_object
              self.scheduler.set_logger(self.logger)
-             self.scheduler.set_config(self.cfg)
              self.scheduler.set_redis_handler(self.r)
              self.scheduler.set_jobs_handler(self.db_jobs)
              self.scheduler.set_users_handler(self.db_users)
              self.scheduler.set_projects_handler(self.db_projects)
+             self.scheduler.set_config(self.cfg)
              print "Loading scheduler: "+self.scheduler.get_name()
         self.executor = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Executor"):
@@ -142,11 +142,11 @@ class GoDWatcher(Daemon):
            if pluginInfo.plugin_object.get_name() == self.cfg.executor:
              self.executor = pluginInfo.plugin_object
              self.executor.set_logger(self.logger)
-             self.executor.set_config(self.cfg)
              self.executor.set_redis_handler(self.r)
              self.executor.set_jobs_handler(self.db_jobs)
              self.executor.set_users_handler(self.db_users)
              self.executor.set_projects_handler(self.db_projects)
+             self.executor.set_config(self.cfg)
              print "Loading executor: "+self.executor.get_name()
 
         self.watchers = []
