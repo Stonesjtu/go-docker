@@ -256,7 +256,7 @@ class MesosScheduler(mesos.interface.Scheduler):
                     if f['name'] == "Go-Docker Mesos":
                         for executor in f['executors']:
                             if str(executor['id']) == str(update.task_id.value):
-                                container = executor['container']
+                                container = 'mesos-'+executor['container']
                                 self.jobs_handler.update({'id': int(update.task_id.value)},{'$set': {'container.id': container}})
                                 break
                         break
