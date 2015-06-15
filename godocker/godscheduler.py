@@ -448,9 +448,9 @@ class GoDScheduler(Daemon):
         else:
             if not task['container']['root']:
                 #cmd += "sudo -u "+user_id+" bash -c \""+vol_home + array_cmd + " ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\"\n"
-                cmd += "su - "+user_id+" -c \""+vol_home + array_cmd + " ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\"\n"
+                cmd += "su - "+user_id+" -c \""+vol_home + array_cmd + " ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\"\n"
             else:
-                cmd += "/mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\n"
+                cmd += "/mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\n"
         cmd += "ret_code=$?\n"
         cmd += "chown -R "+user_id+":"+user_id+" /mnt/go-docker/*\n"
         cmd += "exit $ret_code\n"
