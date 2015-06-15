@@ -488,7 +488,7 @@ class GoDScheduler(Daemon):
             if (not reject) and task['user']['project'] != 'default' and (task['requirements']['project_quota_time'] > 0 or task['requirements']['project_quota_cpu'] > 0 or task['requirements']['project_quota_ram'] > 0):
                 project_usage = None
                 if task['user']['project'] not in projects_usage:
-                    project_usage = self.scheduler.get_user_usage(self, task['user']['project'], 'group')
+                    project_usage = self.scheduler.get_user_usage(task['user']['project'], 'group')
                 else:
                     project_usage = users_usage[task['user']['project']]
                 if (not reject) and (task['requirements']['project_quota_time'] > 0 and task['requirements']['project_quota_time'] < project_usage['total_time']):
