@@ -301,6 +301,8 @@ class GoDScheduler(Daemon):
     def _update_scheduled_task_status(self, running_tasks, rejected_tasks):
         if running_tasks:
             for r in running_tasks:
+                if 'ticket_share' not in r['requirements']:
+                    r['requirements']['ticket_share'] = 0
                 if is_array_child_task(r):
                     self.r.incr(self.cfg.redis_prefix+':job:'+str(r['parent_task_id'])+':subtaskrunning')
                 self.r.rpush(self.cfg.redis_prefix+':jobs:running', r['id'])
@@ -314,6 +316,7 @@ class GoDScheduler(Daemon):
                 self.r.decr(self.cfg.redis_prefix+':jobs:queued')
                 self.db_jobs.update({'id': r['id']},
                                     {'$set': {
+                                        'requirements.ticket_share': r['requirements']['ticket_share'],
                                         'status.primary': r['status']['primary'],
                                         'status.secondary': r['status']['secondary'],
                                         'status.reason': '',
@@ -322,6 +325,8 @@ class GoDScheduler(Daemon):
                 Notify.notify_email(r)
         if rejected_tasks:
             for r in rejected_tasks:
+                if 'ticket_share' not in r['requirements']:
+                    r['requirements']['ticket_share'] = 0
                 # Put back mapping allocated ports
                 if 'resources.port' not in self.executor.features():
                     if r['container']['meta'] and 'Node' in r['container']['meta'] and 'Name' in r['container']['meta']['Node']:
@@ -329,7 +334,14 @@ class GoDScheduler(Daemon):
                         for port in r['container']['ports']:
                             self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
                 r['status']['reason'] = 'Not enough resources available'
-                self.db_jobs.update({'id': r['id']}, {'$set': {'status.reason': r['status']['reason'], 'status.secondary': godutils.STATUS_SECONDARY_SCHEDULER_REJECTED, 'container.ports': []}})
+                self.db_jobs.update({'id': r['id']},
+                                    {'$set': {
+                                        'requirements.ticket_share': r['requirements']['ticket_share'],
+                                        'status.reason': r['status']['reason'],
+                                        'status.secondary': godutils.STATUS_SECONDARY_SCHEDULER_REJECTED,
+                                        'container.ports': []
+                                        }
+                                    })
 
 
     def _create_command(self, task):
