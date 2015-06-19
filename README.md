@@ -53,7 +53,7 @@ Graphics can be displayed with Grafana on series *god_task_usage*
 
 InfluxDB can also be used with cAdvisor to archive usage statistics (see go-docker-web)
 
-InfluxDB is optional but recommended.
+InfluxDB is optional but recommended. Grafana will help getting charts of usage recorded in InfluxDB.
 
 ## Directories
 
@@ -264,5 +264,7 @@ swarm binpacking strategy:
 bin/swarm manage --strategy binpacking -H 127.0.1:2376 nodes://127.0.0.1:2375
 
 ## CAdvisor
+
+Running cAdvisor on nodes gives live monitoring of the container (ram/cpu/network) in the web interface.
 
 sudo docker run --volume=/:/rootfs:ro  --volume=/var/run:/var/run:rw  --volume=/sys:/sys:ro --volume=/var/lib/docker/:/var/lib/docker:ro --publish=8080:8080 --detach=true --name=cadvisor google/cadvisor:latest
