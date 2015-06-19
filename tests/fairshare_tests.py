@@ -53,10 +53,7 @@ class FairShareSchedulerTest(unittest.TestCase):
             self.scheduler.db.drop_collection('projects')
             project = {
                 'id': 'test',
-                'usage':
-                {
-                    'prio': prio
-                }
+                'prio': prio
             }
             self.scheduler.db_projects.insert(project)
 
