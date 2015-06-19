@@ -394,10 +394,11 @@ class GoDWatcher(Daemon):
                 task['requirements']['cpu'],
                 task['requirements']['ram'],
                 task_duration,
-                task_waiting
+                task_waiting,
+                task['container']['image']
             ]],
             'name':'god_task_usage',
-            'columns': ["user", "cpu", "ram", "durationtime", "waitingtime"]
+            'columns': ["user", "cpu", "ram", "durationtime", "waitingtime","image"]
         }]
         try:
             self.db_influx.write_points(data)
