@@ -37,9 +37,9 @@ def convert_size_to_int(string_size):
     '''
     string_value = 0
     unit_multiplier = 1
-    match = re.search("(\d+)(\w)", string_size):
+    match = re.search("(\d+)([a-zA-Z])", string_size)
     if not match:
-        match = re.search("(\d+)", string_size):
+        match = re.search("(\d+)", string_size)
         if not match:
             raise ValueError('size pattern not correct: '+str(string_size))
         string_value = int(match.group(1))
