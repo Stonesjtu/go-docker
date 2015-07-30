@@ -1,3 +1,5 @@
+import re
+
 
 STATUS_CREATED = 'created'
 STATUS_PENDING = 'pending'
@@ -24,6 +26,37 @@ QUEUE_RUNNING = 'running'
 QUEUE_KILL = 'kill'
 QUEUE_SUSPEND = 'suspend'
 QUEUE_RESUME = 'resume'
+
+def convert_size_to_int(string_size):
+    '''
+    Convert a size with unit in long
+
+    :param string_size: size defined with value and unit such as 5k 12M ...
+    :type string_size: str
+    :return: size value in bytes
+    '''
+    string_value = 0
+    unit_multiplier = 1
+    match = re.search("(\d+)(\w)", string_size):
+    if not match:
+        match = re.search("(\d+)", string_size):
+        if not match:
+            raise ValueError('size pattern not correct: '+str(string_size))
+        string_value = int(match.group(1))
+    else:
+        string_value = int(match.group(1))
+        unit = match.group(2).lower()
+        if unit == 'k':
+            unit_multiplier = 1000
+        elif unit == 'm':
+            unit_multiplier = 1000 * 1000
+        elif unit == 'g':
+            unit_multiplier = 1000 * 1000 * 1000
+        elif unit == 't':
+            unit_multiplier = 1000 * 1000 * 1000 * 1000
+        else:
+            raise ValueError('wrong unit: '+str(unit))
+    return string_value * unit_multiplier
 
 def is_array_task(task):
     '''

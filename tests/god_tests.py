@@ -25,6 +25,20 @@ from godocker.pairtreeStorage import PairtreeStorage
 
 import unittest
 
+class UtilsTest(unittest.TestCase):
+
+    def test_convert_size_to_int(self):
+        val = convert_size_to_int('10')
+        self.assertEqual(val, 10)
+        val = convert_size_to_int('10k')
+        self.assertEqual(val, 10000)
+        val = convert_size_to_int('10K')
+        self.assertEqual(val, 10000)
+        val = convert_size_to_int('20M')
+        self.assertEqual(val, 20000000)
+        val = convert_size_to_int('30g')
+        self.assertEqual(val, 30000000000)
+
 class SchedulerTest(unittest.TestCase):
     '''
     Copy properties files to a temp directory and update properties to
