@@ -157,3 +157,9 @@ email_smtp_port: 25
 # can be deleted by cleanup script
 # Default: 30
 clean_old: 30
+
+# Disk quota ###############################
+# Optional disk quota management
+# Default: 0 (no quota)
+# Possible values (value + unit): 12 (bytes), 5k (kilobytes), 12M (megabytes), 40G (gigabytes)
+disk_default_quota: 0
