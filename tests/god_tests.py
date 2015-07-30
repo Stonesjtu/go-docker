@@ -40,6 +40,15 @@ class UtilsTest(unittest.TestCase):
         self.assertEqual(val, 20000000)
         val = godutils.convert_size_to_int('30g')
         self.assertEqual(val, 30000000000)
+        val = godutils.convert_size_to_int('30T')
+        self.assertEqual(val, 30000000000000)
+        try:
+            val = godutils.convert_size_to_int('giga')
+            self.assertFalse(1==0)
+        except ValueError:
+            # An error should be raised
+            self.assertTrue(1==1)
+
 
 class SchedulerTest(unittest.TestCase):
     '''
