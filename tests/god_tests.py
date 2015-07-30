@@ -48,6 +48,12 @@ class UtilsTest(unittest.TestCase):
         except ValueError:
             # An error should be raised
             self.assertTrue(1==1)
+        try:
+            val = godutils.convert_size_to_int('10s')
+            self.assertFalse(1==0)
+        except ValueError:
+            # An error should be raised
+            self.assertTrue(1==1)
 
 
 class SchedulerTest(unittest.TestCase):
