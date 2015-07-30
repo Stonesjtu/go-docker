@@ -4,6 +4,7 @@ STATUS_PENDING = 'pending'
 STATUS_RUNNING = 'running'
 STATUS_RESCHEDULE = 'reschedule'
 STATUS_OVER = 'over'
+STATUS_ARCHIVED = 'archived'
 
 STATUS_SECONDARY_SUSPENDED = 'suspended'
 STATUS_SECONDARY_SUSPEND_REJECTED = 'suspend rejected'

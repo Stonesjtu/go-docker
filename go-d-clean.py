@@ -18,6 +18,7 @@ from bson.json_util import dumps
 from config import Config
 
 from godocker.pairtreeStorage import PairtreeStorage
+import godocker.utils as godutils
 
 if __name__ == "__main__":
         config_file = 'go-d.ini'
@@ -56,6 +57,7 @@ if __name__ == "__main__":
         for job in old_jobs:
             job_dir = store.get_task_dir(job)
             store.clean(job)
+            db_jobsover.update({'_id': job['_id']}, {'status.primary': godutils.STATUS_ARCHIVED})
 
         # Update last_run
         db.cleanup.update({'id': 'pairtree'},{'$set': {'last': new_run}})
