@@ -164,6 +164,7 @@ class SchedulerTest(unittest.TestCase):
         self.scheduler.r.flushdb()
 
         self.scheduler.cfg.shared_dir = tempfile.mkdtemp('godshared')
+        self.watcher.cfg.shared_dir = self.scheduler.cfg.shared_dir
         self.scheduler.store = PairtreeStorage(self.scheduler.cfg)
 
     def tearDown(self):
@@ -217,6 +218,8 @@ class SchedulerTest(unittest.TestCase):
         self.watcher.check_running_jobs()
         over_tasks = self.watcher.db_jobsover.find()
         self.assertTrue(over_tasks.count() == 1)
+        for task in over_tasks:
+            self.assertTrue(task['container']['meta']['disk_size'] > 0)
 
 
     def test_kill_task_running(self):
