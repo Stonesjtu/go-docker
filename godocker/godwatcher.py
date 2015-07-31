@@ -419,8 +419,10 @@ class GoDWatcher(Daemon):
         :return: updated task
         '''
         if 'disk_default_quota' in self.cfg and self.cfg['disk_default_quota'] is not None:
-            task_dir = self.store.get_task_dir(task)
-            folder_size = godutils.get_folder_size(task_dir)
+            folder_size = 0
+            if not is_array_task(task):
+                task_dir = self.store.get_task_dir(task)
+                folder_size = godutils.get_folder_size(task_dir)
             if 'meta' not in task['container'] or task['container']['meta'] is None:
                 task['container']['meta'] = {}
             task['container']['meta']['disk_size'] = folder_size
