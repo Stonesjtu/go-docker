@@ -424,6 +424,8 @@ class GoDWatcher(Daemon):
             if 'meta' not in task['container'] or task['container']['meta'] is None:
                 task['container']['meta'] = {}
             task['container']['meta']['disk_size'] = folder_size
+            self.db_users.update({'id': task['user']['id']}, {'$inc': {'usage.disk': folder_size}})
+
         return task
 
     def update_user_usage(self, task):

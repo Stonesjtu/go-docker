@@ -51,6 +51,10 @@ if __name__ == "__main__":
         else:
             clean_old = cfg.clean_old
 
+        quota = True
+        if 'disk_default_quota' not in cfg or cfg['disk_default_quota'] is None:
+            quota = False
+
         dt = datetime.datetime.now() - timedelta(days=clean_old)
         old_time = time.mktime(dt.timetuple())
         old_jobs = db_jobsover.find({'status.date_over': {'$lte': old_time, '$gte': last_run}})
@@ -58,6 +62,10 @@ if __name__ == "__main__":
             job_dir = store.get_task_dir(job)
             store.clean(job)
             db_jobsover.update({'_id': job['_id']}, {'status.primary': godutils.STATUS_ARCHIVED})
+            if quota and 'disk_size' in job['container']['meta']:
+                self.db_users.update({'id': task['user']['id']},
+                                     {'$inc': {'usage.disk': job['container']['meta']['disk_size'] * -1}})
+
 
         # Update last_run
         db.cleanup.update({'id': 'pairtree'},{'$set': {'last': new_run}})
