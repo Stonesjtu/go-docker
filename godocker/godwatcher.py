@@ -106,6 +106,7 @@ class GoDWatcher(Daemon):
             dirname, filename = os.path.split(os.path.abspath(__file__))
             self.cfg.plugins_dir = os.path.join(dirname, '..', 'plugins')
 
+        self.store = PairtreeStorage(self.cfg)
 
         Notify.set_config(self.cfg)
         Notify.set_logger(self.logger)
@@ -267,6 +268,7 @@ class GoDWatcher(Daemon):
                 dt = datetime.datetime.now()
                 task['status']['date_over'] = time.mktime(dt.timetuple())
                 del task['_id']
+                task = self.terminate_task(task)
                 self.db_jobsover.insert(task)
                 self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
                 if is_array_task(task):
@@ -405,6 +407,23 @@ class GoDWatcher(Daemon):
         except Exception as e:
             # Do not fail on stat writing
             self.logger.error('Stat:Error:'+str(e))
+
+
+    def terminate_task(self, task):
+        '''
+        Checks on finished task (ok or killed)
+
+        :param task: current task
+        :type task: Task
+        :return: updated task
+        '''
+        if 'disk_default_quota' in self.cfg and self.cfg['disk_default_quota'] is not None:
+            task_dir = self.store.get_task_dir(task)
+            folder_size = godutils.get_folder_size(task_dir)
+            if 'meta' not in task['container'] or task['container']['meta'] is None:
+                task['container']['meta'] = {}
+            task['container']['meta']['disk_size'] = folder_size
+        return task
 
     def update_user_usage(self, task):
         '''
@@ -575,6 +594,7 @@ class GoDWatcher(Daemon):
                     task['status']['date_over'] = time.mktime(dt.timetuple())
                     #task['_id'] = ObjectId(task['_id']['$oid'])
                     del task['_id']
+                    task = self.terminate_task(task)
                     self.db_jobsover.insert(task)
                     #self.r.del('god:job:'+str(task['id'])+':container'
                     self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')

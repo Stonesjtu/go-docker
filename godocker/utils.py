@@ -27,14 +27,34 @@ QUEUE_KILL = 'kill'
 QUEUE_SUSPEND = 'suspend'
 QUEUE_RESUME = 'resume'
 
+def get_folder_size(folder):
+    '''
+    Get directory path full size in bytes
+
+    :param folder: directory path
+    :type folder: str
+    :return: size of files in folder
+    '''
+    if not os.path.exists(folder):
+        return -1
+    folder_size = 0
+    for (path, dirs, files) in os.walk(folder):
+        for fileInDir in files:
+            filename = os.path.join(path, fileInDir)
+            folder_size += os.path.getsize(filename)
+    return folder_size
+
+
 def convert_size_to_int(string_size):
     '''
     Convert a size with unit in long
 
     :param string_size: size defined with value and unit such as 5k 12M ...
     :type string_size: str
-    :return: size value in bytes
+    :return: size value in bytes (0 if None)
     '''
+    if string_size is None:
+        return 0
     string_value = 0
     unit_multiplier = 1
     match = re.search("(\d+)([a-zA-Z])", string_size)
