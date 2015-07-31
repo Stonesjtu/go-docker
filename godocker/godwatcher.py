@@ -21,6 +21,7 @@ from influxdb import client as influxdb
 from logging.handlers import RotatingFileHandler
 
 from yapsy.PluginManager import PluginManager
+from godocker.pairtreeStorage import PairtreeStorage
 from godocker.iSchedulerPlugin import ISchedulerPlugin
 from godocker.iExecutorPlugin import IExecutorPlugin
 from godocker.iAuthPlugin import IAuthPlugin
