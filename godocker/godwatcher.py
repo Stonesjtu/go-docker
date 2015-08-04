@@ -244,6 +244,8 @@ class GoDWatcher(Daemon):
                         self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
 
                 task['container']['ports'] = []
+                # If private registry was used, revert to original name without server address
+                task['container']['image'] = original_task['container']['image']
 
                 # Check for reschedule request
                 if original_task and original_task['status']['secondary'] == godutils.STATUS_SECONDARY_RESCHEDULE_REQUESTED:
@@ -571,6 +573,10 @@ class GoDWatcher(Daemon):
                     (task, over) = self.executor.watch_tasks(task)
                 self.logger.debug("TASK:"+str(task['id'])+":"+str(over))
                 if over:
+                    original_task = self.db_jobs.find_one({'id': task['id']})
+                    # If private registry was used, revert to original name without server address
+                    task['container']['image'] = original_task['container']['image']
+                    
                     # Free ports
                     # Put back mapping allocated ports if not managed by executor
                     if 'resources.port' not in self.executor.features():
