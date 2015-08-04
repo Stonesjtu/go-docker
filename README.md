@@ -29,7 +29,7 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 * kill job
 * suspend/resume job
 * reschedule a job
-* quotas: user or project
+* quotas: user or project (cpu, memory, disk)
 
 ## LICENSE
 
