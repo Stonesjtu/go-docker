@@ -522,6 +522,8 @@ class GoDScheduler(Daemon):
                 self.reject_quota(task)
             else:
                 # Create run script
+                if 'use_private_registry' in self.cfg and self.cfg['use_private_registry'] is not None:
+                    task['container']['image'] = self.cfg['use_private_registry'] + '/' + task['container']['image']
                 self._create_command(task)
                 filtered_list.append(task)
 

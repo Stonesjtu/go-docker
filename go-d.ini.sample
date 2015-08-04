@@ -52,6 +52,13 @@ default_images: [
 # Needs swarm >= 0.2
 allow_user_images: False
 
+# Private Registry #####################
+# Allow pull only from a private registry, value is appended to image name
+# Default: None
+# Example value: 'my.registry.com:5000'
+# => pull myimage => pull my.registry.com:5000/myimage 
+use_private_registry: None
+
 # VOLUMES ##############################
 
 volumes: [
