@@ -485,6 +485,15 @@ class GoDScheduler(Daemon):
         filtered_list = []
         for task in queued_list:
             reject =  False
+            quota = True
+            if 'disk_default_quota' not in self.cfg or self.cfg['disk_default_quota'] is None:
+                quota = False
+            if quota:
+                user = self.db_users.find_one({'id': task['user']['id']})
+                if 'disk' in user['usage'] and user['usage']['disk'] > godutils.convert_size_to_int(self.cfg['disk_default_quota']):
+                    reject = True
+                    self.reject_quota(task)
+                    continue
             if task['requirements']['user_quota_time'] > 0 or task['requirements']['user_quota_cpu'] > 0 or task['requirements']['user_quota_ram'] > 0:
                 user_usage = None
                 if task['user']['id'] not in users_usage:
