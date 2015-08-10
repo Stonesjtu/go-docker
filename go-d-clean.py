@@ -61,7 +61,7 @@ if __name__ == "__main__":
         for job in old_jobs:
             job_dir = store.get_task_dir(job)
             store.clean(job)
-            db_jobsover.update({'_id': job['_id']}, {'status.primary': godutils.STATUS_ARCHIVED})
+            db_jobsover.update({'_id': job['_id']}, {'$set': {'status.primary': godutils.STATUS_ARCHIVED}})
             if quota and 'disk_size' in job['container']['meta']:
                 self.db_users.update({'id': task['user']['id']},
                                      {'$inc': {'usage.disk': job['container']['meta']['disk_size'] * -1}})

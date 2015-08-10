@@ -62,5 +62,5 @@ class PairtreeStorage(IStorage):
         :type task: dict
         '''
         job_dir = self.get_task_dir(task)
-        if os.path.exists(task):
+        if os.path.exists(job_dir):
             shutil.rmtree(job_dir)
