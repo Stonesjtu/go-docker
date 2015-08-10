@@ -400,8 +400,33 @@ class SchedulerTest(unittest.TestCase):
         over_tasks = self.scheduler.db_jobsover.find()
         self.assertTrue(over_tasks.count() == 4)
 
-
-
     def test_plugin_get_users(self):
         user_list = self.scheduler.executor.get_users(['osallou'])
         self.assertTrue(user_list.count()==1)
+
+
+    def test_user_rate_limit(self):
+        self.scheduler.cfg.rate_limit = 1
+        task = copy.deepcopy(self.sample_task)
+        task_id = self.scheduler.add_task(task)
+        pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
+        task_list = []
+        for p in pending_tasks:
+            task_list.append(p)
+        queued_tasks = self.scheduler.schedule_tasks(task_list)
+        task = copy.deepcopy(self.sample_task)
+        task_id = self.scheduler.add_task(task)
+        self.assertTrue(task_id is None)
+
+    def test_global_rate_limit(self):
+        self.scheduler.cfg.rate_limit_all = 1
+        task = copy.deepcopy(self.sample_task)
+        task_id = self.scheduler.add_task(task)
+        pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
+        task_list = []
+        for p in pending_tasks:
+            task_list.append(p)
+        queued_tasks = self.scheduler.schedule_tasks(task_list)
+        task = copy.deepcopy(self.sample_task)
+        task_id = self.scheduler.add_task(task)
+        self.assertTrue(task_id is None)

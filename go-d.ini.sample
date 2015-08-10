@@ -56,7 +56,7 @@ allow_user_images: False
 # Allow pull only from a private registry, value is appended to image name
 # Default: None
 # Example value: 'my.registry.com:5000'
-# => pull myimage => pull my.registry.com:5000/myimage 
+# => pull myimage => pull my.registry.com:5000/myimage
 use_private_registry: None
 
 # VOLUMES ##############################
@@ -170,3 +170,15 @@ clean_old: 30
 # Default: None (no quota)
 # Possible values (value + unit): 12 (bytes), 5k (kilobytes), 12M (megabytes), 40G (gigabytes)
 disk_default_quota: None
+
+
+# Rate limiting ############################
+# Max number of pending tasks for a user
+# New tasks will be rejected if rate is reached
+# It is wise to limit it to limit total number of pending jobs for scheduler.
+# Default: None (no limit)
+# Value example: 1000
+rate_limit: None
+# Max number of pending tasks for all users (to avoid scheduler overload)
+# When limit is reached, new tasks are rejected
+rate_limit_all: 10000

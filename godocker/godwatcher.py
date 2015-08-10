@@ -224,14 +224,17 @@ class GoDWatcher(Daemon):
                                 task_to_kill = dumps(self.db_jobs.find_one({'id': subtask_id}))
                                 self.r.set(self.cfg.redis_prefix+':job:'+str(subtask_id)+':task', task_to_kill)
                             self.r.rpush(self.cfg.redis_prefix+':jobs:kill', task_to_kill)
+                            self.r.decr(self.cfg.redis_prefix + ':user:' + str(task['user']['id'])+ ':rate')
                     else:
                         over = True
                         self._set_task_exitcode(task, 137)
                         self.r.decr(self.cfg.redis_prefix+':jobs:queued')
+                        self.r.decr(self.cfg.redis_prefix + ':user:' + str(task['user']['id'])+ ':rate')
                 else:
                     over = True
                     self._set_task_exitcode(task, 137)
                     self.r.decr(self.cfg.redis_prefix+':jobs:queued')
+                    self.r.decr(self.cfg.redis_prefix + ':user:' + str(task['user']['id'])+ ':rate')
             # If not over, executor could not kill the task
             if over:
                 self.logger.debug('Executor:Kill:Success:'+str(task['id']))
@@ -251,6 +254,7 @@ class GoDWatcher(Daemon):
                 if original_task and original_task['status']['secondary'] == godutils.STATUS_SECONDARY_RESCHEDULE_REQUESTED:
                     self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
                     self.r.incr(self.cfg.redis_prefix+':jobs:queued')
+                    self.r.incr(self.cfg.redis_prefix + ':user:' + str(task['user']['id'])+ ':rate')
                     reason = ''
                     if 'reason' in task['status']:
                         reason = task['status']['reason']
@@ -414,7 +418,7 @@ class GoDWatcher(Daemon):
 
     def terminate_task(self, task):
         '''
-        Checks on finished task (ok or killed)
+        Checks and updates on finished task (ok or killed)
 
         :param task: current task
         :type task: Task
@@ -576,7 +580,7 @@ class GoDWatcher(Daemon):
                     original_task = self.db_jobs.find_one({'id': task['id']})
                     # If private registry was used, revert to original name without server address
                     task['container']['image'] = original_task['container']['image']
-                    
+
                     # Free ports
                     # Put back mapping allocated ports if not managed by executor
                     if 'resources.port' not in self.executor.features():

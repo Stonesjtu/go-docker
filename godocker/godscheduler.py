@@ -227,8 +227,22 @@ class GoDScheduler(Daemon):
         :type task: dict
         :return: task id
         '''
+        if 'rate_limit' in self.cfg and self.cfg.rate_limit is not None:
+            current_rate = self.r.get(self.cfg.redis_prefix +
+                                   ':user:' + str(task['user']['id'])+ ':rate')
+            if current_rate is not None and int(current_rate) >= self.cfg.rate_limit:
+                return None
+
+        if 'rate_limit_all' in self.cfg and self.cfg.rate_limit_all is not None:
+            current_rate = self.r.get(self.cfg.redis_prefix +
+                                   ':jobs:queued')
+            if current_rate is not None and int(current_rate) >= self.cfg.rate_limit_all:
+                return None
+
+
         task_id = self.r.incr(self.cfg.redis_prefix+':jobs')
         self.r.incr(self.cfg.redis_prefix+':jobs:queued')
+        self.r.incr(self.cfg.redis_prefix + ':user:' + str(task['user']['id'])+ ':rate')
         task['id'] = task_id
         if not task['status']['primary']:
             task['status']['primary'] = godutils.STATUS_PENDING
@@ -314,6 +328,7 @@ class GoDScheduler(Daemon):
                 r['status']['date_running'] = time.mktime(dt.timetuple())
                 self.r.set(self.cfg.redis_prefix+':job:'+str(r['id'])+':task', dumps(r))
                 self.r.decr(self.cfg.redis_prefix+':jobs:queued')
+                self.r.decr(self.cfg.redis_prefix + ':user:' + str(r['user']['id'])+ ':rate')
                 self.db_jobs.update({'id': r['id']},
                                     {'$set': {
                                         'requirements.ticket_share': r['requirements']['ticket_share'],
