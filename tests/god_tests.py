@@ -430,3 +430,16 @@ class SchedulerTest(unittest.TestCase):
         task = copy.deepcopy(self.sample_task)
         task_id = self.scheduler.add_task(task)
         self.assertTrue(task_id is None)
+
+    def test_disk_quota(self):
+        queued_tasks = self.test_schedule_task()
+        self.scheduler.run_tasks(queued_tasks)
+        running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
+        self.assertTrue(running_tasks.count() == 1)
+        self.watcher.check_running_jobs()
+        self.scheduler.cfg.disk_default_quota = '10'
+        queued_tasks = self.test_schedule_task()
+        quota_job_id = queued_tasks[0]['id']
+        self.scheduler.run_tasks(queued_tasks)
+        over_quota_task = self.scheduler.db_jobsover.find_one({'id': quota_job_id})
+        self.assertTrue(over_quota_task['status']['secondary'] == godutils.STATUS_SECONDARY_QUOTA_REACHED)
