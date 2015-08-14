@@ -37,6 +37,15 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 
 See COPYRIGHT file. Go-Docker is developped at IRISA.
 
+## Other components
+
+* Web: web interface, https://bitbucket.org/osallou/go-docker-web (mandatory)
+* CLI: command line client, https://bitbucket.org/osallou/go-docker-cli/
+* Airflow module: submit Airflow workflow command to go-docker, https://bitbucket.org/osallou/go-docker-airflow/
+* FireWorks module: submit FireWorks workflow commands to go-docker, https://bitbucket.org/osallou/go-docker-fireworks/
+* Live: view job logs in real-time, https://bitbucket.org/osallou/go-docker-live/
+
+
 ## Dependencies
 
 apt-get install python-dev libldap2-dev gcc libsasl2-dev (Debian/Ubuntu)
