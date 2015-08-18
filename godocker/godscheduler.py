@@ -525,6 +525,13 @@ class GoDScheduler(Daemon):
                 if not watcher.can_start(task) :
                     can_run = False
                     break
+            if 'tasks' in task['requirements'] and task['requirements']['tasks']:
+                for parent_task_id in task['requirements']['tasks']:
+                    parent_task = self.db_jobsover.find_one({'id': parent_task_id})
+                    if parent_task is None:
+                        can_run = False
+                        break
+
             if not can_run:
                 continue
 

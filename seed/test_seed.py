@@ -54,7 +54,10 @@ for i in range(10):
                 'nb_tasks_over': 0,
                 'tasks': []
             },
-            'label': None
+            'label': None,
+            # List of task id the task depends on
+            # Task will not start before the end of those tasks
+            'tasks': []
         },
         'container': {
             'image': 'centos:latest',

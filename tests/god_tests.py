@@ -229,6 +229,25 @@ class SchedulerTest(unittest.TestCase):
         for task in over_tasks:
             self.assertTrue(task['container']['meta']['disk_size'] > 0)
 
+    def test_dependent_tasks(self):
+        running = self.test_run_task()
+        self.sample_task['requirements']['tasks'] = [running[0]['id']]
+        running = self.test_run_task()
+        # Parent is running, task should have been kept in pending
+        self.assertTrue(running.count() == 1)
+        # Finish parent job
+        self.watcher.check_running_jobs()
+        # Reschedule
+        pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
+        task_list = []
+        for p in pending_tasks:
+            task_list.append(p)
+        queued_tasks = self.scheduler.schedule_tasks(task_list)
+        self.scheduler.run_tasks(queued_tasks)
+        running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
+        self.assertTrue(running_tasks.count() == 1)
+
+
 
     def test_kill_task_running(self):
         running_tasks = self.test_run_task()

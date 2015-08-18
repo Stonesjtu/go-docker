@@ -32,6 +32,7 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 * quotas: user or project (cpu, memory, disk)
 * use a private registry
 * rate limiting: limit number of pending tasks for a user or globally
+* dependency between tasks
 
 ## LICENSE
 
