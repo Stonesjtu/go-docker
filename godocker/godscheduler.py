@@ -30,6 +30,8 @@ from logging.handlers import RotatingFileHandler
 from godocker.iSchedulerPlugin import ISchedulerPlugin
 from godocker.iExecutorPlugin import IExecutorPlugin
 from godocker.iAuthPlugin import IAuthPlugin
+from godocker.iWatcherPlugin import IWatcherPlugin
+
 from godocker.pairtreeStorage import PairtreeStorage
 from godocker.utils import is_array_child_task, is_array_task
 import godocker.utils as godutils
@@ -175,7 +177,8 @@ class GoDScheduler(Daemon):
         simplePluginManager.setCategoriesFilter({
            "Scheduler": ISchedulerPlugin,
            "Executor": IExecutorPlugin,
-           "Auth": IAuthPlugin
+           "Auth": IAuthPlugin,
+           "Watcher": IWatcherPlugin
          })
         # Load all plugins
         simplePluginManager.collectPlugins()
@@ -205,6 +208,24 @@ class GoDScheduler(Daemon):
              self.executor.set_projects_handler(self.db_projects)
              self.executor.set_config(self.cfg)
              print "Loading executor: "+self.executor.get_name()
+
+        self.watchers = []
+        if 'watchers' in self.cfg and self.cfg.watchers is not None:
+            watchers = self.cfg.watchers.split(',')
+        else:
+            watchers = []
+        for pluginInfo in simplePluginManager.getPluginsOfCategory("Watcher"):
+           #simplePluginManager.activatePluginByName(pluginInfo.name)
+           if pluginInfo.plugin_object.get_name() in watchers:
+             watcher = pluginInfo.plugin_object
+             watcher.set_logger(self.logger)
+             watcher.set_config(self.cfg)
+             watcher.set_redis_handler(self.r)
+             watcher.set_jobs_handler(self.db_jobs)
+             watcher.set_users_handler(self.db_users)
+             watcher.set_projects_handler(self.db_projects)
+             self.watchers.append(watcher)
+             print "Add watcher: "+watcher.get_name()
 
         self.auth_policy = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Auth"):
@@ -499,6 +520,14 @@ class GoDScheduler(Daemon):
         projects_usage = {}
         filtered_list = []
         for task in queued_list:
+            can_run = True
+            for watcher in self.watchers:
+                if not watcher.can_start(task) :
+                    can_run = False
+                    break
+            if not can_run:
+                continue
+
             reject =  False
             quota = True
             if 'disk_default_quota' not in self.cfg or self.cfg['disk_default_quota'] is None:

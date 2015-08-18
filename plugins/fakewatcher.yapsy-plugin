@@ -1,0 +1,9 @@
+[Core]
+Name = FakeWatcher
+Module = fakewatcher
+
+[Documentation]
+Author = Olivier Sallou
+Version = 0.1
+Website =
+Description = Fake watcher for tests

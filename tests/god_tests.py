@@ -198,6 +198,14 @@ class SchedulerTest(unittest.TestCase):
         self.assertTrue(running_tasks.count() == 1)
         return running_tasks
 
+    def test_run_task_watcher_reject(self):
+        self.sample_task['meta']['name'] = 'norun'
+        queued_tasks = self.test_schedule_task()
+        self.scheduler.run_tasks(queued_tasks)
+        running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
+        self.assertTrue(running_tasks.count() == 0)
+        pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
+        self.assertTrue(pending_tasks.count() == 1)
 
     def test_check_redis_restore(self):
         running_tasks = self.test_run_task()

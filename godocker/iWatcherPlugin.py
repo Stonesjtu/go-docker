@@ -6,6 +6,12 @@ class IWatcherPlugin(IGoDockerPlugin):
     Watcher plugin reference. Watchers checks if task can continue to run
     '''
 
+    def can_start(self, task):
+        '''
+        Checks if task can be scheduled for running now
+        '''
+        return True
+
     def can_run(self, task):
         '''
         Checks if task can continue to run. If task cannot run, this method must kill itself the task.
