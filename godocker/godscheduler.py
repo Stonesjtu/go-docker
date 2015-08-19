@@ -527,7 +527,7 @@ class GoDScheduler(Daemon):
                     break
             if 'tasks' in task['requirements'] and task['requirements']['tasks']:
                 for parent_task_id in task['requirements']['tasks']:
-                    parent_task = self.db_jobsover.find_one({'id': parent_task_id})
+                    parent_task = self.db_jobsover.find_one({'id': int(parent_task_id)})
                     if parent_task is None:
                         can_run = False
                         break
