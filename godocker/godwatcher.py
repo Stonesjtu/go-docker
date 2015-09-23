@@ -580,6 +580,10 @@ class GoDWatcher(Daemon):
                     original_task = self.db_jobs.find_one({'id': task['id']})
                     # If private registry was used, revert to original name without server address
                     task['container']['image'] = original_task['container']['image']
+                    # Id, with mesos, is set after task submission, so not present in runtime task
+                    # We need to get it from database metadata
+                    if 'id' in original_task['container']:
+                        task['container']['id'] = original_task['container']['id']
 
                     # Free ports
                     # Put back mapping allocated ports if not managed by executor
