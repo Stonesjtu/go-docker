@@ -582,7 +582,7 @@ class GoDWatcher(Daemon):
                     task['container']['image'] = original_task['container']['image']
                     # Id, with mesos, is set after task submission, so not present in runtime task
                     # We need to get it from database metadata
-                    if 'id' in original_task['container']:
+                    if 'id' in original_task['container'] and original_task['container']['id']:
                         task['container']['id'] = original_task['container']['id']
 
                     # Free ports
