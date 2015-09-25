@@ -210,4 +210,11 @@ class GoAuth(IAuthPlugin):
                 req['mount'] = None
                 volumes.append(req)
                 continue
+            if req['name'] == 'softs':
+                req['path'] = '/softs'
+                req['acl'] = 'ro'
+                req['mount'] = None
+                volumes.append(req)
+                continue
+
         return volumes
