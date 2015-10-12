@@ -282,3 +282,13 @@ bin/swarm manage --strategy binpacking -H 127.0.1:2376 nodes://127.0.0.1:2375
 Running cAdvisor on nodes gives live monitoring of the container (ram/cpu/network) in the web interface.
 
 sudo docker run --volume=/:/rootfs:ro  --volume=/var/run:/var/run:rw  --volume=/sys:/sys:ro --volume=/var/lib/docker/:/var/lib/docker:ro --publish=8080:8080 --detach=true --name=cadvisor google/cadvisor:latest
+
+# End user tutorials
+
+## CLI
+
+https://www.youtube.com/watch?v=3fu2aLocTbI
+
+## Web interface
+
+https://www.youtube.com/watch?v=juw_foi-Q0c
