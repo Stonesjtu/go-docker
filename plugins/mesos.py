@@ -249,18 +249,19 @@ class MesosScheduler(mesos.interface.Scheduler):
             r = None
             try:
                 r = http.urlopen('GET', 'http://'+job['container']['meta']['Node']['Name']+':5051/slave(1)/state.json')
+
+                if r.status == 200:
+                    slave = json.loads(r.data)
+                    for f in slave['frameworks']:
+                        if f['name'] == "Go-Docker Mesos":
+                            for executor in f['executors']:
+                                if str(executor['id']) == str(update.task_id.value):
+                                    container = 'mesos-'+executor['container']
+                                    self.jobs_handler.update({'id': int(update.task_id.value)},{'$set': {'container.id': container}})
+                                    break
+                            break
             except Exception as e:
                 self.logger.error('Failed to contact mesos slave:' + job['container']['meta']['Node']['Name'])
-            if r is not None and r.status == 200:
-                slave = json.loads(r.data)
-                for f in slave['frameworks']:
-                    if f['name'] == "Go-Docker Mesos":
-                        for executor in f['executors']:
-                            if str(executor['id']) == str(update.task_id.value):
-                                container = 'mesos-'+executor['container']
-                                self.jobs_handler.update({'id': int(update.task_id.value)},{'$set': {'container.id': container}})
-                                break
-                        break
 
         self.logger.debug('Mesos:Task:Over:'+str(update.task_id.value))
 
