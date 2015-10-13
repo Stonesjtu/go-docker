@@ -24,6 +24,7 @@ class IAuthPlugin(IGoDockerPlugin):
                   'id' : userId,
                   'uidNumber': systemUserid,
                   'gidNumber': systemGroupid,
+                  'sgids': list of secondary group ids,
                   'email': userEmail,
                   'homeDirectory': userHomeDirectory
                   }
@@ -39,6 +40,7 @@ class IAuthPlugin(IGoDockerPlugin):
                   'id' : userId,
                   'uidNumber': systemUserid,
                   'gidNumber': systemGroupid,
+                  'sgids': list of user secondary group ids,
                   'email': userEmail,
                   'homeDirectory': userHomeDirectory
                   }

@@ -1,5 +1,6 @@
 from godocker.iAuthPlugin import IAuthPlugin
 import logging
+import grp
 
 import ldap
 
@@ -10,6 +11,11 @@ class GoAuth(IAuthPlugin):
     def get_type(self):
         return "Auth"
 
+    def get_groups(self, user_id):
+        gids = [g.gr_gid for g in grp.getgrall() if user_id in g.gr_mem]
+        return [grp.getgrgid(gid).gr_gid for gid in gids]
+
+
     def get_user(self, login):
         '''
         Get user information
@@ -19,6 +25,7 @@ class GoAuth(IAuthPlugin):
                   'id' : userId,
                   'uidNumber': systemUserid,
                   'gidNumber': systemGroupid,
+                  'sgids': list of user secondary group ids,
                   'email': userEmail,
                   'homeDirectory': userHomeDirectory
                   }
@@ -60,6 +67,7 @@ class GoAuth(IAuthPlugin):
                       'id' : userId,
                       'uidNumber': uidNumber,
                       'gidNumber': gidNumber,
+                      'sgids': self.get_groups(userId),
                       'email': ldapMail,
                       'homeDirectory': homeDirectory
                     }
@@ -76,6 +84,7 @@ class GoAuth(IAuthPlugin):
                   'id' : userId,
                   'uidNumber': systemUserid,
                   'gidNumber': systemGroupid,
+                  'sgids': list of user secondary group ids,
                   'email': userEmail,
                   'homeDirectory': userHomeDirectory
                   }
@@ -120,6 +129,7 @@ class GoAuth(IAuthPlugin):
                       'id' : userId,
                       'uidNumber': uidNumber,
                       'gidNumber': gidNumber,
+                      'sgids': self.get_groups(userId),
                       'email': ldapMail,
                       'homeDirectory': homeDirectory
                     }

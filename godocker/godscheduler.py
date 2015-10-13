@@ -417,6 +417,11 @@ class GoDScheduler(Daemon):
         cmd += "groupadd --gid "+str(task['user']['gid'])+" "+user_id
         cmd += " && useradd --uid "+str(task['user']['uid'])+" --gid "+str(task['user']['gid'])+" "+user_id+"\n"
         cmd += "usermod -p"+task['user']['credentials']['apikey']+"  "+user_id+"\n"
+        # Create secondary groups
+        if 'sgids' in task['user']:
+            for sgid in task['user']['sgids']:
+                cmd += "groupadd --gid "+str(sgid)+" group"+str(sgid)+"\n"
+                cmd += "usermod -a -G group"+str(sgid)+" "+user_id+"\n"
         # Installing and using sudo instead of su
         # docker has issues with kernel (need recent kernel) to apply su (and others)
         # in container.
