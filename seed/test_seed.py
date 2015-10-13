@@ -28,11 +28,12 @@ for i in range(10):
     task = {
         'id': task_id,
         # id of the parent task
-        'parent_task_id': None
+        'parent_task_id': None,
         'user': {
             'id': 'osallou',
             'uid': 1001,
             'gid': 1001,
+            'sgids': []
             'project': 'default'
         },
         'date': time.mktime(dt.timetuple()),
