@@ -34,7 +34,10 @@ for i in range(10):
             'uid': 1001,
             'gid': 1001,
             'sgids': []
-            'project': 'default'
+            'project': 'default',
+            'credentials': {
+                'apikey': '123'
+            }
         },
         'date': time.mktime(dt.timetuple()),
         'meta': {
@@ -58,7 +61,10 @@ for i in range(10):
             'label': None,
             # List of task id the task depends on
             # Task will not start before the end of those tasks
-            'tasks': []
+            'tasks': [],
+            'user_quota_time': 0,
+            'user_quota_cpu': 0,
+            'user_quota_ram': 0
         },
         'container': {
             'image': 'centos:latest',
