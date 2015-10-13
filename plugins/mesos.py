@@ -246,11 +246,12 @@ class MesosScheduler(mesos.interface.Scheduler):
             #Switched to RUNNING, get container id
             job = self.jobs_handler.find_one({'id': int(update.task_id.value)})
             http = urllib3.PoolManager()
+            r = None
             try:
                 r = http.urlopen('GET', 'http://'+job['container']['meta']['Node']['Name']+':5051/slave(1)/state.json')
             except Exception as e:
                 self.logger.error('Failed to contact mesos slave:' + job['container']['meta']['Node']['Name'])
-            if r.status == 200:
+            if r is not None and r.status == 200:
                 slave = json.loads(r.data)
                 for f in slave['frameworks']:
                     if f['name'] == "Go-Docker Mesos":
