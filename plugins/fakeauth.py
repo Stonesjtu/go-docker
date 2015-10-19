@@ -33,7 +33,8 @@ class FakeAuth(IAuthPlugin):
         '''
         if login == 'fake':
             return None
-        user = {
+        try:
+            user = {
                  'id' :login,
                  'uidNumber': pwd.getpwnam( login ).pw_uid,
                  'gidNumber': pwd.getpwnam( login ).pw_gid,
@@ -41,6 +42,15 @@ class FakeAuth(IAuthPlugin):
                  'email': login+'@fake.org',
                  'homeDirectory': '/home/'+login
                }
+        except Exception:
+            user = {
+                     'id' :login,
+                     'uidNumber': 1001,
+                     'gidNumber': 1001,
+                     'sgids': [],
+                     'email': login+'@fake.org',
+                     'homeDirectory': '/home/'+login
+                   }
         return user
 
     def get_user(self, login):
