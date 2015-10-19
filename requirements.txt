@@ -25,3 +25,4 @@ pairtree
 influxdb
 python-logstash
 gelfHandler
+urllib3

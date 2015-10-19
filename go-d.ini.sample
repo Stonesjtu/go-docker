@@ -106,6 +106,10 @@ max_job_pop: 100
 executor: 'swarm'
 #executor: 'fake'
 
+# Stats ################################
+prometheus_key: 'mysecretkey'
+prometheus_exporter: '127.0.0.1:6543'
+
 # Mesos ##
 mesos_master: '127.0.0.1:5050'
 

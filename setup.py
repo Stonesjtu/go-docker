@@ -21,6 +21,7 @@ config = {
                             'yapsy',
                             'iso8601',
                             'mock',
+                            'urllib3',
                             'gelfHandler',
                             'python-logstash',
                             'config' ],

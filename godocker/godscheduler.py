@@ -12,6 +12,7 @@ import time
 import socket
 import random
 import string
+import urllib3
 from copy import deepcopy
 
 from gelfHandler import gelfHandler
@@ -330,6 +331,7 @@ class GoDScheduler(Daemon):
         else:
             nb_running = int(nb_running)
         self._add_to_stats(nb_pending, nb_running, end_time - start_time)
+        self._prometheus_stats('god_scheduler_sched_duration', end_time - start_time)
         return tasks
 
 
@@ -583,7 +585,12 @@ class GoDScheduler(Daemon):
                 self._create_command(task)
                 filtered_list.append(task)
 
+        dt = datetime.datetime.now()
+        start_time = time.mktime(dt.timetuple())
         (running_tasks, rejected_tasks) = self.executor.run_tasks(filtered_list, self._update_scheduled_task_status)
+        dt = datetime.datetime.now()
+        end_time = time.mktime(dt.timetuple())
+        self._prometheus_stats('god_scheduler_run_duration', end_time - start_time)
         self._update_scheduled_task_status(running_tasks, rejected_tasks)
 
     def reject_quota(self, task):
@@ -616,10 +623,25 @@ class GoDScheduler(Daemon):
             self.r.rpush(self.cfg.redis_prefix+':jobs:kill',dumps(task))
 
 
+    def _prometheus_stats(self, stat, duration):
+        if 'prometheus_key' in self.cfg and self.cfg.prometheus_exporter is not None and self.cfg.prometheus_key is not None:
+            try:
+                http = urllib3.PoolManager()
+                r = http.request('POST',
+                    self.cfg.prometheus_exporter+'/api/1.0/prometheus',
+                    headers={'Content-Type':'application/json'},
+                    body=json.dumps({ 'key': self.cfg.prometheus_key,
+                                      'stat': [{'name': stat, 'value': duration}]}))
+                if r.status != 200:
+                    logging.warn('Prometheus:Failed to send stats')
+            except Exception as e:
+                logging.warn("Prometheus:Failed to send stats: "+str(e))
+
     def _add_to_stats(self, nb_pending, nb_running, duration_scheduler):
         '''
         Add scheduler stats
         '''
+
         if self.db_influx is None:
             return
 
