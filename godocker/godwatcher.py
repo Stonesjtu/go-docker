@@ -272,6 +272,7 @@ class GoDWatcher(Daemon):
                     self.db_jobsover.remove({'id': task['id']})
                 task['status']['primary'] = godutils.STATUS_OVER
                 task['status']['secondary'] = godutils.STATUS_SECONDARY_KILLED
+                task['status']['exitcode'] = task['container']['meta']['State']['ExitCode']
                 dt = datetime.datetime.now()
                 task['status']['date_over'] = time.mktime(dt.timetuple())
                 del task['_id']
@@ -608,6 +609,7 @@ class GoDWatcher(Daemon):
                         self.db_jobsover.remove({'id': task['id']})
                     task['status']['primary'] = godutils.STATUS_OVER
                     task['status']['secondary'] = ''
+                    task['status']['exitcode'] = task['container']['meta']['State']['ExitCode']
                     dt = datetime.datetime.now()
                     task['status']['date_over'] = time.mktime(dt.timetuple())
                     #task['_id'] = ObjectId(task['_id']['$oid'])
