@@ -110,6 +110,7 @@ Once application is configured, it is necessary, the first time, to initialize t
 
   python go-d-scheduler.py init
 
+Logging is defined in log_config field. One can set logging for logstash, graylog, file etc...
 
 ### Fairshare
 
@@ -276,6 +277,24 @@ docker  -H 127.0.0.1:2376  ps -a | awk 'NR > 1 {print $1}' | xargs docker  -H
 swarm binpacking strategy:
 
 bin/swarm manage --strategy binpacking -H 127.0.1:2376 nodes://127.0.0.1:2375
+
+Cleanup of counters in case of incoherency (due to some framework
+restarts/errors....)
+
+    redis-cli
+    127.0.0.1:6379> get god:jobs:queued
+    "-2"
+    127.0.0.1:6379> set god:jobs:queued 0
+    OK
+    127.0.0.1:6379> llen god:jobs:running
+    (integer) 2
+    127.0.0.1:6379> lpop god:jobs:running
+    "501"
+    127.0.0.1:6379> lpop god:jobs:running
+    "502"
+    127.0.0.1:6379> lpop god:jobs:running
+    nil
+
 
 ## CAdvisor
 

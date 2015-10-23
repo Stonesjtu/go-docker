@@ -63,8 +63,12 @@ class GoDWatcher(Daemon):
             database = self.cfg.influxdb_db
             self.db_influx = influxdb.InfluxDBClient(host, port, username, password, database)
 
-
-        self.logger = logging.getLogger('godocker')
+        if self.cfg.get('log_config', None) is not None:
+            for handler in self.cfg.log_config.handlers.keys():
+                self.cfg.log_config.handlers[handler] = dict(self.cfg.log_config.handlers[handler])
+            logging.config.dictConfig(self.cfg.log_config)
+        self.logger = logging.getLogger('godocker-watcher')
+        '''
         loglevel = logging.ERROR
         if 'log_level' in self.cfg:
             loglevel = self.cfg['log_level']
@@ -102,6 +106,7 @@ class GoDWatcher(Daemon):
 
         if 'log_logstash_host' in self.cfg and self.cfg['log_logstash_host']:
             self.logger.addHandler(logstash.LogstashHandler(self.cfg['log_logstash_host'], self.cfg['log_logstash_port'], version=1))
+        '''
 
         if not self.cfg.plugins_dir:
             dirname, filename = os.path.split(os.path.abspath(__file__))

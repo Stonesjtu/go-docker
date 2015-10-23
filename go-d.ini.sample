@@ -147,14 +147,6 @@ cadvisor_url_part: '/containers/docker/'
 # Number of samples (seconds) to display , according to cAdvisor launch option -storage_duration
 cadvisor_samples: 60
 
-# Logging ###############################
-log_location: ''
-log_level: 'DEBUG'
-log_graylog_host: None
-log_graylog_port: None
-log_logstash_host: None
-log_logstash_port: None
-
 # Email SMTP ################################
 email_from: 'godocker@do-no-reply.fr'
 email_smtp_tls: False
@@ -186,3 +178,62 @@ rate_limit: None
 # Max number of pending tasks for all users (to avoid scheduler overload)
 # When limit is reached, new tasks are rejected
 rate_limit_all: 10000
+
+
+# Logging ##################################
+log_config: {
+    'version': 1,
+    'formatters': {
+        'generic': {
+            'format': '%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'generic',
+            'level': 'INFO'
+        },
+        'watcher': {
+            'class': 'logging.FileHandler',
+            'filename': 'godwatcher.log',
+            'formatter': 'generic',
+            'level': 'INFO'
+        },
+        'scheduler': {
+            'class': 'logging.FileHandler',
+            'filename': 'godscheduler.log',
+            'formatter': 'generic',
+            'level': 'INFO'
+        },
+        'gelf': {
+            'class': 'gelfHandler.gelfHandler',
+            'host': 'localhost',
+            'port':  12201,
+            'formatter': 'generic',
+            'level': 'INFO'
+        },
+        'logstash': {
+            'class': 'logstash.LogstashHandler',
+            'host': 'localhost',
+            'port':  59590,
+            'formatter': 'generic',
+            'level': 'INFO'
+        }
+    },
+    'loggers': {
+        'root': {
+            'level': 'INFO',
+            'handlers': [ 'console' ]
+        },
+        'godocker-watcher': {
+            'level': 'INFO',
+            'handlers': [ 'console', 'watcher', 'gelf']
+        },
+        'godocker-scheduler': {
+            'level': 'INFO',
+            'handlers': [ 'console', 'scheduler', 'gelf']
+        }
+    },
+    'disable_existing_logers': False
+}
