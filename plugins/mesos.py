@@ -261,7 +261,7 @@ class MesosScheduler(mesos.interface.Scheduler):
                                     break
                             break
             except Exception as e:
-                self.logger.error('Failed to contact mesos slave:' + job['container']['meta']['Node']['Name'])
+                self.logger.error('Failed to contact mesos slave')
 
         self.logger.debug('Mesos:Task:Over:'+str(update.task_id.value))
 
