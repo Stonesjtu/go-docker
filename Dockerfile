@@ -32,7 +32,7 @@ RUN cd /opt/go-docker-web && sed -i 's;admin =.*;admin = '${admin}';g' productio
 RUN cd /opt/go-docker && cp go-d.ini.sample go-d.ini
 RUN cd /opt/go-docker && sed -i "s;plugins_dir:.*;plugins_dir: '/opt/go-docker/plugins';g" go-d.ini
 RUN cd /opt/go-docker && sed -i "s;shared_dir:.*;shared_dir: '/opt/godshared';g" go-d.ini
-RUN cd /opt/go-docker && sed -i "s;mongo_url:.*;mongo_url:'mongodb://god-mongo:27001';g" go-d.ini
+RUN cd /opt/go-docker && sed -i "s;mongo_url:.*;mongo_url:'mongodb://god-mongo:27017';g" go-d.ini
 RUN cd /opt/go-docker && sed -i "s;redis_host:.*;redis_host:'god-redis';g" go-d.ini
 RUN cd /opt/go-docker && sed -i "s;influxdb_host:.*;influxdb_host: None;g" go-d.ini
 RUN cd /opt/go-docker && sed -i "s;prometheus_exporter:.*;prometheus_exporter: 'god-web:6543';g" go-d.ini
