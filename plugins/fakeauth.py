@@ -109,10 +109,13 @@ class FakeAuth(IAuthPlugin):
               'acl': 'rw'
             },
             { 'name': 'omaha',
-              'acl': 'rw'
+              'acl': 'rw',
+              'path': '/omaha/$USERID',
+              'mount': '/omaha/$USERID'
             },
             { 'name': 'db',
-              'acl': 'ro'
+              'acl': 'ro',
+              'path': '/db'
             },
         ]
 
@@ -139,23 +142,28 @@ class FakeAuth(IAuthPlugin):
 
         '''
         volumes = []
+        config_volumes = {}
+        if len(requested_volumes) > 0:
+            for vol in self.cfg.volumes:
+                config_volumes[vol['name']] = vol
+
         for req in requested_volumes:
-            if root_access:
-                req['acl'] = 'ro'
             if req['name'] == 'home':
                 req['path'] = user['homeDirectory']
                 req['mount'] = '/mnt/home'
+                if root_access:
+                    req['acl'] = 'ro'
                 volumes.append(req)
                 continue
-            if req['name'] == 'omaha':
-                req['path'] = '/omaha-beach/'+user['id']
-                req['mount'] = None
-                volumes.append(req)
-                continue
-            if req['name'] == 'db':
-                req['path'] = '/db'
+
+            req['path'] = config_volumes[req['name']]['path'].replace('$USERID', user['id'])
+            if 'mount' not in config_volumes[req['name']] or config_volumes[req['name']]['mount'] is None or config_volumes[req['name']]['mount'] == '':
+                req['mount'] = req['path']
+            else:
+                req['mount'] = config_volumes[req['name']]['mount'].replace('$USERID', user['id'])
+
+            if root_access:
                 req['acl'] = 'ro'
-                req['mount'] = None
-                volumes.append(req)
-                continue
+
+            volumes.append(req)
         return volumes

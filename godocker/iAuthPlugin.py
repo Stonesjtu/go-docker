@@ -77,10 +77,13 @@ class IAuthPlugin(IGoDockerPlugin):
               'acl': 'rw'
             },
             { 'name': 'omaha',
-              'acl': 'rw'
+              'acl': 'rw',
+              'path': '/omaha/$USERID',
+              'mount': '/omaha/$USERID'
             },
             { 'name': 'db',
-              'acl': 'ro'
+              'acl': 'ro',
+              'path': '/db'
             },
         ]
 

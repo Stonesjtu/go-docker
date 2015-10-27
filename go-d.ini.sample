@@ -60,16 +60,27 @@ allow_user_images: False
 use_private_registry: None
 
 # VOLUMES ##############################
+# Mandatory fields
+# name: label, home is a reserved label that will map to user home directory
+# acl: rw (read and write) or ro (read-only)
+# path: local path for this directory (ignored for home)
+# Optional fields
+# mount: path in the container, if not set, use the same then path
+#
+# path and mount can specify $USERID variable that will be replaced by user identifier.
 
 volumes: [
     { name: 'home',
       acl: 'rw'
     },
     { name: 'omaha',
-      acl: 'rw'
+      acl: 'rw',
+      mount: '/omaha-beach/$USERID',
+      path: '/omaha-beach/$USERID'
     },
     { name: 'db',
-      acl: 'ro'
+      acl: 'ro',
+      path: '/db'
     },
 ]
 
