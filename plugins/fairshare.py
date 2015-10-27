@@ -86,7 +86,7 @@ class FairShare(ISchedulerPlugin):
         group_time = self.normalize(group_time, self.min_group_time, self.max_group_time)
         group_cpu = self.normalize(group_cpu, self.min_group_cpu, self.max_group_cpu)
         group_ram = self.normalize(group_ram, self.min_group_ram, self.max_group_ram)
-        ticket_share =  task_waiting_time*self.waiting_time_weight + \
+        ticket_share =  (1-task_waiting_time)*self.waiting_time_weight + \
                         user_time*self.user_time_weight + \
                         user_cpu*self.user_cpu_weight + \
                         user_ram*self.user_ram_weight + \
