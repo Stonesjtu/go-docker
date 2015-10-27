@@ -151,16 +151,12 @@ class FakeAuth(IAuthPlugin):
             if req['name'] == 'home':
                 req['path'] = user['homeDirectory']
                 req['mount'] = '/mnt/home'
-                if root_access:
-                    req['acl'] = 'ro'
-                volumes.append(req)
-                continue
-
-            req['path'] = config_volumes[req['name']]['path'].replace('$USERID', user['id'])
-            if 'mount' not in config_volumes[req['name']] or config_volumes[req['name']]['mount'] is None or config_volumes[req['name']]['mount'] == '':
-                req['mount'] = req['path']
             else:
-                req['mount'] = config_volumes[req['name']]['mount'].replace('$USERID', user['id'])
+                req['path'] = config_volumes[req['name']]['path'].replace('$USERID', user['id'])
+                if 'mount' not in config_volumes[req['name']] or config_volumes[req['name']]['mount'] is None or config_volumes[req['name']]['mount'] == '':
+                    req['mount'] = req['path']
+                else:
+                    req['mount'] = config_volumes[req['name']]['mount'].replace('$USERID', user['id'])
 
             if root_access:
                 req['acl'] = 'ro'
