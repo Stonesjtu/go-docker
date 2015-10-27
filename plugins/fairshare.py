@@ -186,6 +186,6 @@ class FairShare(ISchedulerPlugin):
             task['requirements']['ticket_share'] = self.get_ticket_share(user_usage, project_usage, task)
 
         #tasks.sort(key=lambda x: x['requirements']['ticket_share'], reverse=True)
-        tasks.sort(key=lambda x: x['requirements']['ticket_share'])
+        tasks.sort(key=lambda x: (x['requirements']['ticket_share'], int(x['id'])))
 
         return tasks
