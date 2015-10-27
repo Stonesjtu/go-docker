@@ -208,6 +208,8 @@ class GoAuth(IAuthPlugin):
                 config_volumes[vol['name']] = vol
 
         for req in requested_volumes:
+            if req['name'] == 'go-docker':
+                continue
             if req['name'] == 'home':
                 req['path'] = user['homeDirectory']
                 req['mount'] = '/mnt/home'
