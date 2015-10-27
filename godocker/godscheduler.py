@@ -732,6 +732,16 @@ class GoDScheduler(Daemon):
         self.r.hset(self.cfg.redis_prefix+':procs', self.hostname, 'scheduler')
         self.r.set(self.cfg.redis_prefix+':procs:'+self.hostname, timestamp)
 
+
+    def _in_maintenance(self):
+        '''
+        checks if system is in maintenance
+        '''
+        maintenance = self.r.get(self.cfg.redis_prefix+':maintenance')
+        if maintenance is not None and maintenance == 'on':
+            return True
+        return False
+
     def run(self, loop=True):
         '''
         Main executor loop
@@ -742,8 +752,11 @@ class GoDScheduler(Daemon):
         self.executor.open(0)
         while infinite and True and not GoDScheduler.SIGINT:
             # Schedule timer
-            self.update_status()
-            self.manage_tasks()
+            if not self._in_maintenance():
+                self.update_status()
+                self.manage_tasks()
+            else:
+                self.logger.debug('In maintenance, waiting...')
             time.sleep(2)
             if not loop:
                 infinite = False
