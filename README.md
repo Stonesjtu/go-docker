@@ -170,7 +170,7 @@ Available plugins are:
     * fairshare: Fair share user tasks repartition (prio, previous usage, ...)
 * Executor:
     * swarm (Docker Swarm)
-    * mesos (Apache Mesos)
+    * mesos (Apache Mesos, tested with mesos 0.22)
     * fake  (not be used, for test only, simulate a job execution)
 * Auth:
     * goauth: specific for our internal usage, but can be easily used as a template for ldap based authentications.
