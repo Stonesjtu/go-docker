@@ -20,9 +20,9 @@ RUN apt-get install -y git python-dev libldap2-dev gcc libsasl2-dev
 RUN apt-get install -y python-setuptools apt-transport-https
 RUN apt-get install -y openssl libpython-dev libffi-dev libssl-dev
 
-RUN cd /opt && git clone -b develop https://osallou@bitbucket.org/osallou/go-docker.git
+RUN cd /opt && git clone https://osallou@bitbucket.org/osallou/go-docker.git
 RUN rm -f /opt/go-docker/plugins/mesos.*
-RUN cd /opt && git clone -b develop https://osallou@bitbucket.org/osallou/go-docker-web.git
+RUN cd /opt && git clone https://osallou@bitbucket.org/osallou/go-docker-web.git
 RUN easy_install pip
 #RUN pip uninstall six
 RUN cd /opt/go-docker && pip install -r requirements.txt
