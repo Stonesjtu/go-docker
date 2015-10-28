@@ -430,32 +430,7 @@ class GoDScheduler(Daemon):
             for sgid in task['user']['sgids']:
                 cmd += "groupadd --gid "+str(sgid)+" group"+str(sgid)+"\n"
                 cmd += "usermod -a -G group"+str(sgid)+" "+user_id+"\n"
-        # Installing and using sudo instead of su
-        # docker has issues with kernel (need recent kernel) to apply su (and others)
-        # in container.
-        # https://github.com/docker/docker/issues/5899
-        #cmd += "if [ -n \"$(command -v sudo)\" ]; then\n"
-        #cmd += " echo \"sudo installed\"\n"
-        #cmd += "else\n"
 
-        #if not self.cfg.network_disabled:
-            # If deps not installed and we have network access
-        #    cmd += "if [ -n \"$(command -v yum)\" ]; then\n"
-        #    cmd += "  yum -y install sudo\n"
-        #    cmd += "fi\n"
-        #    cmd += "if [ -n \"$(command -v apt-get)\" ]; then\n"
-        #    cmd += "  export DEBIAN_FRONTEND=noninteractive\n"
-        #    cmd += "  apt-get update\n"
-        #    cmd += "  apt-get -y install sudo\n"
-        #    cmd += "fi\n"
-        #else:
-            # If deps are not installed and we have no network access
-        #    cmd += "echo \"sudo not installed, exiting!\" > /mnt/go-docker/god.log"
-        #    cmd += "chown -R "+user_id+":"+user_id+" /mnt/go-docker/*\n"
-        #    cmd += "exit 1"
-
-        #cmd += "fi\n"
-        #cmd += "sed -i  \"s/Defaults\\s\\+requiretty/#/g\" /etc/sudoers\n"
         cmd += "cd /mnt/go-docker\n"
         array_cmd = ""
         if parent_task:
@@ -489,6 +464,7 @@ class GoDScheduler(Daemon):
                 vol_home = "export GODOCKER_HOME=" + v['mount']
                 break
         cmd += vol_home+"\n"
+        cmd += "startprocess=`date +%s`\n"
         if task['command']['interactive']:
             # should execute ssh, copy user ssh key from home in /root/.ssh/authorized_keys or /home/gocker/.ssh/authorized_keys
             # Need to create .ssh dir
@@ -513,6 +489,8 @@ class GoDScheduler(Daemon):
             else:
                 cmd += "/mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\n"
         cmd += "ret_code=$?\n"
+        cmd += "echo $startprocess > /mnt/go-docker/god.info\n"
+        cmd += "date +%s >> /mnt/go-docker/god.info\n"
         cmd += "chown -R "+user_id+":"+user_id+" /mnt/go-docker/*\n"
         cmd += "exit $ret_code\n"
 
