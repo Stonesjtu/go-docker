@@ -48,7 +48,7 @@ on host AND container as final job will end in a host container needing the same
       -v path_to/production.ini:/opt/go-docker-web/production.ini \
       -p 6543:6543 \
       -e "PYRAMID_ENV=prod" \
-      osallou/god \
+      osallou/go-docker \
       gunicorn -p godweb.pid --log-config=/opt/go-docker-web/production.ini --paste /opt/go-docker-web/production.ini
 
 
@@ -58,9 +58,9 @@ The first time only, initialize db etc...
     --link god-mongo:god-mongo \
     --link god-redis:god-redis \
     -v /opt/godshared:/opt/godshared \
-    -v /home/osallou/Development/NOSAVE/go-docker/test/go-d.ini:/opt/go-docker/go-d.ini \
+    -v path_to/go-d.ini:/opt/go-docker/go-d.ini \
      --rm \
-     osallou/god \
+     osallou/go-docker \
      /usr/bin/python go-d-scheduler.py init
 
 
@@ -73,7 +73,7 @@ Run *one* scheduler
       --link god-web:god-web \
       -v /opt/godshared:/opt/godshared \
       -v path_to/go-d.ini:/opt/go-docker/go-d.ini \
-      osallou/god \
+      osallou/go-docker \
       /usr/bin/python go-d-scheduler.py run
 
 Run *one or many* watchers (1 is enough test or medium size production)
@@ -85,5 +85,5 @@ Run *one or many* watchers (1 is enough test or medium size production)
       --link god-web:god-web \
       -v /opt/godshared:/opt/godshared \
       -v path_to/go-d.ini:/opt/go-docker/go-d.ini \
-      osallou/god \
+      osallou/go-docker \
       /usr/bin/python go-d-watcher.py run
