@@ -17,6 +17,9 @@ parameter), it can be set to a known ip address in:
 
     docker_url: 'tcp://god-swarm:2375'
 
+Dockerfile is this directory is to build upon develop branch (with tag *dev*). Dockerfile in root
+directory is based on master branch for stable release.
+
 
 ## Requirements
 
