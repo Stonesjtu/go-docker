@@ -147,6 +147,10 @@ For debug, it is possible to run processes in foreground with run option, or onl
 Log level can be modified with env variable GOD_LOGLEVEL (DEBUG, INFO, ERROR)
 
 
+## Running in containers
+
+See docker-files/README.md
+
 ## Plugins
 
 Tool support plugins for Authorization, Scheduling and Execution. A few ones are provided but it is easy to create new one, following existing ones using Yapsy.

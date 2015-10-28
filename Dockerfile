@@ -2,12 +2,15 @@ FROM debian:stable
 MAINTAINER Olivier Sallou <olivier.sallou@irisa.fr>
 
 LABEL status="Dockerfile in development"
-LABEL description="base container image for godocker components: web, \
- scheduler and watchers. Config should be overriden in /opt/godocker/go-d.ini \
+LABEL description="Batch scheduling system in containers. This image contains \
+ all godocker components: web, scheduler and watchers. \
+ Config should be overriden in /opt/godocker/go-d.ini \
  file. Default configuration does not provide mail and only fake \
- authentication with root user."
+ authentication."
 
 EXPOSE 6543
+
+WORKDIR /opt/go-docker
 
 ENV admin="root"
 ENV swarm_url="tcp://god-swarm:2375"
@@ -17,9 +20,9 @@ RUN apt-get install -y git python-dev libldap2-dev gcc libsasl2-dev
 RUN apt-get install -y python-setuptools apt-transport-https
 RUN apt-get install -y openssl libpython-dev libffi-dev libssl-dev
 
-RUN cd /opt && git clone https://osallou@bitbucket.org/osallou/go-docker.git
+RUN cd /opt && git clone -b develop https://osallou@bitbucket.org/osallou/go-docker.git
 RUN rm -f /opt/go-docker/plugins/mesos.*
-RUN cd /opt && git clone https://osallou@bitbucket.org/osallou/go-docker-web.git
+RUN cd /opt && git clone -b develop https://osallou@bitbucket.org/osallou/go-docker-web.git
 RUN easy_install pip
 #RUN pip uninstall six
 RUN cd /opt/go-docker && pip install -r requirements.txt
@@ -37,4 +40,4 @@ RUN cd /opt/go-docker && sed -i "s;redis_host:.*;redis_host:'god-redis';g" go-d.
 RUN cd /opt/go-docker && sed -i "s;influxdb_host:.*;influxdb_host: None;g" go-d.ini
 RUN cd /opt/go-docker && sed -i "s;prometheus_exporter:.*;prometheus_exporter: 'god-web:6543';g" go-d.ini
 RUN cd /opt/go-docker && sed -i "s;docker_url:.*;docker_url: '"${swarm_url}"';g" go-d.ini
-
+RUN mkdir -p /var/log/go-docker
