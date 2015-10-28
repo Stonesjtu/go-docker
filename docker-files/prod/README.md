@@ -4,7 +4,8 @@
 
 All components of GO-Docker can run as separate containers.
 
-Example configuration files are available in this directory. They should be adapted to your local configuration.
+Example configuration files are available in https://bitbucket.org/osallou/go-docker/src under docker_files/prod directory.
+They should be adapted to your local configuration.
 
 In examples, fake authentication is used (any user with no password control). If
 user does not exists on system, it will create a fake user in the container.
