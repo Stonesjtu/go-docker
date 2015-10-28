@@ -17,13 +17,16 @@ ENV swarm_url="tcp://god-swarm:2375"
 
 RUN apt-get update
 RUN apt-get install -y git python-dev libldap2-dev gcc libsasl2-dev
-RUN apt-get install -y python-setuptools apt-transport-https
+RUN apt-get install -y python-setuptools apt-transport-https wget
 RUN apt-get install -y openssl libpython-dev libffi-dev libssl-dev
 
 RUN cd /opt && git clone -b develop https://bitbucket.org/osallou/go-docker.git
-RUN rm -f /opt/go-docker/plugins/mesos.*
+#RUN rm -f /opt/go-docker/plugins/mesos.*
 RUN cd /opt && git clone -b develop https://bitbucket.org/osallou/go-docker-web.git
 RUN easy_install pip
+RUN wget http://downloads.mesosphere.io/master/debian/7/mesos-0.22.1-py2.7-linux-x86_64.egg
+RUN pip install mesos.interface==0.22.2
+RUN easy_install mesos-0.22.1-py2.7-linux-x86_64.egg
 #RUN pip uninstall six
 RUN cd /opt/go-docker && pip install -r requirements.txt
 RUN cd /opt/go-docker && python setup.py develop

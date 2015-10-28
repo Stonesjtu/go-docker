@@ -20,6 +20,9 @@ parameter), it can be set to a known ip address in:
 Dockerfile is this directory is to build upon develop branch (with tag *dev*). Dockerfile in root
 directory is based on master branch for stable release.
 
+Mesos python library installed in container is v0.22. For different mesos
+version, you need to update mesos and mesos.interface python libs in container.
+
 
 ## Requirements
 
