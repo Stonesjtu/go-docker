@@ -2,7 +2,7 @@
 
 ## About
 
-All components of GO-Docker can be ran as separate containers.
+All components of GO-Docker can run as separate containers.
 
 Example configuration files are available in this directory. They should be adapted to your local configuration.
 
