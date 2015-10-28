@@ -149,7 +149,7 @@ Log level can be modified with env variable GOD_LOGLEVEL (DEBUG, INFO, ERROR)
 
 ## Running in containers
 
-See docker-files/README.md
+See docker-files/prod/README.md
 
 ## Plugins
 

@@ -1,0 +1,220 @@
+########################################
+# GO-Docker                            #
+########################################
+
+# PLUGINS ##############################
+plugins_dir: '/opt/go-docker/plugins'
+
+# DIRECTORIES ##########################
+shared_dir: '/opt/godshared'
+
+# DEFAULTS #############################
+
+defaults_cpu: 1
+defaults_ram: 1
+
+# Disable network in containers
+# If set , application won't be able to install sudo package if not present.
+# In this case, you should make sure container contains required packages.
+network_disabled: False
+
+# Allow root access to containers
+allow_root: True
+
+# Number of days of inactivity after which user usage should be reset
+user_reset_usage_duration: 30
+
+# Live notifications ##################
+# Use live notifications on tasks, needs Go-D-Live server
+live_events: False
+#  Go-D-Live websocket URL
+live_events_url: 'http://localhost:8001'
+
+# Constraints #########################
+
+constraints: [
+]
+
+# SECURITY #############################
+secret_passphrase: 'mygodockersecret'
+
+# IMAGES ###############################
+# Default container images proposed to user
+default_images: [
+    { name: 'centos', url: 'centos:latest', interactive: False, default: True},
+    { name: 'ubuntu', url: 'rastasheep/ubuntu-sshd', interactive: True}
+]
+
+# Needs swarm >= 0.2
+allow_user_images: True
+
+# VOLUMES ##############################
+
+volumes: [
+    { name: 'home',
+      acl: 'rw'
+    }
+]
+
+# PORTS ###############################
+port_allocate: True  # allocates a port from following range instead of mapping port to itself
+port_start: 10000
+port_range: 1000
+
+
+# MONGODB ##############################
+mongo_url: 'mongodb://god-mongo:27017/'
+mongo_db: 'god'
+
+# REDIS ################################
+# Redis configuration
+redis_host: 'god-redis'
+redis_port:  6379
+# Redis database id
+redis_db: 0
+redis_prefix: 'god'
+
+# INFLUXDB ############################
+influxdb_host: None  # None if not required
+influxdb_port: 8086
+influxdb_user: 'root'
+influxdb_password: 'root'
+influxdb_db: 'god'
+
+# Scheduling ###########################
+scheduler_policy: 'FiFo'
+max_job_pop: 100
+
+# Execution system #####################
+#executor: 'mesos'
+executor: 'swarm'
+#executor: 'fake'
+
+# Stats ################################
+prometheus_key: 'mysecretkey'
+prometheus_exporter: 'god-web:6543'
+
+# Mesos ##
+mesos_master: 'god-mesos:5050'
+
+# Authentication #######################
+auth_policy: 'fake'
+
+ldap_host: None
+ldap_port: None
+ldap_dn: None
+
+# Watchers #############################
+# List of watchers, comma separated
+watchers: 'maxlifespan'
+
+# Max job life duration expressed in d(days), h(hours), s(seconds) if not specified in task
+maxlifespan: '1d'
+
+# Requirement dynamic fields ##########
+# fields that can be updated after task submission in requirements
+dynamic_fields: [
+    { name: 'maxlifespan',
+      admin_only: False
+    }
+]
+
+
+
+# Docker ###############################
+#docker_url: 'tcp://127.0.0.1:2376'
+docker_url: 'tcp://god-swarm:2375'
+# API version from docker version command
+docker_api_version: '1.17'
+
+# CAdvisor #############################
+cadvisor_port: 8080
+# /containers/docker/ to map to /containers/docker/container_id
+cadvisor_url_part: '/containers/docker/'
+# Number of samples (seconds) to display , according to cAdvisor launch option -storage_duration
+cadvisor_samples: 600
+
+# Logging ###############################
+#log_location: ''
+#log_level: 'DEBUG'
+#log_graylog_host: None
+#log_graylog_port: 12201
+#log_logstash_host: '127.0.0.1'
+#log_logstash_port: 59590
+
+# Email SMTP ################################
+email_from: 'godocker@do-no-reply.fr'
+email_smtp_tls: False
+email_smtp_user: ''
+email_smtp_password: ''
+email_smtp_host: None
+email_smtp_port: 2525
+
+# Cleanup ###################################
+clean_old: 30
+
+# Disk quota ###############################
+# Optional disk quota management
+# Default: None (no quota)
+# Possible values (value + unit): 12 (bytes), 5k (kilobytes), 12M (megabytes),
+# 40G (gigabytes)
+disk_default_quota: None
+
+
+# Logging ##################################
+log_config: {
+    'version': 1,
+    'formatters': {
+        'generic': {
+            'format': '%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'generic',
+            'level': 'INFO'
+        },
+        'watcher': {
+            'class': 'logging.FileHandler',
+            'filename': '/var/log/go-docker/godwatcher.log',
+            'formatter': 'generic',
+            'level': 'INFO'
+        },
+        'scheduler': {
+            'class': 'logging.FileHandler',
+            'filename': '/var/log/go-docker/godscheduler.log',
+            'formatter': 'generic',
+            'level': 'INFO'
+        },
+        'gelf': {
+            'class': 'gelfHandler.gelfHandler',
+            'host': 'localhost',
+            'port':  12201,
+            'formatter': 'generic',
+            'level': 'INFO'
+        },
+        'logstash': {
+            'class': 'logstash.LogstashHandler',
+            'host': 'localhost',
+            'port':  59590,
+            'formatter': 'generic',
+            'level': 'INFO'
+        }
+    },
+    'loggers': {
+        'root': {
+            'level': 'INFO',
+            'handlers': [ 'console' ]
+        },
+        'godocker-watcher': {
+            'level': 'INFO',
+            'handlers': [ 'console', 'watcher']
+        },
+        'godocker-scheduler': {
+            'level': 'INFO',
+            'handlers': [ 'console', 'scheduler']
+        }
+    },
+    'disable_existing_logers': False
+}
