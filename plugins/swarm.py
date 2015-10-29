@@ -93,6 +93,10 @@ class Swarm(IExecutorPlugin):
                     # some fields are not present, or not at the same place
                     # Use required fields and place them like in swarm
                     job['container']['meta']['Node'] = {'Name': 'localhost'}
+                if 'Config' in job['container']['meta'] and 'Labels' in job['container']['meta']['Config']:
+                    # We don't need labels and some labels with dots create
+                    # issue to store the information in db
+                    del job['container']['meta']['Config']['Labels']
 
                 port_mapping = {}
                 for port in port_list:
