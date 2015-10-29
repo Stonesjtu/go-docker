@@ -152,6 +152,11 @@ class Swarm(IExecutorPlugin):
         #task['container']['stats'] = self.docker_client.stats(task['container']['id'])
         try:
             task['container']['meta'] = self.docker_client.inspect_container(task['container']['id'])
+            if 'Config' in task['container']['meta'] and 'Labels' in task['container']['meta']['Config']:
+                # We don't need labels and some labels with dots create
+                # issue to store the information in db
+                del task['container']['meta']['Config']['Labels']
+
             finished_date =  task['container']['meta']['State']['FinishedAt']
             finished_date = iso8601.parse_date(finished_date)
         except Exception:
