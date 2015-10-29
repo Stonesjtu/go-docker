@@ -182,7 +182,7 @@ Available plugins are:
     * mesos (Apache Mesos, tested with mesos 0.22)
     * fake  (not be used, for test only, simulate a job execution)
 * Auth:
-    * goauth: template for ldap based authentications.
+    * goauth: ldap based authentications.
     * fake: fake authentication for tests
     * local: match db users (using *create_local_user.py*) with system users.
 * Watcher:
