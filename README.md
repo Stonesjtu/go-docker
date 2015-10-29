@@ -182,8 +182,9 @@ Available plugins are:
     * mesos (Apache Mesos, tested with mesos 0.22)
     * fake  (not be used, for test only, simulate a job execution)
 * Auth:
-    * goauth: specific for our internal usage, but can be easily used as a template for ldap based authentications.
-    * fakeauth: fake authentication for tests
+    * goauth: template for ldap based authentications.
+    * fake: fake authentication for tests
+    * local: match db users (using *create_local_user.py*) with system users.
 * Watcher:
     * maxlifespan: Checks max life duration of a job
 

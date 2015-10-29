@@ -1,0 +1,9 @@
+[Core]
+Name = LocalAuth
+Module = localauth
+
+[Documentation]
+Author = Olivier Sallou
+Version = 0.1
+Website =
+Description = Local User Authentication/Authorization plugin
