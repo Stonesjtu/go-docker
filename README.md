@@ -151,6 +151,11 @@ Log level can be modified with env variable GOD_LOGLEVEL (DEBUG, INFO, ERROR)
 
 See docker-files/prod/README.md
 
+## Running on Amazon EC2
+
+Look at https://bitbucket.org/osallou/go-docker-ec2/overview for
+contextualization scripts to deploy an EC2 GO-Docker cluster.
+
 ## Plugins
 
 Tool support plugins for Authorization, Scheduling and Execution. A few ones are provided but it is easy to create new one, following existing ones using Yapsy.
