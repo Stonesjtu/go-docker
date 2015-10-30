@@ -63,11 +63,17 @@ def main():
              auth_policy.set_config(cfg)
              print "Loading auth policy: "+auth_policy.get_name()
 
-    uid = args.uid
-    gid = args.gid
-    sgids = None
-    if args.sgids:
-        sgids = args.sgids.split(',')
+    sgids = []
+    try:
+        uid = int(args.uid)
+        gid = int(args.gid)
+        if args.sgids:
+            sgids_list = args.sgids.split(',')
+            for sgid in sgids_list:
+                sgids.append(int(sgid))
+    except Exception:
+        logging.error("Invalid values, expected numeric values for system identifiers")
+        sys.exit(1)
 
     user = auth_policy.create_user(args.login, args.password, args.email, args.homeDirectory, uid, gid, sgids)
     logging.info("User created: "+str(user))
