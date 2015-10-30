@@ -21,9 +21,12 @@ RUN apt-get install -y python-setuptools apt-transport-https wget
 RUN apt-get install -y openssl libpython-dev libffi-dev libssl-dev
 
 RUN cd /opt && git clone -b develop https://bitbucket.org/osallou/go-docker.git
-#RUN rm -f /opt/go-docker/plugins/mesos.*
+RUN rm -f /opt/go-docker/plugins/mesos.*
 RUN cd /opt && git clone -b develop https://bitbucket.org/osallou/go-docker-web.git
 RUN easy_install pip
+RUN wget http://downloads.mesosphere.io/master/debian/7/mesos_0.22.1-1.0.debian78_amd64.deb
+RUN apt-get install -y openjdk-7-jre-headless libcurl3 libsvn1
+RUN dpkg -i mesos_0.22.1-1.0.debian78_amd64.deb
 RUN wget http://downloads.mesosphere.io/master/debian/7/mesos-0.22.1-py2.7-linux-x86_64.egg
 RUN pip install mesos.interface==0.22.2
 RUN easy_install mesos-0.22.1-py2.7-linux-x86_64.egg
