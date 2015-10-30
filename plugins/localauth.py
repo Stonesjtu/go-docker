@@ -51,9 +51,9 @@ class LocalAuth(IAuthPlugin):
         try:
             user = {
                  'id' :login,
-                 'uidNumber': pwd.getpwnam( login ).pw_uid,
-                 'gidNumber': pwd.getpwnam( login ).pw_gid,
-                 'sgids': self.get_groups(login),
+                 'uidNumber': user_in_db['uid'],
+                 'gidNumber': user_in_db['gid'],
+                 'sgids': user_in_db['sgids'],
                  'email': user_in_db['email'],
                  'homeDirectory': user_in_db['homeDirectory']
                }
@@ -62,16 +62,28 @@ class LocalAuth(IAuthPlugin):
 
         return user
 
-    def create_user(self, login, password, email=None, homeDirectory=None):
+    def create_user(self, login, password, email=None, homeDirectory=None, uid=None, gid=None, sgids=None):
         password_encrypt = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+        try:
+            if uid is None:
+                uid = pwd.getpwnam( login ).pw_uid
+            if gid is None:
+                gid = pwd.getpwnam( login ).pw_gid
+            if sgids is None:
+                sgids = self.get_groups(login)
+        except Exception as e:
+            self.logger.error("User creation error: "+str(e))
+            return None
+
         user = {
                 'id': login,
                 'password': password_encrypt,
                 'type': 'local',
                 'last': datetime.datetime.now(),
-                'uid': pwd.getpwnam( login ).pw_uid,
-                'gid': pwd.getpwnam( login ).pw_gid,
-                'sgids': self.get_groups(login),
+                'uid': uid,
+                'gid': gid,
+                'sgids': sgids,
                 'homeDirectory': homeDirectory,
                 'email': email,
                 'credentials': {
@@ -114,9 +126,9 @@ class LocalAuth(IAuthPlugin):
         try:
             user = {
                      'id' :login,
-                     'uidNumber': pwd.getpwnam( login ).pw_uid,
-                     'gidNumber': pwd.getpwnam( login ).pw_gid,
-                     'sgids': self.get_groups(login),
+                     'uidNumber': user_in_db['uid'],
+                     'gidNumber': user_in_db['gid'],
+                     'sgids': user_in_db['sgids'],
                      'email': user_in_db['email'],
                      'homeDirectory': user_in_db['homeDirectory']
                    }

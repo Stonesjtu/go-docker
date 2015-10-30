@@ -20,6 +20,9 @@ def main():
     parser.add_argument('-p', '--password', dest="password", help="User password", required=True)
     parser.add_argument('-e', '--email', dest="email", help="User email")
     parser.add_argument('-h', '--home', dest="homeDirectory", help="User home directory")
+    parser.add_argument('-u', '--uid', dest="uid", help="User system id (uid)")
+    parser.add_argument('-g', '--gid', dest="gid", help="User system group id (gid)")
+    parser.add_argument('-s', '--sgids', dest="sgids", help="User secondary system group ids (comma separated)")
 
     args = parser.parse_args()
 
@@ -60,7 +63,13 @@ def main():
              auth_policy.set_config(cfg)
              print "Loading auth policy: "+auth_policy.get_name()
 
-    user = auth_policy.create_user(args.login, args.password, args.email, args.homeDirectory)
+    uid = args.uid
+    gid = args.gid
+    sgids = None
+    if args.sgids:
+        sgids = args.sgids.split(',')
+
+    user = auth_policy.create_user(args.login, args.password, args.email, args.homeDirectory, uid, gid, sgids)
     logging.info("User created: "+str(user))
 
 if __name__ == '__main__':
