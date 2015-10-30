@@ -11,6 +11,10 @@ In examples, fake authentication is used (any user with no password control). If
 user does not exists on system, it will create a fake user in the container.
 Fake *godocker* user is declared as administrator in the web interface.
 
+To use other authentication plugin, modify *auth_policy* parameter in go-d.ini.
+To use local authentication, add users with the seed/create_local_user.py scripts.
+For ldap authentication, set the LDAP server info.
+
 If using swarm (as per example go-d.ini), you should have swarm running
 somewhere reachable by the host running scheduler and watchers. Swarm can run
 itself as a container. Example expects a god-swarm hostname (via --link
