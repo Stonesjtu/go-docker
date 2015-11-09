@@ -2,8 +2,7 @@
 
 Cluster management tool with Docker
 
-Manage user job (batch/interactive) submissions with Docker (like SUN Grid Engine, Torque, ... on
-nodes). User does not need to have Docker rights, everything will go through the application.
+Manage user job (batch/interactive) submissions with Docker (like SUN Grid Engine, Torque, ... on nodes). User does not need to have Docker rights, everything will go through the application.
 Linked to the system users (or ldap), user will have their home mounted automatically as well as other configured directories according to required priviledges in container.
 They will be able to run jobs with their uid/gid or as root in the container.
 
