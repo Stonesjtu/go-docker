@@ -133,7 +133,7 @@ class MesosScheduler(mesos.interface.Scheduler):
             self.logger.debug("Mesos:Received offer %s with cpus: %s and mem: %s" \
                   % (offer.id.value, offerCpus, offerMem))
             for task in tasks:
-                if not task['mesos_offer'] and task['requirements']['cpu'] <= offerCpus and task['requirements']['ram'] <= offerMem:
+                if not task['mesos_offer'] and task['requirements']['cpu'] <= offerCpus and task['requirements']['ram']*1000 <= offerMem:
                     # check for label constraints, if any
                     if 'label' in task['requirements'] and task['requirements']['label']:
                         is_ok = True
