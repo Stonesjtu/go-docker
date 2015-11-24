@@ -283,6 +283,9 @@ class GoDWatcher(Daemon):
                     self.logger.warn('No exit code: '+str(task['id']))
                 dt = datetime.datetime.now()
                 task['status']['date_over'] = time.mktime(dt.timetuple())
+
+                task['status']['duration'] = task['status']['date_over'] - task['status']['date_running']
+
                 del task['_id']
                 task = self.terminate_task(task)
                 self.db_jobsover.insert(task)
@@ -637,6 +640,18 @@ class GoDWatcher(Daemon):
                         self.logger.warn('No exit code: '+str(task['id']))
                     dt = datetime.datetime.now()
                     task['status']['date_over'] = time.mktime(dt.timetuple())
+
+                    task['status']['duration'] = task['status']['date_over'] - task['status']['date_running']
+                    task_dir = self.store.get_task_dir(task)
+                    god_info_file = os.path.join(task_dir, 'god.info')
+                    if os.path.exists(god_info_file):
+                        with open(god_info_file) as f:
+                            content = f.read().splitlines()
+                        try:
+                            task['status']['duration'] = int(content[1]) - int(content[0])
+                        except Exception as e:
+                            self.logger.warn('Failed to read god.info data: '+god_info_file)
+
                     #task['_id'] = ObjectId(task['_id']['$oid'])
                     del task['_id']
                     task = self.terminate_task(task)
