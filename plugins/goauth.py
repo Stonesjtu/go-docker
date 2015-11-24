@@ -219,7 +219,8 @@ class GoAuth(IAuthPlugin):
                     req['mount'] = req['path']
                 else:
                     req['mount'] = config_volumes[req['name']]['mount'].replace('$USERID', user['id'])
-
+            if config_volumes[req['name']]['acl'] == 'ro':
+                req['acl'] = 'ro'
             if root_access:
                 req['acl'] = 'ro'
 
