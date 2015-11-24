@@ -302,9 +302,23 @@ class GoDWatcher(Daemon):
                     self.notify_msg(task)
                     Notify.notify_email(task)
             else:
+                if 'kill_tentative' not in task['status']:
+                    task['status']['kill_tentative'] = 0
+                task['status']['kill_tentative'] += 1
                 # Could not kill, put back in queue
                 self.logger.warn('Executor:Kill:Error:'+str(task['id']))
-                self.r.rpush(self.cfg.redis_prefix+':jobs:kill',dumps(task))
+                if task['status']['kill_tentative'] > 10:
+                    # Failed to kill after 10 tentatives
+                    # Remove kill status
+                    self.logger.error('Executor:Kill:Error:'+str(task['id']))
+                    self.db_jobs.update({'id': task['id']},
+                                        {'$set': {
+                                            'status.secondary': godutils.STATUS_SECONDARY_UNKNOWN,
+                                            'status.reason': 'Failure to kill job'
+
+                                        }})
+                else:
+                    self.r.rpush(self.cfg.redis_prefix+':jobs:kill',dumps(task))
 
     def suspend_tasks(self, suspend_list):
         '''
