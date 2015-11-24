@@ -284,7 +284,9 @@ class GoDWatcher(Daemon):
                 dt = datetime.datetime.now()
                 task['status']['date_over'] = time.mktime(dt.timetuple())
 
-                task['status']['duration'] = task['status']['date_over'] - task['status']['date_running']
+                task['status']['duration'] = 0
+                if 'date_running' in task['status'] and task['status']['date_running'] is not None:
+                    task['status']['duration'] = task['status']['date_over'] - task['status']['date_running']
 
                 del task['_id']
                 task = self.terminate_task(task)
