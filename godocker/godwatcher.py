@@ -788,11 +788,14 @@ class GoDWatcher(Daemon):
         self.hostname = None
         infinite = True
         self.executor.open(1)
-        while infinite and True and not GoDWatcher.SIGINT:
-            # Schedule timer
-            self.update_status()
-            self.manage_tasks()
-            time.sleep(2)
-            if not loop:
-                infinite = False
+        try:
+            while infinite and True and not GoDWatcher.SIGINT:
+                # Schedule timer
+                self.update_status()
+                self.manage_tasks()
+                time.sleep(2)
+                if not loop:
+                    infinite = False
+        except Exception as e:
+            self.logger.error('Watcher:'+str(self.hostname)+':'+str(e))
         self.executor.close()

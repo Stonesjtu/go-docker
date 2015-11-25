@@ -60,6 +60,10 @@ class GoDScheduler(Daemon):
         nb_jobs_mongo = jobs_mongo.count()
         nb_jobs_over_mongo = self.db_jobsover.find().count()
         #nb_running_redis = self.r.llen(self.cfg.redis_prefix+':jobs:running')
+        if nb_jobs_mongo == 0:
+            # Nothing running, reset redis some init values just in case
+            self.r.set(self.cfg.redis_prefix+':jobs:queued', 0)
+            self.r.delete(self.cfg.redis_prefix+':jobs:running')
         if nb_jobs_mongo >0 or nb_jobs_over_mongo >0:
             # Not the first run
             jobs_counter = self.r.get(self.cfg.redis_prefix+':jobs')
@@ -728,14 +732,17 @@ class GoDScheduler(Daemon):
         self.hostname = None
         infinite = True
         self.executor.open(0)
-        while infinite and True and not GoDScheduler.SIGINT:
-            # Schedule timer
-            if not self._in_maintenance():
-                self.update_status()
-                self.manage_tasks()
-            else:
-                self.logger.debug('In maintenance, waiting...')
-            time.sleep(2)
-            if not loop:
-                infinite = False
+        try:
+            while infinite and True and not GoDScheduler.SIGINT:
+                # Schedule timer
+                if not self._in_maintenance():
+                    self.update_status()
+                    self.manage_tasks()
+                else:
+                    self.logger.debug('In maintenance, waiting...')
+                time.sleep(2)
+                if not loop:
+                    infinite = False
+        except Exception as e:
+            self.logger.error('Scheduler:'+str(self.hostname)+':'+str(e))
         self.executor.close()
