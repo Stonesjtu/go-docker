@@ -45,6 +45,9 @@ class MesosScheduler(mesos.interface.Scheduler):
 
     def registered(self, driver, frameworkId, masterInfo):
         self.logger.info("Registered with framework ID %s" % frameworkId.value)
+        self.frameworkId = frameworkId.value
+        self.redis_handler.set(self.config.redis_prefix+':mesos:frameworkId',
+                               self.frameworkId)
 
     def get_mapping_port(self, offer, task):
         '''
@@ -298,6 +301,13 @@ class Mesos(IExecutorPlugin):
         framework.user = "" # Have Mesos fill in the current user.
         framework.name = "Go-Docker Mesos"
 
+        self.frameworkId = self.redis_handler.get(self.cfg.redis_prefix+':mesos:frameworkId')
+        if self.frameworkId is not None and self.frameworkId:
+            self.logger.info("Reusing framework ID: "+self.frameworkId)
+            fid = mesos_pb2.FrameworkID()
+            fid.value = self.frameworkId
+            framework.id = fid
+
         if os.getenv("MESOS_CHECKPOINT"):
             self.logger.info("Enabling checkpoint for the framework")
             framework.checkpoint = True
@@ -370,7 +380,7 @@ class Mesos(IExecutorPlugin):
         #if self.mesosthread.isAlive():
         #    self.mesosthread.stop()
         if self.driver is not None:
-            self.driver.stop()
+            self.driver.stop(True)
         self.Terminated = True
 
     def run_all_tasks(self, tasks, callback=None):
