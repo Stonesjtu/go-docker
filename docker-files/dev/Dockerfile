@@ -36,6 +36,7 @@ RUN cd /opt/go-docker && python setup.py develop
 RUN cd /opt/go-docker-web && pip install -r requirements.txt
 RUN cd /opt/go-docker-web && python setup.py develop
 RUN pip install godocker_cli
+RUN cd /opt/go-docker-web && cp production.ini.example production.ini
 RUN cd /opt/go-docker-web && sed -i 's;global_properties =.*;global_properties = /opt/go-docker/go-d.ini;g' production.ini
 RUN cd /opt/go-docker-web && sed -i 's;admin =.*;admin = '${admin}';g' production.ini
 RUN cd /opt/go-docker && cp go-d.ini.sample go-d.ini
