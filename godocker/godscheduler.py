@@ -13,6 +13,7 @@ import socket
 import random
 import string
 import urllib3
+import traceback
 from copy import deepcopy
 
 from gelfHandler import gelfHandler
@@ -733,4 +734,6 @@ class GoDScheduler(Daemon):
                     infinite = False
         except Exception as e:
             self.logger.error('Scheduler:'+str(self.hostname)+':'+str(e))
+            traceback_msg = traceback.format_exc()
+            self.logger.error(traceback_msg)
         self.executor.close()

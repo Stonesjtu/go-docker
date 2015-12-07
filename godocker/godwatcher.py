@@ -10,6 +10,7 @@ import datetime
 import time
 import os
 import socket
+import traceback
 
 from gelfHandler import gelfHandler
 import logstash
@@ -783,4 +784,7 @@ class GoDWatcher(Daemon):
                     infinite = False
         except Exception as e:
             self.logger.error('Watcher:'+str(self.hostname)+':'+str(e))
+            traceback_msg = traceback.format_exc()
+            self.logger.error(traceback_msg)
+
         self.executor.close()
