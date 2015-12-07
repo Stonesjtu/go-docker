@@ -1,4 +1,5 @@
 1.0.1:
+    encode script to UTF-8
     add Status plugins with etcd support: add new config parameter *status_policy*
     check volumes name to catch invalid volume injection
     manage mesos framework restart
