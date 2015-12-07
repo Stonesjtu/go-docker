@@ -399,11 +399,14 @@ class GoDScheduler(Daemon):
             if not os.path.exists(task_dir):
                 os.makedirs(task_dir)
                 os.chmod(task_dir, 0777)
-            script_file = self.store.add_file(parent_task, 'cmd.sh', task['command']['cmd'], str(task['requirements']['array']['task_id']))
+            script_file = self.store.add_file(parent_task, 'cmd.sh',
+                                              task['command']['cmd'].encode('utf-8'),
+                                              str(task['requirements']['array']['task_id']))
             os.chmod(script_file, 0755)
             task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
         else:
-            script_file = self.store.add_file(task, 'cmd.sh', task['command']['cmd'])
+            script_file = self.store.add_file(task, 'cmd.sh',
+                                              task['command']['cmd'].encode('utf-8'))
             os.chmod(script_file, 0755)
             task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
 
