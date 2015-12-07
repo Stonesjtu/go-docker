@@ -1,4 +1,5 @@
 1.0.1:
+    add Status plugins with etcd support
     check volumes name to catch invalid volume injection
     manage mesos framework restart
     add global try/catch to catch errors generating an exit

@@ -32,6 +32,7 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 * use a private registry
 * rate limiting: limit number of pending tasks for a user or globally
 * dependency between tasks
+* process monitoring
 
 ## LICENSE
 
@@ -74,8 +75,6 @@ go-d-docker needs a shared directory between go-d-scheduler, go-d-watcher and
 container nodes.
 
 ## Status
-
-In development
 
 Documentation: http://go-docker.readthedocs.org/en/latest/index.html
 
@@ -132,7 +131,6 @@ FairShare plugin adds additional, optional configuration to manage different wei
 
 To identify processes, each process must have a unique id. It is possible to set this id with the environment variable GOD_PROCID.
 This variable is needed when multiple processes are executed on the same server and to set a process id (one watcher for example) identical after each restart.
-If not set, an incremental PROCID will be set.
 
     export GOD_PROCID = 1
     python go-d-scheduler start
@@ -165,6 +163,7 @@ To create a new plugin, create a xx.yapsy-plugin file and a xx.py file following
 * iExecutor execute the job and checks its status
 * iAuth is used by the web interface, to authenticate a user (ldap bind for example), get some user information (uidnumber, home directory...) and ACLs (which volumes can be mounted for this user request for example).
 * iWatcher checks, once a job is running if it should continue or be killed, ...
+* iStatus register processes and get status of processes to an external system (etcd, ...), if none is set, no monitoring will be done
 
 Base classes are documented here: http://go-docker.readthedocs.org/en/latest/
 
@@ -186,6 +185,8 @@ Available plugins are:
     * local: match db users (using *create_local_user.py*) with system users.
 * Watcher:
     * maxlifespan: Checks max life duration of a job
+* Status:
+     etcd: register processes to etcd
 
 ### Swarm
 
@@ -275,6 +276,27 @@ It is a C implementation of DRMAA v1. Not all methods are implemented but basic
 use to submit/check jobs are present.
 
 Python DRMAA modules can work with this library.
+
+## Process monitoring
+
+Process monitoring is optional, if you do not wish to use etcd default plugin, simple set status_policy to None or empty string.
+
+### Etcd
+
+Etcd must be running on a server. One can use Docker to do so:
+
+    docker run -p 4001:4001 --name etcd --rm  quay.io/coreos/etcd \
+        -listen-client-urls http://0.0.0.0:2379,http://0.0.0.0:4001 \
+        -advertise-client-urls http://${HostIP}:2379,http://${HostIP}:4001
+
+
+Configuration:
+
+    status_policy: 'etcd'
+    etcd_prefix: '/godocker'
+    etcd_host: 'a.b.c.d' # Ip address where is running etcd
+    etcd_port: 4001
+
 
 ## Tips
 

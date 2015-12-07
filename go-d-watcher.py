@@ -27,6 +27,9 @@ if __name__ == "__main__":
                         daemon.run()
                 elif 'once' == sys.argv[1]:
                         daemon.run(False)
+                elif 'status' == sys.argv[1]:
+                        status = daemon.status()
+                        print "Last keep-alive: "+str(status)
                 else:
                         print "Unknown command"
                         sys.exit(2)

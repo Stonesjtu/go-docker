@@ -26,6 +26,7 @@ from godocker.iSchedulerPlugin import ISchedulerPlugin
 from godocker.iExecutorPlugin import IExecutorPlugin
 from godocker.iAuthPlugin import IAuthPlugin
 from godocker.iWatcherPlugin import IWatcherPlugin
+from godocker.iStatusPlugin import IStatusPlugin
 from godocker.utils import is_array_task, is_array_child_task
 import godocker.utils as godutils
 from godocker.notify import Notify
@@ -68,45 +69,7 @@ class GoDWatcher(Daemon):
                 self.cfg.log_config.handlers[handler] = dict(self.cfg.log_config.handlers[handler])
             logging.config.dictConfig(self.cfg.log_config)
         self.logger = logging.getLogger('godocker-watcher')
-        '''
-        loglevel = logging.ERROR
-        if 'log_level' in self.cfg:
-            loglevel = self.cfg['log_level']
-            if loglevel == 'DEBUG':
-                loglevel = logging.DEBUG
-            if loglevel == 'INFO':
-                loglevel = logging.INFO
-            if loglevel == 'ERROR':
-                loglevel = logging.ERROR
-        if os.getenv('GOD_LOGLEVEL'):
-            loglevel = os.environ['GOD_LOGLEVEL']
-            if loglevel == 'DEBUG':
-                loglevel = logging.DEBUG
-            if loglevel == 'INFO':
-                loglevel = logging.INFO
-            if loglevel == 'ERROR':
-                loglevel = logging.ERROR
-        self.logger.setLevel(loglevel)
-        #fh = logging.FileHandler('god_scheduler.log')
-        log_file_path = 'god_watcher.log'
-        if 'log_location' in self.cfg:
-            log_file_path = os.path.join(self.cfg['log_location'], log_file_path)
 
-        fh = RotatingFileHandler(log_file_path, maxBytes=10000000,
-                                      backupCount=5)
-        fh.setLevel(loglevel)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        self.logger.addHandler(fh)
-
-        if 'log_graylog_host' in self.cfg and self.cfg['log_graylog_host']:
-            graypy_handler = gelfHandler(host=self.cfg['log_graylog_host'],port=self.cfg['log_graylog_port'], proto='UDP')
-            graypy_handler.setLevel(loglevel)
-            self.logger.addHandler(graypy_handler)
-
-        if 'log_logstash_host' in self.cfg and self.cfg['log_logstash_host']:
-            self.logger.addHandler(logstash.LogstashHandler(self.cfg['log_logstash_host'], self.cfg['log_logstash_port'], version=1))
-        '''
 
         if not self.cfg.plugins_dir:
             dirname, filename = os.path.split(os.path.abspath(__file__))
@@ -125,12 +88,28 @@ class GoDWatcher(Daemon):
            "Scheduler": ISchedulerPlugin,
            "Executor": IExecutorPlugin,
            "Auth": IAuthPlugin,
-           "Watcher": IWatcherPlugin
+           "Watcher": IWatcherPlugin,
+           "Status": IStatusPlugin
          })
         # Load all plugins
         simplePluginManager.collectPlugins()
 
         # Activate plugins
+        self.status_manager = None
+        for pluginInfo in simplePluginManager.getPluginsOfCategory("Status"):
+           if not self.cfg.status_policy:
+               print "No status manager in configuration"
+               break
+           if pluginInfo.plugin_object.get_name() == self.cfg.status_policy:
+             self.status_manager = pluginInfo.plugin_object
+             self.status_manager.set_logger(self.logger)
+             self.status_manager.set_redis_handler(self.r)
+             self.status_manager.set_jobs_handler(self.db_jobs)
+             self.status_manager.set_users_handler(self.db_users)
+             self.status_manager.set_projects_handler(self.db_projects)
+             self.status_manager.set_config(self.cfg)
+             print "Loading status manager: "+self.status_manager.get_name()
+
         self.scheduler = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Scheduler"):
            #simplePluginManager.activatePluginByName(pluginInfo.name)
@@ -174,7 +153,19 @@ class GoDWatcher(Daemon):
              self.watchers.append(watcher)
              print "Add watcher: "+watcher.get_name()
 
+    def status(self):
+        '''
+        Get process status
 
+        :return: last timestamp of keep alive for current process, else None
+        '''
+        if self.status_manager is None:
+            return None
+        status = self.status_manager.status()
+        for s in status:
+            if s['name'] == self.proc_name:
+                return s['last']
+        return None
 
     def _set_task_exitcode(self, task, exitcode):
         '''
@@ -762,23 +753,17 @@ class GoDWatcher(Daemon):
         self.executor.close()
 
     def update_status(self):
-        dt = datetime.datetime.now()
-        timestamp = time.mktime(dt.timetuple())
+        if self.status_manager is None:
+            return
         if not self.hostname:
-            hostname = socket.gethostbyaddr(socket.gethostname())[0]
-            host_exists = True
-            index = 1
-            if os.getenv('GOD_PROCID'):
-                index = os.environ['GOD_PROCID']
-            else:
-                while host_exists:
-                    if self.r.get(self.cfg.redis_prefix+':procs:'+hostname+'-'+str(index)) is not None:
-                        index += 1
-                    else:
-                        host_exists = False
-            self.hostname = hostname + '-' + str(index)
-        self.r.hset(self.cfg.redis_prefix+':procs', self.hostname, 'watcher')
-        self.r.set(self.cfg.redis_prefix+':procs:'+self.hostname, timestamp)
+            self.hostname = socket.gethostbyaddr(socket.gethostname())[0]
+        self.proc_name = 'watcher-'+self.hostname
+        if os.getenv('GOD_PROCID'):
+            self.proc_name += os.getenv('GOD_PROCID')
+        res = self.status_manager.keep_alive(self.proc_name, 'watcher')
+        if not res:
+            self.logger.error('Watcher:UpdateStatus:Error')
+        return
 
     def run(self, loop=True):
         '''

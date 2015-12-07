@@ -191,6 +191,14 @@ rate_limit: None
 rate_limit_all: 10000
 
 
+# Status Manager ###########################
+# Uncomment to use etcd monitoring
+#status_policy: 'etcd'
+#etcd_prefix: '/godocker'
+#etcd_host: '127.0.0.1'
+#etcd_port: 4001
+
+
 # Logging ##################################
 log_config: {
     'version': 1,

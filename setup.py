@@ -25,6 +25,7 @@ config = {
                             'gelfHandler',
                             'python-logstash',
                             'config',
+                            'python-etcd',
                             'bcrypt' ],
     'packages': find_packages(),
     'include_package_data': True,

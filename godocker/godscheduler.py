@@ -32,6 +32,8 @@ from godocker.iSchedulerPlugin import ISchedulerPlugin
 from godocker.iExecutorPlugin import IExecutorPlugin
 from godocker.iAuthPlugin import IAuthPlugin
 from godocker.iWatcherPlugin import IWatcherPlugin
+from godocker.iStatusPlugin import IStatusPlugin
+
 
 from godocker.pairtreeStorage import PairtreeStorage
 from godocker.utils import is_array_child_task, is_array_task
@@ -54,6 +56,20 @@ class GoDScheduler(Daemon):
         self.db_jobs.ensure_index('status.primary')
         self.db_jobsover.ensure_index('status.primary')
         self.db_users.ensure_index('id')
+
+    def status(self):
+        '''
+        Get process status
+
+        :return: last timestamp of keep alive for current process, else None
+        '''
+        if self.status_manager is None:
+            return None
+        status = self.status_manager.status()
+        for s in status:
+            if s['name'] == self.proc_name:
+                return s['last']
+        return None
 
     def check_redis(self):
         jobs_mongo = self.db_jobs.find()
@@ -132,46 +148,6 @@ class GoDScheduler(Daemon):
             logging.config.dictConfig(self.cfg.log_config)
         self.logger = logging.getLogger('godocker-scheduler')
 
-        '''
-        loglevel = logging.ERROR
-        if 'log_level' in self.cfg:
-            loglevel = self.cfg['log_level']
-            if loglevel == 'DEBUG':
-                loglevel = logging.DEBUG
-            if loglevel == 'INFO':
-                loglevel = logging.INFO
-            if loglevel == 'ERROR':
-                loglevel = logging.ERROR
-        if os.getenv('GOD_LOGLEVEL'):
-            loglevel = os.environ['GOD_LOGLEVEL']
-            if loglevel == 'DEBUG':
-                loglevel = logging.DEBUG
-            if loglevel == 'INFO':
-                loglevel = logging.INFO
-            if loglevel == 'ERROR':
-                loglevel = logging.ERROR
-        self.logger.setLevel(loglevel)
-        #fh = logging.FileHandler('god_scheduler.log')
-        log_file_path = 'god_scheduler.log'
-        if 'log_location' in self.cfg:
-            log_file_path = os.path.join(self.cfg['log_location'], log_file_path)
-
-        fh = RotatingFileHandler(log_file_path, maxBytes=10000000,
-                                      backupCount=5)
-        fh.setLevel(loglevel)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        self.logger.addHandler(fh)
-
-        if 'log_graylog_host' in self.cfg and self.cfg['log_graylog_host']:
-            #graypy_handler = graypy.GELFHandler(self.cfg['log_graylog_host'], self.cfg['log_graylog_port'])
-            graypy_handler = gelfHandler(host=self.cfg['log_graylog_host'],port=self.cfg['log_graylog_port'], proto='UDP')
-            graypy_handler.setLevel(loglevel)
-            self.logger.addHandler(graypy_handler)
-
-        if 'log_logstash_host' in self.cfg and self.cfg['log_logstash_host']:
-            self.logger.addHandler(logstash.LogstashHandler(self.cfg['log_logstash_host'], self.cfg['log_logstash_port'], version=1))
-        '''
         if not self.cfg.plugins_dir:
             dirname, filename = os.path.split(os.path.abspath(__file__))
             self.cfg.plugins_dir = os.path.join(dirname, '..', 'plugins')
@@ -189,12 +165,28 @@ class GoDScheduler(Daemon):
            "Scheduler": ISchedulerPlugin,
            "Executor": IExecutorPlugin,
            "Auth": IAuthPlugin,
-           "Watcher": IWatcherPlugin
+           "Watcher": IWatcherPlugin,
+           "Status": IStatusPlugin
          })
         # Load all plugins
         simplePluginManager.collectPlugins()
 
         # Activate plugins
+        self.status_manager = None
+        for pluginInfo in simplePluginManager.getPluginsOfCategory("Status"):
+           if not self.cfg.status_policy:
+               print "No status manager in configuration"
+               break
+           if pluginInfo.plugin_object.get_name() == self.cfg.status_policy:
+             self.status_manager = pluginInfo.plugin_object
+             self.status_manager.set_logger(self.logger)
+             self.status_manager.set_redis_handler(self.r)
+             self.status_manager.set_jobs_handler(self.db_jobs)
+             self.status_manager.set_users_handler(self.db_users)
+             self.status_manager.set_projects_handler(self.db_projects)
+             self.status_manager.set_config(self.cfg)
+             print "Loading status manager: "+self.status_manager.get_name()
+
         self.scheduler = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Scheduler"):
            #simplePluginManager.activatePluginByName(pluginInfo.name)
@@ -696,24 +688,17 @@ class GoDScheduler(Daemon):
         self.executor.close()
 
     def update_status(self):
-        dt = datetime.datetime.now()
-        timestamp = time.mktime(dt.timetuple())
+        if self.status_manager is None:
+            return
         if not self.hostname:
-            hostname = socket.gethostbyaddr(socket.gethostname())[0]
-            host_exists = True
-            index = 1
-            if os.getenv('GOD_PROCID'):
-                index = os.environ['GOD_PROCID']
-            else:
-                while host_exists:
-                    if self.r.get(self.cfg.redis_prefix+':procs:'+hostname+'-'+str(index)) is not None:
-                        index += 1
-                    else:
-                        host_exists = False
-            self.hostname = hostname + '-' + str(index)
-        self.r.hset(self.cfg.redis_prefix+':procs', self.hostname, 'scheduler')
-        self.r.set(self.cfg.redis_prefix+':procs:'+self.hostname, timestamp)
-
+            self.hostname = socket.gethostbyaddr(socket.gethostname())[0]
+        self.proc_name = 'scheduler-'+self.hostname
+        if os.getenv('GOD_PROCID'):
+            self.proc_name += os.getenv('GOD_PROCID')
+        res = self.status_manager.keep_alive(self.proc_name, 'scheduler')
+        if not res:
+            self.logger.error('Watcher:UpdateStatus:Error')
+        return
 
     def _in_maintenance(self):
         '''
