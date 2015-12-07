@@ -174,7 +174,7 @@ class GoDScheduler(Daemon):
         # Activate plugins
         self.status_manager = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Status"):
-           if not self.cfg.status_policy:
+           if 'status_policy' not in self.cfg or not self.cfg.status_policy:
                print "No status manager in configuration"
                break
            if pluginInfo.plugin_object.get_name() == self.cfg.status_policy:
