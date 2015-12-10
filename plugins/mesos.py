@@ -306,7 +306,7 @@ class Mesos(IExecutorPlugin):
             self.logger.info("Reusing framework ID: "+self.frameworkId)
             fid = mesos_pb2.FrameworkID()
             fid.value = self.frameworkId
-            framework.id = fid
+            framework.id.value = fid.value
 
         if os.getenv("MESOS_CHECKPOINT"):
             self.logger.info("Enabling checkpoint for the framework")
