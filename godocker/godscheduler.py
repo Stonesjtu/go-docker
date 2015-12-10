@@ -125,6 +125,12 @@ class GoDScheduler(Daemon):
         '''
         cfg_file = file(f)
         self.cfg = Config(cfg_file)
+
+        self.hostname = socket.gethostbyaddr(socket.gethostname())[0]
+        self.proc_name = 'scheduler-'+self.hostname
+        if os.getenv('GOD_PROCID'):
+            self.proc_name += os.getenv('GOD_PROCID')
+
         self.r = redis.StrictRedis(host=self.cfg.redis_host, port=self.cfg.redis_port, db=self.cfg.redis_db)
         self.mongo = MongoClient(self.cfg.mongo_url)
         self.db = self.mongo[self.cfg.mongo_db]
@@ -694,11 +700,6 @@ class GoDScheduler(Daemon):
     def update_status(self):
         if self.status_manager is None:
             return
-        if not self.hostname:
-            self.hostname = socket.gethostbyaddr(socket.gethostname())[0]
-        self.proc_name = 'scheduler-'+self.hostname
-        if os.getenv('GOD_PROCID'):
-            self.proc_name += os.getenv('GOD_PROCID')
         if self.status_manager is not None:
             res = self.status_manager.keep_alive(self.proc_name, 'scheduler')
             if not res:
