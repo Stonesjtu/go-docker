@@ -774,6 +774,7 @@ class GoDWatcher(Daemon):
         self.hostname = None
         infinite = True
         self.executor.open(1)
+        self.logger.warn('Start watcher')
         try:
             while infinite and True and not GoDWatcher.SIGINT:
                 # Schedule timer

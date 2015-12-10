@@ -721,6 +721,7 @@ class GoDScheduler(Daemon):
         self.hostname = None
         infinite = True
         self.executor.open(0)
+        self.logger.warn('Start scheduler')
         try:
             while infinite and True and not GoDScheduler.SIGINT:
                 # Schedule timer
