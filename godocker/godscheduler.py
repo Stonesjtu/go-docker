@@ -699,9 +699,10 @@ class GoDScheduler(Daemon):
         self.proc_name = 'scheduler-'+self.hostname
         if os.getenv('GOD_PROCID'):
             self.proc_name += os.getenv('GOD_PROCID')
-        res = self.status_manager.keep_alive(self.proc_name, 'scheduler')
-        if not res:
-            self.logger.error('Watcher:UpdateStatus:Error')
+        if self.status_manager is not None:
+            res = self.status_manager.keep_alive(self.proc_name, 'scheduler')
+            if not res:
+                self.logger.error('Watcher:UpdateStatus:Error')
         return
 
     def _in_maintenance(self):
