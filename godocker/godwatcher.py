@@ -171,7 +171,7 @@ class GoDWatcher(Daemon):
         status = self.status_manager.status()
         for s in status:
             if s['name'] == self.proc_name:
-                return s['last']
+                return s['timestamp']
         return None
 
     def _set_task_exitcode(self, task, exitcode):

@@ -69,7 +69,7 @@ class GoDScheduler(Daemon):
         status = self.status_manager.status()
         for s in status:
             if s['name'] == self.proc_name:
-                return s['last']
+                return s['timestamp']
         return None
 
     def check_redis(self):
