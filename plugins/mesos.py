@@ -301,12 +301,12 @@ class Mesos(IExecutorPlugin):
         framework.user = "" # Have Mesos fill in the current user.
         framework.name = "Go-Docker Mesos"
 
-        self.frameworkId = self.redis_handler.get(self.cfg.redis_prefix+':mesos:frameworkId')
-        if self.frameworkId is not None and self.frameworkId:
-            self.logger.info("Reusing framework ID: "+self.frameworkId)
-            fid = mesos_pb2.FrameworkID()
-            fid.value = self.frameworkId
-            framework.id.value = fid.value
+        #self.frameworkId = self.redis_handler.get(self.cfg.redis_prefix+':mesos:frameworkId')
+        #if self.frameworkId is not None and self.frameworkId:
+        #    self.logger.info("Reusing framework ID: "+self.frameworkId)
+        #    fid = mesos_pb2.FrameworkID()
+        #    fid.value = self.frameworkId
+        #    framework.id.value = fid.value
 
         if os.getenv("MESOS_CHECKPOINT"):
             self.logger.info("Enabling checkpoint for the framework")
