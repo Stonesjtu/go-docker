@@ -160,6 +160,13 @@ clean_old: 30
 # 40G (gigabytes)
 disk_default_quota: None
 
+# Status Manager ###########################
+status_policy: None
+etcd_prefix: '/godocker'
+etcd_host: '127.0.0.1'
+etcd_port: 4001
+
+
 
 # Logging ##################################
 log_config: {
