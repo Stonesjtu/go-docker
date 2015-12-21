@@ -1,3 +1,6 @@
+1.0.2:
+    minor error cases handling
+
 1.0.1:
     encode script to UTF-8
     add Status plugins with etcd support: add new config parameter *status_policy*
