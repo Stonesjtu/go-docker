@@ -572,7 +572,11 @@ class GoDScheduler(Daemon):
                 # Create run script
                 if 'use_private_registry' in self.cfg and self.cfg['use_private_registry'] is not None:
                     task['container']['image'] = self.cfg['use_private_registry'] + '/' + task['container']['image']
-                self._create_command(task)
+                try:
+                    self._create_command(task)
+                except Exception as e:
+                    logging.error("Failed to create cmd: "+str(e))
+                    continue
                 filtered_list.append(task)
 
         dt = datetime.datetime.now()
