@@ -253,7 +253,6 @@ class MesosScheduler(mesos.interface.Scheduler):
             try:
                 if str(update.data) != "":
                     containers = json.loads(update.data)
-                    self.logger.error("Size of update.data: "+str(len(containers)))
                     containerId = str(containers[0]["Name"]).split(".")
                     containerId = "mesos-"+containerId[1]
                     self.jobs_handler.update({'id': int(update.task_id.value)},{'$set': {'container.id': container}})
@@ -263,7 +262,7 @@ class MesosScheduler(mesos.interface.Scheduler):
                 containerId = None
 
             # Mesos <= 0.22, container id is not in TaskStatus, let's query mesos
-            if containerId is None:        
+            if containerId is None:
                 http = urllib3.PoolManager()
                 r = None
                 try:
