@@ -248,23 +248,39 @@ class MesosScheduler(mesos.interface.Scheduler):
         if update.state == 1:
             #Switched to RUNNING, get container id
             job = self.jobs_handler.find_one({'id': int(update.task_id.value)})
-            http = urllib3.PoolManager()
-            r = None
-            try:
-                r = http.urlopen('GET', 'http://'+job['container']['meta']['Node']['Name']+':5051/slave(1)/state.json')
 
-                if r.status == 200:
-                    slave = json.loads(r.data)
-                    for f in slave['frameworks']:
-                        if f['name'] == "Go-Docker Mesos":
-                            for executor in f['executors']:
-                                if str(executor['id']) == str(update.task_id.value):
-                                    container = 'mesos-'+executor['container']
-                                    self.jobs_handler.update({'id': int(update.task_id.value)},{'$set': {'container.id': container}})
-                                    break
-                            break
+            #Switched to RUNNING, get container id
+            try:
+                if str(update.data) != "":
+                    containers = json.loads(update.data)
+                    self.logger.error("Size of update.data: "+str(len(containers)))
+                    containerId = str(containers[0]["Name"]).split(".")
+                    containerId = "mesos-"+containerId[1]
+                    self.jobs_handler.update({'id': int(update.task_id.value)},{'$set': {'container.id': container}})
+
             except Exception as e:
-                self.logger.error('Failed to contact mesos slave: '+str(e))
+                self.logger.debug("Could not extract container id from TaskStatus")
+                containerId = None
+
+            # Mesos <= 0.22, container id is not in TaskStatus, let's query mesos
+            if containerId is None:        
+                http = urllib3.PoolManager()
+                r = None
+                try:
+                    r = http.urlopen('GET', 'http://'+job['container']['meta']['Node']['Name']+':5051/slave(1)/state.json')
+
+                    if r.status == 200:
+                        slave = json.loads(r.data)
+                        for f in slave['frameworks']:
+                            if f['name'] == "Go-Docker Mesos":
+                                for executor in f['executors']:
+                                    if str(executor['id']) == str(update.task_id.value):
+                                        container = 'mesos-'+executor['container']
+                                        self.jobs_handler.update({'id': int(update.task_id.value)},{'$set': {'container.id': container}})
+                                        break
+                                break
+                except Exception as e:
+                    self.logger.error('Failed to contact mesos slave: '+str(e))
 
         self.logger.debug('Mesos:Task:Over:'+str(update.task_id.value))
 
