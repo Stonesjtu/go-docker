@@ -24,12 +24,17 @@ RUN cd /opt && git clone -b develop https://bitbucket.org/osallou/go-docker.git
 RUN rm -f /opt/go-docker/plugins/mesos.*
 RUN cd /opt && git clone -b develop https://bitbucket.org/osallou/go-docker-web.git
 RUN easy_install pip
-RUN wget http://downloads.mesosphere.io/master/debian/7/mesos_0.22.1-1.0.debian78_amd64.deb
+#RUN wget http://downloads.mesosphere.io/master/debian/7/mesos_0.22.1-1.0.debian78_amd64.deb
+RUN wget http://downloads.mesosphere.io/master/debian/8/mesos_0.23.0-1.0.debian81_amd64.deb
 RUN apt-get install -y openjdk-7-jre-headless libcurl3 libsvn1
-RUN dpkg -i mesos_0.22.1-1.0.debian78_amd64.deb
-RUN wget http://downloads.mesosphere.io/master/debian/7/mesos-0.22.1-py2.7-linux-x86_64.egg
-RUN pip install mesos.interface==0.22.2
-RUN easy_install mesos-0.22.1-py2.7-linux-x86_64.egg
+#RUN dpkg -i mesos_0.22.1-1.0.debian78_amd64.deb
+RUN dpkg -i mesos_0.23.0-1.0.debian81_amd64.deb
+#RUN wget http://downloads.mesosphere.io/master/debian/7/mesos-0.22.1-py2.7-linux-x86_64.egg
+RUN wget http://downloads.mesosphere.io/master/debian/8/mesos-0.23.0-py2.7-linux-x86_64.egg
+#RUN pip install mesos.interface==0.22.2
+RUN pip install mesos.interface==0.23.1
+#RUN easy_install mesos-0.22.1-py2.7-linux-x86_64.egg
+RUN easy_install mesos-0.23.0-py2.7-linux-x86_64.egg
 #RUN pip uninstall six
 RUN cd /opt/go-docker && pip install -r requirements.txt
 RUN cd /opt/go-docker && python setup.py develop
