@@ -153,6 +153,11 @@ See docker-files/prod/README.md
 Look at https://bitbucket.org/osallou/go-docker-ec2/overview for
 contextualization scripts to deploy an EC2 GO-Docker cluster.
 
+## Chef install
+
+You can install GoDocker master and slaves using Chef cookbooks, see https://bitbucket.org/osallou/go-docker-chef.
+Cookbooks can be used on EC2 or bare metal.
+
 ## Plugins
 
 Tool support plugins for Authorization, Scheduling and Execution. A few ones are provided but it is easy to create new one, following existing ones using Yapsy.
