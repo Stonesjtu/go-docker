@@ -33,6 +33,7 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 * rate limiting: limit number of pending tasks for a user or globally
 * dependency between tasks
 * process monitoring
+* temporary local storage on nodes
 
 ## LICENSE
 
@@ -302,6 +303,11 @@ Configuration:
     etcd_host: 'a.b.c.d' # Ip address where is running etcd
     etcd_port: 4001
 
+
+## Temporary local storage
+
+This feature needs the Docker volume plugin docker-plugin-zfs on each node (see Docker plugins).
+User can specify a local Temporary storage size on tasks. System will create and mount a ZFS storage volume for the container and will be deleted at the end of the task. Volume has quota according to task requirements. This provides a local disk storage for intermediate computation requiring fast disk access.
 
 ## Tips
 

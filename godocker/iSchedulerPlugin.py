@@ -9,6 +9,14 @@ class ISchedulerPlugin(IGoDockerPlugin):
     Scheduler plugins interface
     '''
 
+    def features(self):
+        '''
+        Get supported features
+
+        :return: list of features within ['docker-plugin-zfs']
+        '''
+        return []
+
 
     def get_user_prio(self, user_id):
         '''

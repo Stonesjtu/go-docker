@@ -437,6 +437,12 @@ class GoDScheduler(Daemon):
                 cmd += "groupadd --gid "+str(sgid)+" group"+str(sgid)+"\n"
                 cmd += "usermod -a -G group"+str(sgid)+" "+user_id+"\n"
 
+        # docker-plugin-zfs
+        if 'plugin_zfs' in self.cfg and self.cfg['plugin_zfs']:
+            cmd += "if [ -e /tmp-data ]; then\n"
+            cmd += "    chown -R "+user_id+" /tmp-data\n"
+            cmd += "fi\n"
+
         cmd += "cd /mnt/go-docker\n"
         array_cmd = ""
         if parent_task:

@@ -36,6 +36,14 @@ class MesosScheduler(mesos.interface.Scheduler):
         self.Terminated = False
         self.jobs_handler = None
 
+    def features(self):
+        '''
+        Get supported features
+
+        :return: list of features within ['docker-plugin-zfs']
+        '''
+        return ['docker-plugin-zfs']
+
     def set_config(self, config):
         self.config = config
         self.redis_handler = redis.StrictRedis(host=self.config.redis_host, port=self.config.redis_port, db=self.config.redis_db)
@@ -81,6 +89,70 @@ class MesosScheduler(mesos.interface.Scheduler):
             task['container']['ports'] = []
         task['container']['ports'].append(port)
         return int(port)
+
+    def plugin_zfs_unmount(self, hostname, task):
+        '''
+        Unmount and delete temporary storage
+        '''
+        if 'plugin_zfs' not in self.config or not self.config['plugin_zfs']:
+            return
+
+        if 'tmpstorage' not in task['requirements']:
+            return
+
+        if task['requirements']['tmpstorage'] is None or task['requirements']['tmpstorage']['size'] == '':
+            return
+
+        try:
+            http = urllib3.PoolManager()
+            r = http.urlopen('POST', 'http://'+ hostname + ':5000/VolumeDriver.Unmount', body=json.dumps({'Name': str(task['id'])}))
+            res = json.loads(r.data)
+            if res['Err'] is not None or res['Err'] != '':
+                r = http.urlopen('POST', 'http://'+ hostname + ':5000/VolumeDriver.Remove', body=json.dumps({'Name': str(task['id'])}))
+            else:
+                self.logger.error('Failed to remove zfs volume: '+str(task['id']))
+        except Exception as e:
+            self.logger.error('Failed to remove zfs volume: '+str(task['id']))
+
+
+    def plugin_zfs_mount(self, hostname, task):
+        '''
+        Create and mount temporary storage
+        '''
+        zfs_path = None
+
+        if 'plugin_zfs' not in self.config or not self.config['plugin_zfs']:
+            return (True, None)
+
+        if 'tmpstorage' not in task['requirements']:
+            return (True, None)
+
+        if task['requirements']['tmpstorage'] is None or task['requirements']['tmpstorage']['size'] == '':
+            return (True, None)
+
+        try:
+            http = urllib3.PoolManager()
+            r = None
+            activated = self.redis_handler.get(self.config.redis_prefix+':plugins:zfs:'+hostname)
+            if activated is None:
+                http.urlopen('GET', 'http://' + hostname + ':5000/Plugin.Activate')
+                self.redis_handler.set(self.config.redis_prefix+':plugins:zfs:'+ hostname,"plugin-zfs")
+            r = http.urlopen('POST', 'http://'+ hostname + ':5000/VolumeDriver.Create', body=json.dumps({'Name': str(task['id']), 'Opts': {'size': str(task['requirements']['tmpstorage']['size'])}}))
+            if r.status == 200:
+                r = http.urlopen('POST', 'http://'+ hostname + ':5000/VolumeDriver.Mount', body=json.dumps({'Name': str(task['id'])}))
+                res = json.loads(r.data)
+                if res['Err'] is not None:
+                    return (False, None)
+                r = http.urlopen('POST', 'http://'+ hostname + ':5000/VolumeDriver.Path', body=json.dumps({'Name': str(task['id'])}))
+                res = json.loads(r.data)
+                zfs_path = res['Name']
+            else:
+                self.logger.error("Failed to resource plugin-zfs")
+                return (False, None)
+        except Exception as e:
+            self.logger.error("Failed to resource plugin-zfs:"+str(e))
+            return (False, None)
+        return (True, zfs_path)
 
     def resourceOffers(self, driver, offers):
         '''
@@ -147,6 +219,19 @@ class MesosScheduler(mesos.interface.Scheduler):
                                 break
                         if not is_ok:
                             continue
+
+                    (res, zfs_path) = self.plugin_zfs_mount(labels['hostname'], task)
+                    if not res:
+                        continue
+                    else:
+                        if zfs_path is not None:
+                            task['requirements']['tmpstorage']['path'] = zfs_path
+                        else:
+                            if task['requirements']['tmpstorage'] is not None:
+                                task['requirements']['tmpstorage']['path'] = None
+                            else:
+                                task['requirements']['tmpstorage'] = { 'path': None, 'size': ''}
+
                     offer_tasks.append(self.new_task(offer, task, labels))
                     offerCpus -= task['requirements']['cpu']
                     offerMem -= task['requirements']['ram']*1000
@@ -184,6 +269,12 @@ class MesosScheduler(mesos.interface.Scheduler):
                 volume.mode = 1 # mesos_pb2.Volume.Mode.RW
             else:
                 volume.mode = 2 # mesos_pb2.Volume.Mode.RO
+
+        if job['requirements']['tmpstorage']['path'] is not None:
+            volume = container.volumes.add()
+            volume.container_path = '/tmp-data'
+            volume.host_path = job['requirements']['tmpstorage']['path']
+            volume.mode = 1
 
         tid = str(job['id'])
 
@@ -282,6 +373,12 @@ class MesosScheduler(mesos.interface.Scheduler):
                     self.logger.error('Failed to contact mesos slave: '+str(e))
 
         self.logger.debug('Mesos:Task:Over:'+str(update.task_id.value))
+        if int(update.state) in [2,3,4,5,7]:
+            job = self.jobs_handler.find_one({'id': int(update.task_id.value)})
+            if job is not None:
+                self.plugin_zfs_unmount(job['container']['meta']['Node']['Name'], job)
+
+
 
         self.redis_handler.set(self.config.redis_prefix+':mesos:over:'+str(update.task_id.value),update.state)
 

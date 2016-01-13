@@ -243,6 +243,8 @@ class GoDWatcher(Daemon):
                 self.logger.debug('Executor:Kill:Success:'+str(task['id']))
 
                 original_task = self.db_jobs.find_one({'id': task['id']})
+                if original_task is None:
+                    continue
                 if 'resources.port' not in self.executor.features():
                     for port in original_task['container']['ports']:
                         host = original_task['container']['meta']['Node']['Name']
