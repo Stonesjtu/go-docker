@@ -309,6 +309,8 @@ Configuration:
 This feature needs the Docker volume plugin docker-plugin-zfs on each node (see Docker plugins).
 User can specify a local Temporary storage size on tasks. System will create and mount a ZFS storage volume for the container and will be deleted at the end of the task. Volume has quota according to task requirements. This provides a local disk storage for intermediate computation requiring fast disk access.
 
+At this moment, this works only with mesos plugin, not swarm due to swarm management/scheduling with Volume plugins.
+
 ## Tips
 
 Remove old containers
