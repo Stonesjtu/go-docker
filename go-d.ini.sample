@@ -84,6 +84,13 @@ volumes: [
     },
 ]
 
+# Temporary local volumes
+# Use docker-plugin-zfs Docker volume plugin: True, False
+# Plugin must be running on all slaves and must be supported by framework
+
+plugin_zfs: False
+
+
 # PORTS ###############################
 port_allocate: True  # allocates a port from following range instead of mapping port to itself
 port_start: 10000
