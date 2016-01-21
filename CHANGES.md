@@ -4,6 +4,7 @@
     add Temporary local volumes
         Use docker-plugin-zfs Docker volume plugin
         New configuration parameter: plugin_zfs
+    add hostnames in etcd
 1.0.1:
     encode script to UTF-8
     add Status plugins with etcd support: add new config parameter *status_policy*

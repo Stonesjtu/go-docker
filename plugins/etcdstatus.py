@@ -3,6 +3,7 @@ import logging
 import etcd
 import datetime
 import time
+import socket
 
 class EtcdStatusAuth(IStatusPlugin):
     def get_name(self):
@@ -35,6 +36,8 @@ class EtcdStatusAuth(IStatusPlugin):
             if proctype is None:
                 proctype = 'undefined'
             client.write(etcd_prefix+'/process/'+proctype+'/'+str(name),str(timestamp), ttl=3600)
+            hostname = socket.gethostbyaddr(socket.gethostname())[0]
+            client.write(etcd_prefix+'/hosts/'+proctype+'/'+str(name),str(hostname), ttl=3600)
         except Exception as e:
             self.logger.error('Etcd:Keep-Alive:Error:'+str(e))
             return False
