@@ -213,9 +213,9 @@ guest_allow: False
 guest_bind: None
 # Allow guest to run scripts as root in containers
 guest_allow_root: False
-# Home directroy base path for guest, guest home dir will be guest_home_root/guest_userid
+# Home directory base path for guest, guest home dir will be guest_home_root/guest_userid
 # None => No home directory
-# 'default' empty string, use guest_bind home directory
+# 'default', use guest_bind home directory
 guest_home_root: None
 
 # Logging ##################################
