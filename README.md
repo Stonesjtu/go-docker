@@ -34,6 +34,7 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 * dependency between tasks
 * process monitoring
 * temporary local storage on nodes
+* optional *guest* support, i.e. accepting users connecting with Google, GitHub, ... and not in system. Guest will map to a system user for execution.
 
 ## LICENSE
 
@@ -310,6 +311,14 @@ This feature needs the Docker volume plugin docker-plugin-zfs on each node (see 
 User can specify a local Temporary storage size on tasks. System will create and mount a ZFS storage volume for the container and will be deleted at the end of the task. Volume has quota according to task requirements. This provides a local disk storage for intermediate computation requiring fast disk access.
 
 At this moment, this works only with mesos plugin, not swarm due to swarm management/scheduling with Volume plugins.
+
+## Guest support
+
+The guest feature is optional and supported by the guest_XXX parameters in go-d.ini file. Guest users connect with Google, GitHub, ... and are not in system (ldap, ...). All guests are mapped/binded to a system user for execution. They do not have direct access to theur *home directory*, which will be created as a subdirectory of a specified, existing, directory.
+
+Administrator, via the web interface, must activate the users after their first login. Guest can be disabled afterward.
+
+Care should be taken regarding disk space used in the guest home directory. Usage is visible in administrator panel of the web interface.
 
 ## Tips
 
