@@ -395,7 +395,16 @@ class GoDScheduler(Daemon):
         '''
         Write command script on disk
         '''
-
+        if 'guest' in task['user'] and task['user']['guest']:
+            home_requested = False
+            for volume in task['container']['volumes']:
+                if volume['name'] == 'home':
+                    home_requested = True
+                    if not os.path.exists(volume['path']):
+                        self.logger.debug("Create home dir for guest:" + volume['path'])
+                        os.makedirs(volume['path'])
+                        os.chmod(volume['path'], 0777)
+                    break
         # Add task directory
         task_dir = self.store.get_task_dir(task)
         parent_task = None

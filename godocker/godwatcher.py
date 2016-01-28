@@ -461,6 +461,14 @@ class GoDWatcher(Daemon):
                 task['container']['meta'] = {}
             task['container']['meta']['disk_size'] = folder_size
             self.db_users.update({'id': task['user']['id']}, {'$inc': {'usage.disk': folder_size}})
+        if 'guest' in task['user'] and task['user']['guest']:
+            # Calculate pseudo home dir size
+            for volume in task['container']['volumes']:
+                if volume['name'] == 'home':
+                    print "Calculate for "+volume['path']
+                    folder_size = godutils.get_folder_size(volume['path'])
+                    self.db_users.update({'id': task['user']['id']}, {'$set': {'usage.guest_home': folder_size}})
+                    break
         return task
 
     def update_user_usage(self, task):
