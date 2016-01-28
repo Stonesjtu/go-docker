@@ -166,6 +166,18 @@ etcd_prefix: '/godocker'
 etcd_host: '127.0.0.1'
 etcd_port: 4001
 
+# Guest management ########################
+
+# Allow guest (user not having a local account) to login
+guest_allow: False
+# Local user that will run the tasks for the guest
+guest_bind: None
+# Allow guest to run scripts as root in containers
+guest_allow_root: False
+# Home directroy base path for guest, guest home dir will be guest_home_root/guest_userid
+# None => No home directory
+# 'default' empty string, use guest_bind home directory
+guest_home_root: None
 
 
 # Logging ##################################
