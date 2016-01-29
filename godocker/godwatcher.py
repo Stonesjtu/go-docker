@@ -311,7 +311,9 @@ class GoDWatcher(Daemon):
                     task['status']['kill_tentative'] = 0
                 task['status']['kill_tentative'] += 1
                 # Could not kill, put back in queue
-                self.logger.warn('Executor:Kill:Error:'+str(task['id']))
+                if over is not None:
+                    # async case like mesos, kill is not immediate
+                    self.logger.warn('Executor:Kill:Error:'+str(task['id']))
                 if task['status']['kill_tentative'] > 10:
                     # Failed to kill after 10 tentatives
                     # Remove kill status
