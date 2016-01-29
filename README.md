@@ -35,6 +35,7 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 * process monitoring
 * temporary local storage on nodes
 * optional *guest* support, i.e. accepting users connecting with Google, GitHub, ... and not in system. Guest will map to a system user for execution.
+* node reservation (mesos)
 
 ## LICENSE
 
@@ -319,6 +320,18 @@ The guest feature is optional and supported by the guest_XXX parameters in go-d.
 Administrator, via the web interface, must activate the users after their first login. Guest can be disabled afterward.
 
 Care should be taken regarding disk space used in the guest home directory. Usage is visible in administrator panel of the web interface.
+
+## Node reservation
+
+with mesos, a node can be reserved for a set of users or projects.
+
+Simply add to mesos-slave the attribute:
+
+    reservation:users_or_project_names_comma_separated
+
+    example:
+
+    reservation:user1,project2
 
 ## Tips
 

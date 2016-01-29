@@ -5,7 +5,8 @@
         Use docker-plugin-zfs Docker volume plugin
         New configuration parameter: plugin_zfs
     add hostnames in etcd
-    support optional guest users (not in system)
+    support optional guest users (not in system)*
+    GOD-3 add node reservation support
 1.0.1:
     encode script to UTF-8
     add Status plugins with etcd support: add new config parameter *status_policy*
