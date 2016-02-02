@@ -243,7 +243,7 @@ Network access is required if sudo is not installed, go-docker will install it a
 ## Interactive sessions
 
 If user selects an interactive session, a port will be opened and the sshd process started in the container.
-For interactive sessions, the selected image MUST have the openssh server package installed.
+For interactive sessions, the selected image SHOULD have the openssh server package installed. If not installed GoDocker will try to install openssh-server package via apt- or yum.
 
 Mapped port will be available in task description.
 

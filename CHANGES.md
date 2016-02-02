@@ -8,6 +8,8 @@
     support optional guest users (not in system)*
     GOD-3 add node reservation support
     GOD-4 experimental resource management for GPUs
+    GOD-10 allow interactive session in any image, godocker will try to install
+         a ssh server if none is installed in the container.
 1.0.1:
     encode script to UTF-8
     add Status plugins with etcd support: add new config parameter *status_policy*
