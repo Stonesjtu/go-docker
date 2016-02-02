@@ -233,6 +233,16 @@ class MesosScheduler(mesos.interface.Scheduler):
             for task in tasks:
                 if not task['mesos_offer'] and task['requirements']['cpu'] <= offerCpus and task['requirements']['ram']*1000 <= offerMem:
                     # check for label constraints, if any
+                    if 'reservation' in labels:
+                        self.logger.debug("Node has reservation")
+                        reservations = labels['reservation'].split(',')
+                        offer_hostname = "undefined"
+                        if 'hostname' in labels:
+                            offer_hostname = labels['hostname']
+                        self.logger.debug("Check reservation for "+ offer_hostname)
+                        if task['user']['id'] not in reservations and task['user']['project'] not in reservations:
+                            self.logger.debug("User "+task['user']['id']+" not allowed to execute on "+ offer_hostname)
+                            continue                    
                     if 'label' in task['requirements'] and task['requirements']['label']:
                         reqlabel = req.split('==')
                         # Reserved label prefix *resource*
