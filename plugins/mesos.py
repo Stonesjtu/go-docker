@@ -57,6 +57,29 @@ class MesosScheduler(mesos.interface.Scheduler):
         self.redis_handler.set(self.config.redis_prefix+':mesos:frameworkId',
                                self.frameworkId)
 
+    def has_enough_resource(self, offer, requested_resource, quantity):
+        '''
+        Checks if a resource is available and has enough slots available in offer
+
+        :param offer: Mesos offer
+        :type offer: Mesos Offer
+        :param requested_resource: requested resource name as defined in mesos-slave resource (resource==gpu)
+        :type requested_resource: str
+        :param quantity: number of slots requested_resource
+        :type quantity: int
+        :return: True if resource is available in offer, else False
+        '''
+        available_resources = 0
+        for resource in offer.resources:
+            if resource.name == requested_resource:
+                for mesos_range in resource.ranges.range:
+                    if mesos_range.begin <= mesos_range.end:
+                        available_resources += 1 + mesos_range.end - mesos_range.begin
+        if available_resources >= quantity:
+            return True
+        else:
+            return False
+
     def get_mapping_port(self, offer, task):
         '''
         Get a port mapping for interactive tasks
@@ -211,6 +234,11 @@ class MesosScheduler(mesos.interface.Scheduler):
                 if not task['mesos_offer'] and task['requirements']['cpu'] <= offerCpus and task['requirements']['ram']*1000 <= offerMem:
                     # check for label constraints, if any
                     if 'label' in task['requirements'] and task['requirements']['label']:
+                        reqlabel = req.split('==')
+                        # Reserved label prefix *resource*
+                        if reqlabel[0] == 'resource':
+                            continue
+
                         is_ok = True
                         for req in task['requirements']['label']:
                             reqlabel = req.split('==')
