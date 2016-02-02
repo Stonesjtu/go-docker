@@ -486,6 +486,12 @@ class GoDScheduler(Daemon):
                 break
         cmd += vol_home+"\n"
         cmd += "startprocess=`date +%s`\n"
+
+        if not task['container']['root']:
+            cmd += "su - "+user_id+" -c \""+vol_home + array_cmd + " ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\"\n"
+        else:
+            cmd += "/mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\n"
+
         if task['command']['interactive']:
             # should execute ssh, copy user ssh key from home in /root/.ssh/authorized_keys or /home/gocker/.ssh/authorized_keys
             # Need to create .ssh dir
@@ -496,19 +502,31 @@ class GoDScheduler(Daemon):
                 cmd += "echo 'root:"+task['user']['credentials']['apikey']+"' | chpasswd\n"
             else:
                 ssh_dir = "/home/"+user_id+"/.ssh"
+                cmd += "echo '"+user_id+":"+task['user']['credentials']['apikey']+"' | chpasswd\n"
             cmd +="mkdir -p "+ssh_dir+"\n"
             cmd +="echo \"" + task['user']['credentials']['public'] + "\" > "+ssh_dir+"/authorized_keys\n"
             cmd +="chmod 600 " + ssh_dir +"/authorized_keys\n"
             if not task['container']['root']:
                 cmd +="chown -R "+user_id+":"+user_id+" /home/"+user_id+"\n"
                 cmd +="chmod 644 /home/"+user_id+"/.ssh/authorized_keys\n"
+
+            cmd += "\nif hash sshd 2>/dev/null; then\n"
+            cmd += "    echo \"ssh server installed\"\n"
+            cmd += "else\n"
+            cmd += "    echo \"ssh server not installed\"\n"
+            cmd += "if [ -n \"$(command -v yum)\" ]; then\n"
+            cmd += "     yum -y install openssh-server\n"
+            cmd += "     ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa\n"
+            cmd += "else\n"
+            cmd += "    apt-get update\n"
+            cmd += "    apt-get install -y openssh-server\n"
+            cmd += "    mkdir /var/run/sshd\n"
+            cmd += "fi\n"
+            cmd += "sed -ri 's/^PermitRootLogin\s+.*/PermitRootLogin yes/' /etc/ssh/sshd_config\n"
+            cmd += "fi\n"
+
             cmd +="/usr/sbin/sshd -f /etc/ssh/sshd_config -D\n"
-        else:
-            if not task['container']['root']:
-                #cmd += "sudo -u "+user_id+" bash -c \""+vol_home + array_cmd + " ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh &> /mnt/go-docker/god.log\"\n"
-                cmd += "su - "+user_id+" -c \""+vol_home + array_cmd + " ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\"\n"
-            else:
-                cmd += "/mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\n"
+
         cmd += "ret_code=$?\n"
         cmd += "echo $startprocess > /mnt/go-docker/god.info\n"
         cmd += "date +%s >> /mnt/go-docker/god.info\n"
