@@ -232,7 +232,8 @@ class MesosScheduler(mesos.interface.Scheduler):
                   % (offer.id.value, offerCpus, offerMem))
             for task in tasks:
                 if not task['mesos_offer'] and task['requirements']['cpu'] <= offerCpus and task['requirements']['ram']*1000 <= offerMem:
-                    # check for label constraints, if any
+                    # check for reservation constraints, if any
+                    self.logger.debug("Try to place task "+str(task['id']))
                     if 'reservation' in labels:
                         self.logger.debug("Node has reservation")
                         reservations = labels['reservation'].split(',')
@@ -242,16 +243,40 @@ class MesosScheduler(mesos.interface.Scheduler):
                         self.logger.debug("Check reservation for "+ offer_hostname)
                         if task['user']['id'] not in reservations and task['user']['project'] not in reservations:
                             self.logger.debug("User "+task['user']['id']+" not allowed to execute on "+ offer_hostname)
-                            continue                    
-                    if 'label' in task['requirements'] and task['requirements']['label']:
-                        reqlabel = req.split('==')
-                        # Reserved label prefix *resource*
-                        if reqlabel[0] == 'resource':
                             continue
 
+                    # check for resources
+                    if 'label' in task['requirements'] and task['requirements']['label']:
+                        task['requirements']['resources'] = {}
+                        for task_resource in task['requirements']['label']:
+                            if not task_resource.startswith('resource=='):
+                                continue
+                            requested_resource = task_resource.split('==')
+                            requested_resource = requested_resource[1]
+                            if requested_resource not in task['requirements']['resources']:
+                                task['requirements']['resources'][requested_resource] = 1
+                            else:
+                                task['requirements']['resources'][requested_resource] += 1
+                        # check if enough resources
+                        has_enough_resources = True
+                        for requested_resource in task['requirements']['resources']:
+                            quantity = task['requirements']['resources'][requested_resource]
+                            if not self.has_enough_resource(offer, requested_resource, quantity):
+                                self.logger.debug('Not enough '+requested_resource+' on this node')
+                                has_enough_resources = False
+                                break
+                        if not has_enough_resources:
+                            del task['requirements']['resources']
+                            continue
+
+                    # check for label constraints, if any
+                    if 'label' in task['requirements'] and task['requirements']['label']:
                         is_ok = True
                         for req in task['requirements']['label']:
                             reqlabel = req.split('==')
+                            if reqlabel[0] == 'resource':
+                                continue
+
                             if reqlabel[0] not in labels or reqlabel[1] != labels[reqlabel[0]]:
                                 is_ok = False
                                 break
@@ -296,6 +321,46 @@ class MesosScheduler(mesos.interface.Scheduler):
         task = mesos_pb2.TaskInfo()
         container = mesos_pb2.ContainerInfo()
         container.type = 1 # mesos_pb2.ContainerInfo.Type.DOCKER
+
+        # Reserve requested resource and mount related volumes
+        if 'resources' in job['requirements'] and job['requirements']['resources']:
+            for requested_resource in job['requirements']['resources']:
+                quantity = job['requirements']['resources'][requested_resource]
+                mesos_resources = task.resources.add()
+                mesos_resources.name = requested_resource
+                mesos_resources.type = mesos_pb2.Value.RANGES
+                for resource in offer.resources:
+                    if resource.name == requested_resource and quantity > 0:
+                        for mesos_range in resource.ranges.range:
+                            if mesos_range.begin <= mesos_range.end:
+                                if (1 + mesos_range.end - mesos_range.begin >= quantity):
+                                    # take what is necessary
+                                    mesos_resource = mesos_resources.ranges.range.add()
+                                    mesos_resource.begin = mesos_range.begin
+                                    mesos_resource.end = mesos_range.begin + quantity - 1
+                                    mesos_range.begin  = quantity
+                                    quantity = 0
+                                else:
+                                    # take what is available
+                                    mesos_resource = mesos_resources.ranges.range.add()
+                                    mesos_resource.begin = mesos_range.begin
+                                    mesos_resource.end = mesos_range.begin + (mesos_range.end - mesos_range.begin)
+                                    mesos_range.begin += 1 + mesos_range.end - mesos_range.begin
+                                    quantity -= 1 + mesos_range.end - mesos_range.begin
+                                self.logger.debug("Take resources: "+str(mesos_resource.begin)+"-"+str(mesos_resource.end))
+            for mesos_range in mesos_resources.ranges.range:
+                for res_range in range(mesos_range.begin,mesos_range.end + 1):
+                    resource_volume_id = mesos_resources.name+"_"+str(res_range)
+                    self.logger.debug("Add volumes for resource "+resource_volume_id)
+                    if resource_volume_id in labels:
+                        resource_volumes = labels[resource_volume_id].split(',')
+                        for resource_volume in resource_volumes:
+                            volume = container.volumes.add()
+                            self.logger.debug("Add volume for resource: " + resource_volume)
+                            volume.container_path = resource_volume
+                            volume.host_path = resource_volume
+                            volume.mode = 1
+            del job['requirements']['resources']
 
         for v in job['container']['volumes']:
             if v['mount'] is None:
@@ -342,6 +407,7 @@ class MesosScheduler(mesos.interface.Scheduler):
             job['container']['meta']['Node']['Name'] = labels['hostname']
         else:
             job['container']['meta']['Node']['Name'] = offer.slave_id.value
+        self.logger.debug("Task placed on host "+str(job['container']['meta']['Node']['Name']))
 
         docker = mesos_pb2.ContainerInfo.DockerInfo()
         docker.image = job['container']['image']
@@ -637,7 +703,7 @@ class Mesos(IExecutorPlugin):
             else:
                 task['container']['meta']['State']['ExitCode'] = 1
             self.redis_handler.delete(self.cfg.redis_prefix+':mesos:over:'+str(task['id']))
-            self.redis_handler.set(self.cfg.redis_prefix+':mesos:kill_pending:'+str(task['id']))
+            self.redis_handler.set(self.cfg.redis_prefix+':mesos:kill_pending:'+str(task['id']), 1)
             return (task, True)
         else:
             self.logger.debug('Mesos:Task:Kill:IsRunning:'+str(task['id']))
