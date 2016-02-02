@@ -36,6 +36,7 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 * temporary local storage on nodes
 * optional *guest* support, i.e. accepting users connecting with Google, GitHub, ... and not in system. Guest will map to a system user for execution.
 * node reservation (mesos)
+* experimental resource reservation (GPU, etc.)
 
 ## LICENSE
 
@@ -323,7 +324,7 @@ Care should be taken regarding disk space used in the guest home directory. Usag
 
 ## Node reservation
 
-with mesos, a node can be reserved for a set of users or projects.
+With mesos, a node can be reserved for a set of users or projects.
 
 Simply add to mesos-slave the attribute:
 
@@ -332,6 +333,35 @@ Simply add to mesos-slave the attribute:
     example:
 
     reservation:user1,project2
+
+## Resource reservation
+
+With mesos, one can ask for specific resources (GPU, etc.) according to resources available set in mesos-slave.
+
+Resources are defined in go-docker as constraints, in constraint named *resource*:
+
+    constraints: [
+        { name: 'storage', value: 'ssd,disk' },
+        { name: 'resource', value: 'gpu_10.5' }
+    ]
+
+One can define multiple resource with a comma (gpu_10.5,my_specific_resource).
+
+On mesos-slave, resources should be added as following fro a GPU use case.
+
+    admin:/etc/mesos-slave$ cat attributes
+    hostname:10.72.136.115
+    gpu_10.5_0:/dev/nvidia0,/dev/nvidiactl,/dev/nvidia-uvm
+    gpu_10.5_1:/dev/nvidia1,/dev/nvidiactl,/dev/nvidia-uvm
+    admin@ip-10-72-136-115:/etc/mesos-slave$ cat resources
+    gpu_10.5:[0-1]
+
+In resources files, we define the resource name and the available quantity for this resources. In above example, we have 2 GPUs (a range with left and right bounds included).
+For each resource, it is possible to define volumes to mount in container. To do so, we add to the attributes file one attribute per resource with the name scheme: nameOfResource_resourceSlot. Volumes must be comma separated if multiple ones are needed.
+
+Still in previous example, if system selects in available resources the slot 0 of resource *gpu_10.5*, then volumes defined in *gpu_10.5_0* will be mounted in container.
+
+It is possible to specify in task multiple resource requirements.
 
 ## Tips
 

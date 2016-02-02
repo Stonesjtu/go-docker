@@ -7,6 +7,7 @@
     add hostnames in etcd
     support optional guest users (not in system)*
     GOD-3 add node reservation support
+    GOD-4 experimental resource management for GPUs
 1.0.1:
     encode script to UTF-8
     add Status plugins with etcd support: add new config parameter *status_policy*
