@@ -12,9 +12,9 @@ pyramid==1.5.4
 pyramid-angularstarter==0.1
 pyramid-chameleon==0.3
 pyramid-debugtoolbar==2.3
-pyramid-jinja2==2.3.3
+#pyramid-jinja2==2.3.3
 pyramid-mako==1.0.2
-pyramid-marrowmailer==0.1
+#pyramid-marrowmailer==0.1
 pyramid-tm==0.11
 python-ldap==2.4.19
 redis==2.10.3
