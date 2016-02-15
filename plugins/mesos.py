@@ -508,6 +508,18 @@ class Mesos(IExecutorPlugin):
         self.cfg = cfg
         self.Terminated = False
 
+
+    def open(self, proc_type):
+        '''
+        Request start of executor if needed
+        '''
+        #self.mesosthread = MesosThread()
+        #self.mesosthread.set_driver(self.driver)
+        #self.mesosthread.start()
+        if proc_type is not None and proc_type ==1:
+            # do not start framework on watchers
+            return
+
         executor = mesos_pb2.ExecutorInfo()
         executor.executor_id.value = "go-docker"
         #executor.command.value = "/bin/echo hello # $MESOS_SANDBOX #"
@@ -516,13 +528,6 @@ class Mesos(IExecutorPlugin):
         framework = mesos_pb2.FrameworkInfo()
         framework.user = "" # Have Mesos fill in the current user.
         framework.name = "Go-Docker Mesos"
-
-        #self.frameworkId = self.redis_handler.get(self.cfg.redis_prefix+':mesos:frameworkId')
-        #if self.frameworkId is not None and self.frameworkId:
-        #    self.logger.info("Reusing framework ID: "+self.frameworkId)
-        #    fid = mesos_pb2.FrameworkID()
-        #    fid.value = self.frameworkId
-        #    framework.id.value = fid.value
 
         if os.getenv("MESOS_CHECKPOINT"):
             self.logger.info("Enabling checkpoint for the framework")
@@ -572,21 +577,6 @@ class Mesos(IExecutorPlugin):
                 self.cfg.mesos_master)
 
         self.driver = driver
-        #if driver is not None:
-        #    self.driver = driver
-        #    self.driver.start()
-
-
-    def open(self, proc_type):
-        '''
-        Request start of executor if needed
-        '''
-        #self.mesosthread = MesosThread()
-        #self.mesosthread.set_driver(self.driver)
-        #self.mesosthread.start()
-        if proc_type is not None and proc_type ==1:
-            # do not start framework on watchers
-            return
         self.driver.start()
 
     def close(self):

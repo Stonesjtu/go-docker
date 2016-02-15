@@ -142,11 +142,13 @@ This variable is needed when multiple processes are executed on the same server 
     export GOD_PROCID = 2
     python go-d-watcher start
 
+Executables have *start* and *stop* commands to manage their execution (ran in background)
 
-For debug, it is possible to run processes in foreground with run option, or only one time (no loop) with option once.
+For debug, it is possible to run processes in foreground with *run* option, or only one time (no loop) with option *once*.
 
 Log level can be modified with env variable GOD_LOGLEVEL (DEBUG, INFO, ERROR)
 
+Executables
 
 ## Running in containers
 
