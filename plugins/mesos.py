@@ -444,6 +444,7 @@ class MesosScheduler(mesos.interface.Scheduler):
             job = self.jobs_handler.find_one({'id': int(update.task_id.value)})
 
             #Switched to RUNNING, get container id
+            containerId = None
             try:
                 if str(update.data) != "":
                     containers = json.loads(update.data)
