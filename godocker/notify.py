@@ -23,7 +23,7 @@ class Notify:
         Notify.logger = logger
 
     @staticmethod
-    def notify_email(task):
+    def notify_email(task, opt_msg=None):
         '''
         Sends an email to *to*.
         '''
@@ -38,7 +38,9 @@ class Notify:
 
         to = task['user']['email']
         subject = 'Task '+str(task['id'])+': '+str(task['status']['primary'])
-        message = 'Task '+str(task['id'])+ '('+str(task['meta']['name'])+') switched to status '+str(task['status']['primary'])+'/'+str(task['status']['secondary'])
+        message = opt_msg
+        if opt_msg is None:
+            message = 'Task '+str(task['id'])+ '('+str(task['meta']['name'])+') switched to status '+str(task['status']['primary'])+'/'+str(task['status']['secondary'])
         # Create a text/plain message
         msg = MIMEText(message)
 
