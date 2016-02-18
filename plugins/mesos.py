@@ -209,7 +209,6 @@ class MesosScheduler(mesos.interface.Scheduler):
             redis_task = self.redis_handler.lpop(self.config.redis_prefix+':mesos:pending')
 
         for offer in offers:
-            self.logger.debug(offer)
             if not tasks:
                 self.logger.debug('Mesos:Offer:NoTask')
                 driver.declineOffer(offer.id)
