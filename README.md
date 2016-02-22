@@ -1,8 +1,8 @@
 # Go-Docker
 
-Cluster management tool with Docker
+Batch computing/cluster management tool with Docker.
 
-Manage user job (batch/interactive) submissions with Docker (like SUN Grid Engine, Torque, ... on nodes). User does not need to have Docker rights, everything will go through the application.
+Manage user job (batch/interactive) submissions with Docker (like SUN Grid Engine, Torque, ... on nodes). User does not need to have Docker rights, everything will go through the application. Jobs that cannot be scheduled are kept in queue until contraints/resources are available.
 Linked to the system users (or ldap), user will have their home mounted automatically as well as other configured directories according to required priviledges in container.
 They will be able to run jobs with their uid/gid or as root in the container.
 
