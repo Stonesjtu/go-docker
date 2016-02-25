@@ -13,6 +13,7 @@ import time
 import pairtree
 import string
 import random
+from config import Config
 from bson.json_util import dumps
 
 #from mock import patch
@@ -21,7 +22,8 @@ from optparse import OptionParser
 
 from godocker.godscheduler import GoDScheduler
 from godocker.godwatcher import GoDWatcher
-from godocker.pairtreeStorage import PairtreeStorage
+#from godocker.pairtreeStorage import PairtreeStorage
+from godocker.storageManager import StorageManager
 import godocker.utils as godutils
 
 
@@ -55,6 +57,23 @@ class UtilsTest(unittest.TestCase):
             # An error should be raised
             self.assertTrue(1==1)
 
+class StorageTests(unittest.TestCase):
+
+    def setUp(self):
+        curdir = os.path.dirname(os.path.abspath(__file__))
+        cfg_file =os.path.join(curdir,'go-d.ini')
+        self.cfg = Config(cfg_file)
+
+    def test_handler_default(self):
+        from godocker.pairtreeStorage import PairtreeStorage
+        handler = StorageManager.get_storage(self.cfg)
+        self.assertTrue(isinstance(handler, PairtreeStorage))
+
+    def test_handler_default(self):
+        from godocker.pairtreeStorage import PairtreeStorage
+        self.cfg['storage'] = 'fail'
+        handler = StorageManager.get_storage(self.cfg)
+        self.assertTrue(handler is None)
 
 class SchedulerTest(unittest.TestCase):
     '''
@@ -165,7 +184,8 @@ class SchedulerTest(unittest.TestCase):
 
         self.scheduler.cfg.shared_dir = tempfile.mkdtemp('godshared')
         self.watcher.cfg.shared_dir = self.scheduler.cfg.shared_dir
-        self.scheduler.store = PairtreeStorage(self.scheduler.cfg)
+        #self.scheduler.store = PairtreeStorage(self.scheduler.cfg)
+        self.scheduler.store = StorageManager.get_storage(self.scheduler.cfg)
 
     def tearDown(self):
         if os.path.exists(self.scheduler.cfg.shared_dir):

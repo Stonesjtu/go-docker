@@ -22,7 +22,8 @@ from influxdb import client as influxdb
 from logging.handlers import RotatingFileHandler
 
 from yapsy.PluginManager import PluginManager
-from godocker.pairtreeStorage import PairtreeStorage
+#from godocker.pairtreeStorage import PairtreeStorage
+from godocker.storageManager import StorageManager
 from godocker.iSchedulerPlugin import ISchedulerPlugin
 from godocker.iExecutorPlugin import IExecutorPlugin
 from godocker.iAuthPlugin import IAuthPlugin
@@ -82,7 +83,8 @@ class GoDWatcher(Daemon):
             dirname, filename = os.path.split(os.path.abspath(__file__))
             self.cfg.plugins_dir = os.path.join(dirname, '..', 'plugins')
 
-        self.store = PairtreeStorage(self.cfg)
+        #self.store = PairtreeStorage(self.cfg)
+        self.store = StorageManager.get_storage(self.cfg)
 
         Notify.set_config(self.cfg)
         Notify.set_logger(self.logger)

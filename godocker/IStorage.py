@@ -28,6 +28,20 @@ class IStorage(object):
         '''
         return None
 
+    def get_pre_command(self):
+        '''
+        Pre execution in job script (bash)
+        :return: str command to execute
+        '''
+        return ''
+
+    def get_post_command(self):
+        '''
+        Post execution in job script (bash)
+        :return: str command to execute
+        '''
+        return ''
+
     def clean(self, task):
         '''
         Cleanup task directory

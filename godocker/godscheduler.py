@@ -36,7 +36,8 @@ from godocker.iWatcherPlugin import IWatcherPlugin
 from godocker.iStatusPlugin import IStatusPlugin
 
 
-from godocker.pairtreeStorage import PairtreeStorage
+#from godocker.pairtreeStorage import PairtreeStorage
+from godocker.storageManager import StorageManager
 from godocker.utils import is_array_child_task, is_array_task
 import godocker.utils as godutils
 from godocker.notify import Notify
@@ -159,7 +160,8 @@ class GoDScheduler(Daemon):
             dirname, filename = os.path.split(os.path.abspath(__file__))
             self.cfg.plugins_dir = os.path.join(dirname, '..', 'plugins')
 
-        self.store = PairtreeStorage(self.cfg)
+        #self.store = PairtreeStorage(self.cfg)
+        self.store = StorageManager.get_storage(self.cfg)
 
         Notify.set_config(self.cfg)
         Notify.set_logger(self.logger)
@@ -487,6 +489,8 @@ class GoDScheduler(Daemon):
         cmd += vol_home+"\n"
         cmd += "startprocess=`date +%s`\n"
 
+        cmd += str(self.store.get_pre_command())+"\n"
+
         if not task['container']['root']:
             cmd += "su - "+user_id+" -c \""+vol_home + array_cmd + " ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\"\n"
         else:
@@ -531,6 +535,7 @@ class GoDScheduler(Daemon):
         cmd += "echo $startprocess > /mnt/go-docker/god.info\n"
         cmd += "date +%s >> /mnt/go-docker/god.info\n"
         cmd += "chown -R "+user_id+":"+user_id+" /mnt/go-docker/*\n"
+        cmd += str(self.store.get_post_command())+"\n"
         cmd += "exit $ret_code\n"
 
         if is_array_child_task(task):
