@@ -22,7 +22,7 @@ from optparse import OptionParser
 
 from godocker.godscheduler import GoDScheduler
 from godocker.godwatcher import GoDWatcher
-#from godocker.pairtreeStorage import PairtreeStorage
+from godocker.pairtreeStorage import PairtreeStorage
 from godocker.storageManager import StorageManager
 import godocker.utils as godutils
 
@@ -74,6 +74,30 @@ class StorageTests(unittest.TestCase):
         self.cfg['storage'] = 'fail'
         handler = StorageManager.get_storage(self.cfg)
         self.assertTrue(handler is None)
+
+class PairtreeTests(unittest.TestCase):
+
+    def setUp(self):
+        curdir = os.path.dirname(os.path.abspath(__file__))
+        cfg_file =os.path.join(curdir,'go-d.ini')
+        self.cfg = Config(cfg_file)
+        self.cfg.shared_dir = tempfile.mkdtemp('godshared')
+
+    def test_storage_init(self):
+        storage = PairtreeStorage(self.cfg)
+        self.assertTrue(os.path.exists(os.path.join(self.cfg.shared_dir,'tasks')))
+
+    def test_manage_object(self):
+        storage = PairtreeStorage(self.cfg)
+        task = { 'id': 1234 }
+        storage.add_file(task, "sample1.txt", "hello world")
+        storage.add_file(task, "sample1.txt", "hello world","subtest")
+        task_dir = storage.get_task_dir(task)
+        self.assertTrue(os.path.exists(task_dir))
+        self.assertTrue(os.path.exists(os.path.join(task_dir,'sample1.txt')))
+        self.assertTrue(os.path.exists(os.path.join(task_dir,'subtest','sample1.txt')))
+        storage.clean(task)
+        self.assertFalse(os.path.exists(task_dir))
 
 class SchedulerTest(unittest.TestCase):
     '''

@@ -184,7 +184,7 @@ class GoDScheduler(Daemon):
         self.status_manager = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Status"):
            if 'status_policy' not in self.cfg or not self.cfg.status_policy:
-               print "No status manager in configuration"
+               print("No status manager in configuration")
                break
            if pluginInfo.plugin_object.get_name() == self.cfg.status_policy:
              self.status_manager = pluginInfo.plugin_object
@@ -194,7 +194,7 @@ class GoDScheduler(Daemon):
              self.status_manager.set_users_handler(self.db_users)
              self.status_manager.set_projects_handler(self.db_projects)
              self.status_manager.set_config(self.cfg)
-             print "Loading status manager: "+self.status_manager.get_name()
+             print("Loading status manager: "+self.status_manager.get_name())
 
         self.scheduler = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Scheduler"):
@@ -207,7 +207,7 @@ class GoDScheduler(Daemon):
              self.scheduler.set_users_handler(self.db_users)
              self.scheduler.set_projects_handler(self.db_projects)
              self.scheduler.set_config(self.cfg)
-             print "Loading scheduler: "+self.scheduler.get_name()
+             print("Loading scheduler: "+self.scheduler.get_name())
         self.executor = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Executor"):
            #simplePluginManager.activatePluginByName(pluginInfo.name)
@@ -219,7 +219,7 @@ class GoDScheduler(Daemon):
              self.executor.set_users_handler(self.db_users)
              self.executor.set_projects_handler(self.db_projects)
              self.executor.set_config(self.cfg)
-             print "Loading executor: "+self.executor.get_name()
+             print("Loading executor: "+self.executor.get_name())
 
         self.watchers = []
         if 'watchers' in self.cfg and self.cfg.watchers is not None:
@@ -237,7 +237,7 @@ class GoDScheduler(Daemon):
              watcher.set_users_handler(self.db_users)
              watcher.set_projects_handler(self.db_projects)
              self.watchers.append(watcher)
-             print "Add watcher: "+watcher.get_name()
+             print("Add watcher: "+watcher.get_name())
 
         self.auth_policy = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Auth"):
@@ -245,7 +245,7 @@ class GoDScheduler(Daemon):
                  self.auth_policy = pluginInfo.plugin_object
                  self.auth_policy.set_logger(self.logger)
                  self.auth_policy.set_config(self.cfg)
-                 print "Loading auth policy: "+self.auth_policy.get_name()
+                 print("Loading auth policy: "+self.auth_policy.get_name())
 
         self.check_redis()
 
@@ -701,7 +701,7 @@ class GoDScheduler(Daemon):
 
         '''
 
-        print "Get pending task"
+        self.logger.debug("Get pending task")
         #pending_tasks = []
         #pending_tasks_length = self.r.llen('jobs:pending')
         #for i in range(min(pending_tasks_length, self.cfg.max_job_pop)):
@@ -723,7 +723,7 @@ class GoDScheduler(Daemon):
         if queued_tasks:
             self.run_tasks(queued_tasks)
 
-        print 'Get tasks to reschedule'
+        self.logger.debug('Get tasks to reschedule')
         if self.stop_daemon:
             return
         reschedule_task_list = []

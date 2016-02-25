@@ -11,6 +11,7 @@
     GOD-10 allow interactive session in any image, godocker will try to install
          a ssh server if none is installed in the container.
     Fix #21 mesos start daemon failure
+    GOD-14 change pairtree implementation for python 3 support
 1.0.1:
     encode script to UTF-8
     add Status plugins with etcd support: add new config parameter *status_policy*

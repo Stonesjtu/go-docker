@@ -107,7 +107,7 @@ class GoDWatcher(Daemon):
         self.status_manager = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Status"):
            if 'status_policy' not in self.cfg or not self.cfg.status_policy:
-               print "No status manager in configuration"
+               print("No status manager in configuration")
                break
            if pluginInfo.plugin_object.get_name() == self.cfg.status_policy:
              self.status_manager = pluginInfo.plugin_object
@@ -117,7 +117,7 @@ class GoDWatcher(Daemon):
              self.status_manager.set_users_handler(self.db_users)
              self.status_manager.set_projects_handler(self.db_projects)
              self.status_manager.set_config(self.cfg)
-             print "Loading status manager: "+self.status_manager.get_name()
+             print("Loading status manager: "+self.status_manager.get_name())
 
         self.scheduler = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Scheduler"):
@@ -130,7 +130,7 @@ class GoDWatcher(Daemon):
              self.scheduler.set_users_handler(self.db_users)
              self.scheduler.set_projects_handler(self.db_projects)
              self.scheduler.set_config(self.cfg)
-             print "Loading scheduler: "+self.scheduler.get_name()
+             print("Loading scheduler: "+self.scheduler.get_name())
         self.executor = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Executor"):
            #simplePluginManager.activatePluginByName(pluginInfo.name)
@@ -142,7 +142,7 @@ class GoDWatcher(Daemon):
              self.executor.set_users_handler(self.db_users)
              self.executor.set_projects_handler(self.db_projects)
              self.executor.set_config(self.cfg)
-             print "Loading executor: "+self.executor.get_name()
+             print("Loading executor: "+self.executor.get_name())
 
         self.watchers = []
         if 'watchers' in self.cfg and self.cfg.watchers is not None:
@@ -160,7 +160,7 @@ class GoDWatcher(Daemon):
              watcher.set_users_handler(self.db_users)
              watcher.set_projects_handler(self.db_projects)
              self.watchers.append(watcher)
-             print "Add watcher: "+watcher.get_name()
+             print("Add watcher: "+watcher.get_name())
 
     def status(self):
         '''
@@ -469,7 +469,7 @@ class GoDWatcher(Daemon):
             # Calculate pseudo home dir size
             for volume in task['container']['volumes']:
                 if volume['name'] == 'home':
-                    print "Calculate for "+volume['path']
+                    print("Calculate for "+volume['path'])
                     folder_size = godutils.get_folder_size(volume['path'])
                     self.db_users.update({'id': task['user']['id']}, {'$set': {'usage.guest_home': folder_size}})
                     break
@@ -581,7 +581,7 @@ class GoDWatcher(Daemon):
         '''
         Checks if running jobs are over
         '''
-        print "Check running jobs"
+        self.logger.debug("Check running jobs")
         nb_elt = 1
         #elts  = self.r.lrange('jobs:running', lmin, lmin+lrange)
         nb_running_jobs = self.r.llen(self.cfg.redis_prefix+':jobs:running')
@@ -708,7 +708,7 @@ class GoDWatcher(Daemon):
 
         '''
         self.logger.debug('Watcher:'+str(self.hostname)+':Run')
-        print "Get tasks to kill"
+        self.logger.debug("Get tasks to kill")
         if self.stop_daemon:
             self.executor.close()
             return
@@ -726,7 +726,7 @@ class GoDWatcher(Daemon):
         if 'kill' in self.executor.features():
             self.kill_tasks(kill_task_list)
 
-        print 'Get tasks to suspend'
+        self.logger.debug('Get tasks to suspend')
         if self.stop_daemon:
             self.executor.close()
             return
@@ -744,7 +744,7 @@ class GoDWatcher(Daemon):
         if 'pause' in self.executor.features():
             self.suspend_tasks(suspend_task_list)
 
-        print 'Get tasks to resume'
+        self.logger.debug('Get tasks to resume')
         if self.stop_daemon:
             self.executor.close()
             return
@@ -762,7 +762,7 @@ class GoDWatcher(Daemon):
         if 'pause' in self.executor.features():
             self.resume_tasks(resume_task_list)
 
-        print 'Look for terminated jobs'
+        self.logger.debug('Look for terminated jobs')
         if self.stop_daemon:
             self.executor.close()
             return
