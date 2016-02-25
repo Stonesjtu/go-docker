@@ -405,7 +405,7 @@ class GoDScheduler(Daemon):
                     if not os.path.exists(volume['path']):
                         self.logger.debug("Create home dir for guest:" + volume['path'])
                         os.makedirs(volume['path'])
-                        os.chmod(volume['path'], 0777)
+                        os.chmod(volume['path'], 0o777)
                     break
         # Add task directory
         task_dir = self.store.get_task_dir(task)
@@ -416,16 +416,16 @@ class GoDScheduler(Daemon):
             task_dir = os.path.join(task_dir, str(task['requirements']['array']['task_id']))
             if not os.path.exists(task_dir):
                 os.makedirs(task_dir)
-                os.chmod(task_dir, 0777)
+                os.chmod(task_dir, 0o777)
             script_file = self.store.add_file(parent_task, 'cmd.sh',
                                               task['command']['cmd'].encode('utf-8'),
                                               str(task['requirements']['array']['task_id']))
-            os.chmod(script_file, 0755)
+            os.chmod(script_file, 0o755)
             task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
         else:
             script_file = self.store.add_file(task, 'cmd.sh',
                                               task['command']['cmd'].encode('utf-8'))
-            os.chmod(script_file, 0755)
+            os.chmod(script_file, 0o755)
             task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
 
         task['container']['volumes'].append({
@@ -540,11 +540,11 @@ class GoDScheduler(Daemon):
 
         if is_array_child_task(task):
             script_file = self.store.add_file(parent_task, 'godocker.sh', cmd, str(task['requirements']['array']['task_id']))
-            os.chmod(script_file, 0755)
+            os.chmod(script_file, 0o755)
             task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
         else:
             script_file = self.store.add_file(task, 'godocker.sh', cmd)
-            os.chmod(script_file, 0755)
+            os.chmod(script_file, 0o755)
             task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
 
     def run_tasks(self, queued_list):

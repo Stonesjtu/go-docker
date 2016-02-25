@@ -178,7 +178,7 @@ class PairtreeStorage(IStorage):
         if path:
             subpath = os.path.join(subpath, path)
         task_obj.add_bytestream(name, content, path=subpath)
-        os.chmod(task_dir, 0777)
+        os.chmod(task_dir, 0o777)
         return os.path.join(task_dir, path, name)
 
 
