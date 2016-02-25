@@ -35,7 +35,7 @@ class GoAuth(IAuthPlugin):
             ldap_host = self.cfg.ldap_host
             ldap_port = self.cfg.ldap_port
             con = ldap.initialize('ldap://' + ldap_host + ':' + str(ldap_port))
-        except Exception, err:
+        except Exception as err:
             self.logger.error(str(err))
             return None
         ldap_dn = self.cfg.ldap_dn
@@ -94,7 +94,7 @@ class GoAuth(IAuthPlugin):
             ldap_host = self.cfg.ldap_host
             ldap_port = self.cfg.ldap_port
             con = ldap.initialize('ldap://' + ldap_host + ':' + str(ldap_port))
-        except Exception, err:
+        except Exception as err:
             self.logger.error(str(err))
             return None
         ldap_dn = self.cfg.ldap_dn

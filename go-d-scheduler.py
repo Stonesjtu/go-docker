@@ -32,11 +32,11 @@ if __name__ == "__main__":
                         daemon.run(False)
                 elif 'status' == sys.argv[1]:
                         status = daemon.status()
-                        print "Last keep-alive: "+str(status)
+                        print("Last keep-alive: %s" % str(status))
                 else:
-                        print "Unknown command"
+                        print("Unknown command")
                         sys.exit(2)
                 sys.exit(0)
         else:
-                print "usage: %s start|stop|restart|init|once" % sys.argv[0]
+                print("usage: %s start|stop|restart|init|once" % sys.argv[0])
                 sys.exit(2)

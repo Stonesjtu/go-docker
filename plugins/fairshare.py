@@ -148,7 +148,7 @@ class FairShare(ISchedulerPlugin):
 
         # Get user bounds
         usages = []
-        for user_id in self.users_usage.keys():
+        for user_id in list(self.users_usage.keys()):
             usages.append(self.users_usage[user_id])
         max_usages = self.get_bounds_usage(usages)
         self.max_user_time = max_usages['max_time']
@@ -160,7 +160,7 @@ class FairShare(ISchedulerPlugin):
 
         # Get project bounds
         usages = []
-        for project_id in self.projects_usage.keys():
+        for project_id in list(self.projects_usage.keys()):
             usages.append(self.projects_usage[project_id])
         max_usages = self.get_bounds_usage(usages)
         self.max_group_time = max_usages['max_time']
