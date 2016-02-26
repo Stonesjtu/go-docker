@@ -20,7 +20,6 @@ redis==2.10.3
 codecov
 coverage
 sphinx
-pairtree
 influxdb
 python-logstash
 gelfHandler
