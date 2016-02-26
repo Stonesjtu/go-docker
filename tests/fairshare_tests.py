@@ -11,7 +11,6 @@ import stat
 import datetime
 from datetime import date, timedelta
 import time
-import pairtree
 import string
 import random
 from bson.json_util import dumps

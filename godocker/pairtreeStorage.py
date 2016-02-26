@@ -1,5 +1,4 @@
 import os
-#import pairtree
 import shutil
 import logging
 import re

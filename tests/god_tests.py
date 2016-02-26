@@ -10,7 +10,6 @@ import copy
 import stat
 import datetime
 import time
-import pairtree
 import string
 import random
 import yaml
