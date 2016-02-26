@@ -22,7 +22,7 @@ coverage
 sphinx
 influxdb
 python-logstash
-gelfHandler
+graypy
 urllib3
 bcrypt==1.1.0
 python-etcd

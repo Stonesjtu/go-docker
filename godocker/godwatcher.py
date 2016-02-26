@@ -12,7 +12,7 @@ import socket
 import traceback
 import yaml
 
-from gelfHandler import gelfHandler
+import graypy
 import logstash
 
 from pymongo import MongoClient

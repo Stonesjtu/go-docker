@@ -17,7 +17,7 @@ import traceback
 from copy import deepcopy
 import yaml
 
-from gelfHandler import gelfHandler
+import graypy
 import logstash
 
 
