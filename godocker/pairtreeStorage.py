@@ -89,9 +89,9 @@ class PairtreeStorageFactory(object):
 
 
     def _encode(self, s):
-        s = s.encode('utf-8')
+        #s = s.encode('utf-8')
 
-        s = PairtreeStorageFactory._encode_regex.sub(self._char2hex, s)
+        s = self._encode_regex.sub(self._char2hex, s)
         parts = []
         for char in s:
             parts.append(PairtreeStorageFactory._encode_map.get(char, char))
