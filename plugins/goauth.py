@@ -2,7 +2,7 @@ from godocker.iAuthPlugin import IAuthPlugin
 import logging
 import grp
 
-import ldap
+from ldap3 import Server, Connection, ALL, SUBTREE
 
 class GoAuth(IAuthPlugin):
     def get_name(self):
@@ -31,10 +31,12 @@ class GoAuth(IAuthPlugin):
                   }
         '''
         user = None
+        con = None
         try:
             ldap_host = self.cfg['ldap_host']
             ldap_port = self.cfg['ldap_port']
-            con = ldap.initialize('ldap://' + ldap_host + ':' + str(ldap_port))
+            s = Server(host=ldap_host, port=int(ldap_port), use_ssl=False, get_info='ALL')
+            con = Connection(s)
         except Exception as err:
             self.logger.error(str(err))
             return None
@@ -42,9 +44,13 @@ class GoAuth(IAuthPlugin):
         base_dn = 'ou=People,' + ldap_dn
         filter = "(&""(|(uid=" + login + ")(mail=" + login + ")))"
         try:
-            con.simple_bind_s()
+            if not con.bind():
+                self.logger.error('LDAP simple anon bind failed')
+                return None
             attrs = ['mail', 'uid', 'uidNumber', 'gidNumber', 'homeDirectory']
-            results = con.search_s(base_dn, ldap.SCOPE_SUBTREE, filter, attrs)
+            con.search(search_base=base_dn, search_scope = SUBTREE,
+                        search_filter=filter,attributes=attrs)
+            results = con.response
             if results:
                 ldapMail = None
                 userId = None
@@ -52,7 +58,9 @@ class GoAuth(IAuthPlugin):
                 gidNumber = None
                 homeDirectory = None
                 user_dn = None
-                for dn, entry in results:
+                for res in results:
+                  dn = entry['dn']
+                  entry = res['raw_attributes']
                   user_dn = str(dn)
                   if 'uid' not in entry:
                     self.logger.error('Uid not set for user '+user)
@@ -90,10 +98,13 @@ class GoAuth(IAuthPlugin):
                   }
         '''
         user = None
+        s = None
+        con = None
         try:
             ldap_host = self.cfg['ldap_host']
             ldap_port = self.cfg['ldap_port']
-            con = ldap.initialize('ldap://' + ldap_host + ':' + str(ldap_port))
+            s = Server(host=ldap_host, port=int(ldap_port), use_ssl=False, get_info='ALL')
+            con = Connection(s)
         except Exception as err:
             self.logger.error(str(err))
             return None
@@ -101,9 +112,15 @@ class GoAuth(IAuthPlugin):
         base_dn = 'ou=People,' + ldap_dn
         filter = "(&""(|(uid=" + login + ")(mail=" + login + ")))"
         try:
-            con.simple_bind_s()
+            if not con.bind():
+                self.logger.error('LDAP anon bind failed')
+                return None
+
             attrs = ['mail', 'uid', 'uidNumber', 'gidNumber', 'homeDirectory']
-            results = con.search_s(base_dn, ldap.SCOPE_SUBTREE, filter, attrs)
+            con.search(search_base=base_dn, search_scope = SUBTREE,
+                        search_filter=filter,attributes=attrs)
+            results = con.response
+
             if results:
                 ldapMail = None
                 userId = None
@@ -111,7 +128,10 @@ class GoAuth(IAuthPlugin):
                 gidNumber = None
                 homeDirectory = None
                 user_dn = None
-                for dn, entry in results:
+                for res in results:
+                  dn = res['dn']
+                  entry = res['raw_attributes']
+
                   user_dn = str(dn)
                   if 'uid' not in entry:
                     self.logger.error('Uid not set for user '+user)
@@ -123,8 +143,12 @@ class GoAuth(IAuthPlugin):
                     ldapMail = entry['mail'][0]
 
                 # Check credentials
-                con.simple_bind_s(user_dn, password)
-                con.unbind_s()
+                con = Connection(s, user=user_dn, password=password)
+                if not con.bind():
+                    self.logger.info('User binding failed')
+                    return None
+                con.unbind()
+
                 user = {
                       'id' : userId,
                       'uidNumber': uidNumber,

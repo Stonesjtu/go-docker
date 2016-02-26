@@ -12,6 +12,8 @@
          a ssh server if none is installed in the container.
     Fix #21 mesos start daemon failure
     GOD-14 change pairtree implementation for python 3 support
+    switch ini config file to YAML format
+    switch ldap library for python3 compat
 1.0.1:
     encode script to UTF-8
     add Status plugins with etcd support: add new config parameter *status_policy*

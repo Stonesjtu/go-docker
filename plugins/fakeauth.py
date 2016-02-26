@@ -3,8 +3,6 @@ import logging
 import pwd
 import grp
 
-import ldap
-
 class FakeAuth(IAuthPlugin):
     def get_name(self):
         return "fake"

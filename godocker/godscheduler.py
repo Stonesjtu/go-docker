@@ -306,7 +306,7 @@ class GoDScheduler(Daemon):
                 array_last = int(array_req[1])
                 if len(array_req) == 3:
                     array_step = int(array_req[2])
-            for i in xrange(array_first, array_last + array_step, array_step):
+            for i in range(array_first, array_last + array_step, array_step):
                 subtask = deepcopy(task)
                 subtask['requirements']['array']['nb_tasks'] = 0
                 subtask['requirements']['array']['tasks'] = []
