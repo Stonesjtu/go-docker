@@ -84,7 +84,7 @@ class GoDScheduler(Daemon):
             self.r.delete(self.cfg['redis_prefix']+':jobs:running')
         if nb_jobs_mongo >0 or nb_jobs_over_mongo >0:
             # Not the first run
-            jobs_counter = self.r.get(self.cfg['redis_prefix']+':jobs')
+            jobs_counter = int(self.r.get(self.cfg['redis_prefix']+':jobs'))
             if jobs_counter > 0:
                 self.logger.info("Redis database looks ok")
                 return
@@ -333,7 +333,7 @@ class GoDScheduler(Daemon):
         tasks = self.scheduler.schedule(pending_list)
         dt = datetime.datetime.now()
         end_time = time.mktime(dt.timetuple())
-        nb_pending = self.r.get(self.cfg['redis_prefix']+':jobs:queued')
+        nb_pending = int(self.r.get(self.cfg['redis_prefix']+':jobs:queued'))
         if nb_pending is None:
             nb_pending = 0
         else:
