@@ -46,7 +46,7 @@ class MesosScheduler(mesos.interface.Scheduler):
 
     def set_config(self, config):
         self.config = config
-        self.redis_handler = redis.StrictRedis(host=self.config['redis_host'], port=self.config['redis_port'], db=self.config['redis_db'])
+        self.redis_handler = redis.StrictRedis(host=self.config['redis_host'], port=self.config['redis_port'], db=self.config['redis_db'], decode_responses=True)
 
     def set_logger(self, logger):
         self.logger = logger

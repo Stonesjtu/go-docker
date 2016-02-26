@@ -21,7 +21,7 @@ db = mongo.god
 db_jobs = db.jobs
 db_users = db.users
 
-r = redis.StrictRedis(host=cfg['redis_host'], port=cfg['redis_port'], db=cfg['redis_db'])
+r = redis.StrictRedis(host=cfg['redis_host'], port=cfg['redis_port'], db=cfg['redis_db'], decode_responses=True)
 
 tasks = []
 interactive = False

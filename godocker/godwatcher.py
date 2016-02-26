@@ -56,7 +56,7 @@ class GoDWatcher(Daemon):
         if os.getenv('GOD_PROCID'):
             self.proc_name += os.getenv('GOD_PROCID')
 
-        self.r = redis.StrictRedis(host=self.cfg['redis_host'], port=self.cfg['redis_port'], db=self.cfg['redis_db'])
+        self.r = redis.StrictRedis(host=self.cfg['redis_host'], port=self.cfg['redis_port'], db=self.cfg['redis_db'], decode_responses=True)
         self.mongo = MongoClient(self.cfg['mongo_url'])
         self.db = self.mongo[self.cfg['mongo_db']]
         self.db_jobs = self.db.jobs
