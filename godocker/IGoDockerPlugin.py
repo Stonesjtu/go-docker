@@ -56,9 +56,9 @@ class IGoDockerPlugin(IPlugin):
         :type group_id: int
         :return: list (cpu,ram,duration)
         '''
-        cpu = self.redis_handler.get(self.cfg.redis_prefix+':group:'+str(group_id)+':cpu')
-        ram = self.redis_handler.get(self.cfg.redis_prefix+':group:'+str(group_id)+':ram')
-        duration = self.redis_handler.get(self.cfg.redis_prefix+':group:'+str(group_id)+':time')
+        cpu = self.redis_handler.get(self.cfg['redis_prefix']+':group:'+str(group_id)+':cpu')
+        ram = self.redis_handler.get(self.cfg['redis_prefix']+':group:'+str(group_id)+':ram')
+        duration = self.redis_handler.get(self.cfg['redis_prefix']+':group:'+str(group_id)+':time')
         return (cpu, ram, duration)
 
     def get_running_tasks(self, start=0, stop=-1):
@@ -71,7 +71,7 @@ class IGoDockerPlugin(IPlugin):
         :type stop: int
         '''
         running_tasks = []
-        tasks = self.redis_handler.lrange(self.cfg.redis_prefix+':jobs:running', start, stop)
+        tasks = self.redis_handler.lrange(self.cfg['redis_prefix']+':jobs:running', start, stop)
         for task in tasks:
             running_tasks.append(json.loads(task))
         return running_tasks
@@ -84,7 +84,7 @@ class IGoDockerPlugin(IPlugin):
         :type task_id: int
         :return: bool
         '''
-        task = self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
+        task = self.r.get(self.cfg['redis_prefix']+':job:'+str(task['id'])+':task')
         if task is not None:
             return True
         return False
@@ -131,4 +131,4 @@ class IGoDockerPlugin(IPlugin):
                         'status.secondary': 'kill requested'
                         }
             })
-            self.redis_handler.rpush(self.cfg.redis_prefix+':jobs:kill',dumps(task))
+            self.redis_handler.rpush(self.cfg['redis_prefix']+':jobs:kill',dumps(task))

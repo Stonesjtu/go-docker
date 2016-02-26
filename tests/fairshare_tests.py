@@ -44,12 +44,12 @@ class FairShareSchedulerTest(unittest.TestCase):
         for i in range(0, 1):
             previous = dt - timedelta(days=i)
             date_key = str(previous.year)+'_'+str(previous.month)+'_'+str(previous.day)
-            self.scheduler.r.set(self.scheduler.cfg.redis_prefix+':user:'+identifier+':cpu:'+date_key, 1)
-            self.scheduler.r.set(self.scheduler.cfg.redis_prefix+':user:'+identifier+':ram:'+date_key, 1)
-            self.scheduler.r.set(self.scheduler.cfg.redis_prefix+':user:'+identifier+':time:'+date_key, 1)
+            self.scheduler.r.set(self.scheduler.cfg['redis_prefix']+':user:'+identifier+':cpu:'+date_key, 1)
+            self.scheduler.r.set(self.scheduler.cfg['redis_prefix']+':user:'+identifier+':ram:'+date_key, 1)
+            self.scheduler.r.set(self.scheduler.cfg['redis_prefix']+':user:'+identifier+':time:'+date_key, 1)
 
     def add_project(self, prio):
-            self.scheduler.r.delete(self.scheduler.cfg.redis_prefix+':project:test:prio')
+            self.scheduler.r.delete(self.scheduler.cfg['redis_prefix']+':project:test:prio')
             self.scheduler.db.drop_collection('projects')
             project = {
                 'id': 'test',
@@ -58,8 +58,8 @@ class FairShareSchedulerTest(unittest.TestCase):
             self.scheduler.db_projects.insert(project)
 
     def add_users(self, prio1, prio2):
-            self.scheduler.r.delete(self.scheduler.cfg.redis_prefix+':user:user1:prio')
-            self.scheduler.r.delete(self.scheduler.cfg.redis_prefix+':user:user2:prio')
+            self.scheduler.r.delete(self.scheduler.cfg['redis_prefix']+':user:user1:prio')
+            self.scheduler.r.delete(self.scheduler.cfg['redis_prefix']+':user:user2:prio')
             self.scheduler.db.drop_collection('users')
             user1 = {
                 'id': 'user1',
@@ -200,12 +200,12 @@ class FairShareSchedulerTest(unittest.TestCase):
         self.scheduler.db_users.insert(self.sample_user)
         self.scheduler.r.flushdb()
 
-        self.scheduler.cfg.shared_dir = tempfile.mkdtemp('godshared')
+        self.scheduler.cfg['shared_dir'] = tempfile.mkdtemp('godshared')
         self.scheduler.store = PairtreeStorage(self.scheduler.cfg)
 
     def tearDown(self):
-        if os.path.exists(self.scheduler.cfg.shared_dir):
-            shutil.rmtree(self.scheduler.cfg.shared_dir)
+        if os.path.exists(self.scheduler.cfg['shared_dir']):
+            shutil.rmtree(self.scheduler.cfg['shared_dir'])
         pass
 
     def test_task_create(self):
@@ -238,9 +238,9 @@ class FairShareSchedulerTest(unittest.TestCase):
             for i in range(0, 10):
                 previous = dt - timedelta(days=i)
                 date_key = str(previous.year)+'_'+str(previous.month)+'_'+str(previous.day)
-                self.scheduler.r.set(self.scheduler.cfg.redis_prefix+':'+key+':'+identifier+':cpu:'+date_key, random.randint(1,12))
-                self.scheduler.r.set(self.scheduler.cfg.redis_prefix+':'+key+':'+identifier+':ram:'+date_key, random.randint(8,20))
-                self.scheduler.r.set(self.scheduler.cfg.redis_prefix+':'+key+':'+identifier+':time:'+date_key, random.random()*10)
+                self.scheduler.r.set(self.scheduler.cfg['redis_prefix']+':'+key+':'+identifier+':cpu:'+date_key, random.randint(1,12))
+                self.scheduler.r.set(self.scheduler.cfg['redis_prefix']+':'+key+':'+identifier+':ram:'+date_key, random.randint(8,20))
+                self.scheduler.r.set(self.scheduler.cfg['redis_prefix']+':'+key+':'+identifier+':time:'+date_key, random.random()*10)
 
             usage = self.scheduler.scheduler.get_user_usage(identifier, key)
             usages.append(usage)
@@ -257,9 +257,9 @@ class FairShareSchedulerTest(unittest.TestCase):
             for i in range(0, 10):
                 previous = dt - timedelta(days=i)
                 date_key = str(previous.year)+'_'+str(previous.month)+'_'+str(previous.day)
-                self.scheduler.r.set(self.scheduler.cfg.redis_prefix+':'+key+':'+identifier+':cpu:'+date_key, random.randint(1,12))
-                self.scheduler.r.set(self.scheduler.cfg.redis_prefix+':'+key+':'+identifier+':ram:'+date_key, random.randint(8,20))
-                self.scheduler.r.set(self.scheduler.cfg.redis_prefix+':'+key+':'+identifier+':time:'+date_key, random.random()*10)
+                self.scheduler.r.set(self.scheduler.cfg['redis_prefix']+':'+key+':'+identifier+':cpu:'+date_key, random.randint(1,12))
+                self.scheduler.r.set(self.scheduler.cfg['redis_prefix']+':'+key+':'+identifier+':ram:'+date_key, random.randint(8,20))
+                self.scheduler.r.set(self.scheduler.cfg['redis_prefix']+':'+key+':'+identifier+':time:'+date_key, random.random()*10)
         self.sample_task['user']['id'] = 'sample0'
         task_id = self.test_task_create()
         self.sample_task['user']['id'] = 'sample1'

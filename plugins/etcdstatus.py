@@ -24,11 +24,11 @@ class EtcdStatusAuth(IStatusPlugin):
         :return: bool return False in case of failure
         '''
         try:
-            client = etcd.Client(host=self.cfg.etcd_host,
-                                 port=self.cfg.etcd_port)
+            client = etcd.Client(host=self.cfg['etcd_host'],
+                                 port=self.cfg['etcd_port'])
             etcd_prefix = 'godocker'
-            if self.cfg.etcd_prefix:
-                etcd_prefix = str(self.cfg.etcd_prefix)
+            if self.cfg['etcd_prefix']:
+                etcd_prefix = str(self.cfg['etcd_prefix'])
                 if not etcd_prefix.startswith('/'):
                     etcd_prefix = '/'+etcd_prefix
             dt = datetime.datetime.now()
@@ -52,16 +52,16 @@ class EtcdStatusAuth(IStatusPlugin):
         procs_status = []
         try:
             host = '127.0.0.1'
-            if self.cfg.etcd_host:
-                host = self.cfg.etcd_host
+            if self.cfg['etcd_host']:
+                host = self.cfg['etcd_host']
             port = 4001
-            if self.cfg.etcd_port:
-                port = self.cfg.etcd_port
+            if self.cfg['etcd_port']:
+                port = self.cfg['etcd_port']
             client = etcd.Client(host=host,
-                                 port=self.cfg.etcd_port)
+                                 port=self.cfg['etcd_port'])
             etcd_prefix = 'godocker'
-            if self.cfg.etcd_prefix:
-                etcd_prefix = str(self.cfg.etcd_prefix)
+            if self.cfg['etcd_prefix']:
+                etcd_prefix = str(self.cfg['etcd_prefix'])
                 if not etcd_prefix.startswith('/'):
                     etcd_prefix = '/'+etcd_prefix
 

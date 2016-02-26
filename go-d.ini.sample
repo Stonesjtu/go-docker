@@ -26,10 +26,11 @@ user_reset_usage_duration: 30
 
 # Constraints #########################
 # See Docker labels
-constraints: [
-    { name: 'storage', value: 'ssd,disk' },
-    { name: 'device', value: 'gpu' }
-]
+constraints:
+    - name: 'storage'
+      value: 'ssd,disk'
+    - name: 'resource'
+      value: 'gpu_10.5'
 
 
 # Live notifications ##################
@@ -44,20 +45,24 @@ secret_passphrase: 'mysamplesecret'
 
 # IMAGES ###############################
 # Default container images proposed to user
-default_images: [
-    { name: 'centos', url: 'centos:latest', interactive: False, default: True},
-    { name: 'ubuntu', url: 'rastasheep/ubuntu-sshd', interactive: True}
-]
+default_images:
+    - name: 'centos'
+      url: 'centos:latest'
+      interactive: False
+      default: True
+    - name: 'ubuntu'
+      url: 'rastasheep/ubuntu-sshd'
+      interactive: True
 
 # Needs swarm >= 0.2
 allow_user_images: False
 
 # Private Registry #####################
 # Allow pull only from a private registry, value is appended to image name
-# Default: None
+# Default: null
 # Example value: 'my.registry.com:5000'
 # => pull myimage => pull my.registry.com:5000/myimage
-use_private_registry: None
+use_private_registry: null
 
 # VOLUMES ##############################
 # Mandatory fields
@@ -69,20 +74,16 @@ use_private_registry: None
 #
 # path and mount can specify $USERID variable that will be replaced by user identifier.
 
-volumes: [
-    { name: 'home',
+volumes:
+    - name: 'home'
       acl: 'rw'
-    },
-    { name: 'omaha',
-      acl: 'rw',
-      mount: '/omaha-beach/$USERID',
+    - name: 'omaha'
+      acl: 'rw'
+      mount: '/omaha-beach/$USERID'
       path: '/omaha-beach/$USERID'
-    },
-    { name: 'db',
-      acl: 'ro',
+    - name: 'db'
+      acl: 'ro'
       path: '/db'
-    },
-]
 
 # Temporary local volumes
 # Use docker-plugin-zfs Docker volume plugin: True, False
@@ -110,7 +111,7 @@ redis_db: 0
 redis_prefix: 'god'
 
 # INFLUXDB ############################
-influxdb_host: 'localhost' # or None if not required
+influxdb_host: null # or null if not required
 influxdb_port: 8086
 influxdb_user: 'root'
 influxdb_password: 'root'
@@ -123,6 +124,7 @@ max_job_pop: 100
 # Execution system #####################
 executor: 'swarm'
 #executor: 'fake'
+#executor: 'mesos'
 
 # Stats ################################
 prometheus_key: 'mysecretkey'
@@ -134,24 +136,22 @@ mesos_master: '127.0.0.1:5050'
 # Authentication #######################
 auth_policy: 'fake'
 
-ldap_host: None
-ldap_port: None
-ldap_dn: None
+ldap_host: null
+ldap_port: null
+ldap_dn: null
 
 # Watchers #############################
 # List of watchers, comma separated, example 'maxlifespan'
-watchers: None
+watchers: null
 
 # Max job life duration expressed in d(days), h(hours), s(seconds) if not specified in task
 maxlifespan: '7d'
 
 # Requirement dynamic fields (optional) ##########
 # fields that can be updated after task submission in requirements, string type only
-#dynamic_fields: [
-#    { name: 'maxlifespan',
+#dynamic_fields:
+#    - name: 'maxlifespan'
 #      admin_only: False
-#    }
-#]
 
 # Docker ###############################
 docker_url: 'tcp://127.0.0.1:2376'
@@ -168,9 +168,9 @@ cadvisor_samples: 60
 # Email SMTP ################################
 email_from: 'godocker@do-no-reply.fr'
 email_smtp_tls: False
-email_smtp_user: None
-email_smtp_password: None
-email_smtp_host: None
+email_smtp_user: null
+email_smtp_password: null
+email_smtp_host: null
 email_smtp_port: 25
 
 # Clean up ##################################
@@ -183,7 +183,7 @@ clean_old: 30
 # Optional disk quota management
 # Default: None (no quota)
 # Possible values (value + unit): 12 (bytes), 5k (kilobytes), 12M (megabytes), 40G (gigabytes)
-disk_default_quota: None
+disk_default_quota: null
 
 
 # Rate limiting ############################
@@ -192,7 +192,7 @@ disk_default_quota: None
 # It is wise to limit it to limit total number of pending jobs for scheduler.
 # Default: None (no limit)
 # Value example: 1000
-rate_limit: None
+rate_limit: null
 # Max number of pending tasks for all users (to avoid scheduler overload)
 # When limit is reached, new tasks are rejected
 rate_limit_all: 10000
@@ -210,68 +210,62 @@ rate_limit_all: 10000
 # Allow guest (user not having a local account) to login
 guest_allow: False
 # Local user that will run the tasks for the guest
-guest_bind: None
+guest_bind: null
 # Allow guest to run scripts as root in containers
 guest_allow_root: False
 # Home directory base path for guest, guest home dir will be guest_home_root/guest_userid
-# None => No home directory
+# null => No home directory
 # 'default', use guest_bind home directory
-guest_home_root: None
+guest_home_root: null
 
 # Logging ##################################
-log_config: {
-    'version': 1,
-    'formatters': {
-        'generic': {
+log_config:
+    'version': 1
+    'formatters':
+        'generic':
             'format': '%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s'
-        }
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'generic',
+    'handlers':
+        'console':
+            'class': 'logging.StreamHandler'
+            'formatter': 'generic'
             'level': 'INFO'
-        },
-        'watcher': {
-            'class': 'logging.FileHandler',
-            'filename': 'godwatcher.log',
-            'formatter': 'generic',
+        'watcher':
+            'class': 'logging.FileHandler'
+            'filename': 'godwatcher.log'
+            'formatter': 'generic'
             'level': 'INFO'
-        },
-        'scheduler': {
-            'class': 'logging.FileHandler',
-            'filename': 'godscheduler.log',
-            'formatter': 'generic',
+        'scheduler':
+            'class': 'logging.FileHandler'
+            'filename': 'godscheduler.log'
+            'formatter': 'generic'
             'level': 'INFO'
-        },
-        'gelf': {
-            'class': 'gelfHandler.gelfHandler',
-            'host': 'localhost',
-            'port':  12201,
-            'formatter': 'generic',
+        'gelf':
+            'class': 'gelfHandler.gelfHandler'
+            'host': 'localhost'
+            'port':  12201
+            'formatter': 'generic'
             'level': 'INFO'
-        },
-        'logstash': {
-            'class': 'logstash.LogstashHandler',
-            'host': 'localhost',
-            'port':  59590,
-            'formatter': 'generic',
+        'logstash':
+            'class': 'logstash.LogstashHandler'
+            'host': 'localhost'
+            'port':  59590
+            'formatter': 'generic'
             'level': 'INFO'
-        }
-    },
-    'loggers': {
-        'root': {
-            'level': 'INFO',
-            'handlers': [ 'console' ]
-        },
-        'godocker-watcher': {
-            'level': 'INFO',
-            'handlers': [ 'console', 'watcher', 'gelf']
-        },
-        'godocker-scheduler': {
-            'level': 'INFO',
-            'handlers': [ 'console', 'scheduler', 'gelf']
-        }
-    },
+    'loggers':
+        'root':
+            'level': 'INFO'
+            'handlers':
+                - 'console'
+        'godocker-watcher':
+            'level': 'INFO'
+            'handlers':
+                - 'console'
+                - 'watcher'
+                - 'gelf'
+        'godocker-scheduler':
+            'level': 'INFO'
+            'handlers':
+                - 'console'
+                - 'scheduler'
+                - 'gelf'
     'disable_existing_logers': False
-}

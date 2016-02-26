@@ -24,7 +24,7 @@ class Swarm(IExecutorPlugin):
 
         from docker import Client
 
-        self.docker_client = Client(base_url=self.cfg.docker_url, version=self.cfg.docker_api_version)
+        self.docker_client = Client(base_url=self.cfg['docker_url'], version=self.cfg['docker_api_version'])
 
 
     def run_all_tasks(self, tasks, callback=None):
@@ -84,7 +84,7 @@ class Swarm(IExecutorPlugin):
                                                                 cpu_shares=job['requirements']['cpu'],
                                                                 mem_limit=str(job['requirements']['ram'])+'g',
                                                                 ports=port_list,
-                                                                network_disabled=self.cfg.network_disabled,
+                                                                network_disabled=self.cfg['network_disabled'],
                                                                 environment=constraints,
                                                                 volumes=vol_list)
                 job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
@@ -100,7 +100,7 @@ class Swarm(IExecutorPlugin):
 
                 port_mapping = {}
                 for port in port_list:
-                    if self.cfg.port_allocate:
+                    if self.cfg['port_allocate']:
                         mapped_port = self.get_mapping_port(job['container']['meta']['Node']['Name'], job)
                     else:
                         mapped_port = port

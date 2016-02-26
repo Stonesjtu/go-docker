@@ -6,25 +6,28 @@ import json
 import datetime
 import time
 import logging
-from config import Config
+import yaml
 
 config_file = 'go-d.ini'
 if 'GOD_CONFIG' in os.environ:
     config_file = os.environ['GOD_CONFIG']
-cfg = Config(config_file)
 
-mongo = MongoClient(cfg.mongo_url)
+cfg= None
+with open(config_file, 'r') as ymlfile:
+cfg = yaml.load(ymlfile)
+
+mongo = MongoClient(cfg['mongo_url'])
 db = mongo.god
 db_jobs = db.jobs
 db_users = db.users
 
-r = redis.StrictRedis(host=cfg.redis_host, port=cfg.redis_port, db=cfg.redis_db)
+r = redis.StrictRedis(host=cfg['redis_host'], port=cfg['redis_port'], db=cfg['redis_db'])
 
 tasks = []
 interactive = False
 for i in range(10):
     dt = datetime.datetime.now()
-    task_id = r.incr(cfg.redis_prefix+':jobs')
+    task_id = r.incr(cfg['redis_prefix']+':jobs')
     task = {
         'id': task_id,
         # id of the parent task

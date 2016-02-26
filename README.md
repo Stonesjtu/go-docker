@@ -106,6 +106,8 @@ multiple watchers running in parallel
 
 Configuration is in file go-d.ini. One can define the scheduler and executor to use. It must be one of the classes defined in plugins. One can easily add new ones following godocker/iExecutorPlugin and iSchedulterPlugin interfaces
 
+File is in YAML format.
+
 One can set environment variable GOD_CONFIG to specify go-d.ini location for go-d-scheduler and go-d-watcher.
 
 Once application is configured, it is necessary, the first time, to initialize the database:

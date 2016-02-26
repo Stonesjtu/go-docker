@@ -32,13 +32,13 @@ class GoAuth(IAuthPlugin):
         '''
         user = None
         try:
-            ldap_host = self.cfg.ldap_host
-            ldap_port = self.cfg.ldap_port
+            ldap_host = self.cfg['ldap_host']
+            ldap_port = self.cfg['ldap_port']
             con = ldap.initialize('ldap://' + ldap_host + ':' + str(ldap_port))
         except Exception as err:
             self.logger.error(str(err))
             return None
-        ldap_dn = self.cfg.ldap_dn
+        ldap_dn = self.cfg['ldap_dn']
         base_dn = 'ou=People,' + ldap_dn
         filter = "(&""(|(uid=" + login + ")(mail=" + login + ")))"
         try:
@@ -91,13 +91,13 @@ class GoAuth(IAuthPlugin):
         '''
         user = None
         try:
-            ldap_host = self.cfg.ldap_host
-            ldap_port = self.cfg.ldap_port
+            ldap_host = self.cfg['ldap_host']
+            ldap_port = self.cfg['ldap_port']
             con = ldap.initialize('ldap://' + ldap_host + ':' + str(ldap_port))
         except Exception as err:
             self.logger.error(str(err))
             return None
-        ldap_dn = self.cfg.ldap_dn
+        ldap_dn = self.cfg['ldap_dn']
         base_dn = 'ou=People,' + ldap_dn
         filter = "(&""(|(uid=" + login + ")(mail=" + login + ")))"
         try:
@@ -204,7 +204,7 @@ class GoAuth(IAuthPlugin):
         volumes = []
         config_volumes = {}
         if len(requested_volumes) > 0:
-            for vol in self.cfg.volumes:
+            for vol in self.cfg['volumes']:
                 config_volumes[vol['name']] = vol
 
         for req in requested_volumes:

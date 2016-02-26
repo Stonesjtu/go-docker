@@ -107,10 +107,10 @@ class IExecutorPlugin(IGoDockerPlugin):
         :type task: int
         :return: available port
         '''
-        if not self.redis_handler.exists(self.cfg.redis_prefix+':ports:'+host):
-            for i in range(self.cfg.port_range):
-                self.redis_handler.rpush(self.cfg.redis_prefix+':ports:'+host, self.cfg.port_start + i)
-        port = self.redis_handler.lpop(self.cfg.redis_prefix+':ports:'+host)
+        if not self.redis_handler.exists(self.cfg['redis_prefix']+':ports:'+host):
+            for i in range(self.cfg['port_range']):
+                self.redis_handler.rpush(self.cfg['redis_prefix']+':ports:'+host, self.cfg['port_start'] + i)
+        port = self.redis_handler.lpop(self.cfg['redis_prefix']+':ports:'+host)
         self.logger.debug('Port:Give:'+task['container']['meta']['Node']['Name']+':'+str(port))
         if not 'ports' in task['container']:
             task['container']['ports'] = []

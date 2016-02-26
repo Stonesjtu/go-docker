@@ -46,7 +46,7 @@ class MesosScheduler(mesos.interface.Scheduler):
 
     def set_config(self, config):
         self.config = config
-        self.redis_handler = redis.StrictRedis(host=self.config.redis_host, port=self.config.redis_port, db=self.config.redis_db)
+        self.redis_handler = redis.StrictRedis(host=self.config['redis_host'], port=self.config['redis_port'], db=self.config['redis_db'])
 
     def set_logger(self, logger):
         self.logger = logger
@@ -54,7 +54,7 @@ class MesosScheduler(mesos.interface.Scheduler):
     def registered(self, driver, frameworkId, masterInfo):
         self.logger.info("Registered with framework ID %s" % frameworkId.value)
         self.frameworkId = frameworkId.value
-        self.redis_handler.set(self.config.redis_prefix+':mesos:frameworkId',
+        self.redis_handler.set(self.config['redis_prefix']+':mesos:frameworkId',
                                self.frameworkId)
 
     def has_enough_resource(self, offer, requested_resource, quantity):
@@ -88,16 +88,16 @@ class MesosScheduler(mesos.interface.Scheduler):
         :type task: int
         :return: available port
         '''
-        #port_min = self.config.port_start
-        #port_max = self.config.port_start + self.config.port_range
+        #port_min = self.config['port_start']
+        #port_max = self.config['port_start'] + self.config['port_range']
 
-        #if not self.redis_handler.exists(self.config.redis_prefix+':ports:'+host):
+        #if not self.redis_handler.exists(self.config['redis_prefix']+':ports:'+host):
         #    for resource in offer.resources:
         #        if resource.name == "ports":
         #            for mesos_range in resource.ranges.range:
         #                for port in range(mesos_range.end - mesos_range.begin):
-        #                    self.redis_handler.rpush(self.config.redis_prefix+':ports:'+host, mesos_range.begin + port)
-        #port = self.redis_handler.lpop(self.config.redis_prefix+':ports:'+host)
+        #                    self.redis_handler.rpush(self.config['redis_prefix']+':ports:'+host, mesos_range.begin + port)
+        #port = self.redis_handler.lpop(self.config['redis_prefix']+':ports:'+host)
 
         # Get first free port
         for resource in offer.resources:
@@ -156,10 +156,10 @@ class MesosScheduler(mesos.interface.Scheduler):
         try:
             http = urllib3.PoolManager()
             r = None
-            activated = self.redis_handler.get(self.config.redis_prefix+':plugins:zfs:'+hostname)
+            activated = self.redis_handler.get(self.config['redis_prefix']+':plugins:zfs:'+hostname)
             if activated is None:
                 http.urlopen('GET', 'http://' + hostname + ':5000/Plugin.Activate')
-                self.redis_handler.set(self.config.redis_prefix+':plugins:zfs:'+ hostname,"plugin-zfs")
+                self.redis_handler.set(self.config['redis_prefix']+':plugins:zfs:'+ hostname,"plugin-zfs")
             r = http.urlopen('POST', 'http://'+ hostname + ':5000/VolumeDriver.Create', body=json.dumps({'Name': str(task['id']), 'Opts': {'size': str(task['requirements']['tmpstorage']['size'])}}))
             if r.status == 200:
                 r = http.urlopen('POST', 'http://'+ hostname + ':5000/VolumeDriver.Mount', body=json.dumps({'Name': str(task['id'])}))
@@ -187,26 +187,26 @@ class MesosScheduler(mesos.interface.Scheduler):
             return
 
         self.logger.debug('Mesos:Offers:Kill:Begin')
-        redis_task_id = self.redis_handler.lpop(self.config.redis_prefix+':mesos:kill')
+        redis_task_id = self.redis_handler.lpop(self.config['redis_prefix']+':mesos:kill')
         while redis_task_id is not None:
-            is_over = self.redis_handler.get(self.config.redis_prefix+':mesos:over:'+redis_task_id)
+            is_over = self.redis_handler.get(self.config['redis_prefix']+':mesos:over:'+redis_task_id)
             if is_over is not None:
                 task_id = mesos_pb2.TaskID()
                 task_id.value = redis_task_id
                 self.logger.debug('Mesos:Offers:Kill:Task:'+redis_task_id)
                 driver.killTask(task_id)
-            redis_task_id = self.redis_handler.lpop(self.config.redis_prefix+':mesos:kill')
+            redis_task_id = self.redis_handler.lpop(self.config['redis_prefix']+':mesos:kill')
         self.logger.debug('Mesos:Offers:Kill:End')
 
         self.logger.debug('Mesos:Offers:Begin')
         # Get tasks
         tasks = []
-        redis_task = self.redis_handler.lpop(self.config.redis_prefix+':mesos:pending')
+        redis_task = self.redis_handler.lpop(self.config['redis_prefix']+':mesos:pending')
         while redis_task is not None:
             task = json.loads(redis_task)
             task['mesos_offer'] = False
             tasks.append(task)
-            redis_task = self.redis_handler.lpop(self.config.redis_prefix+':mesos:pending')
+            redis_task = self.redis_handler.lpop(self.config['redis_prefix']+':mesos:pending')
 
         for offer in offers:
             if not tasks:
@@ -299,18 +299,18 @@ class MesosScheduler(mesos.interface.Scheduler):
                     offerMem -= task['requirements']['ram']*1000
                     task['mesos_offer'] = True
                     self.logger.debug('Mesos:Task:Running:'+str(task['id']))
-                    self.redis_handler.rpush(self.config.redis_prefix+':mesos:running', dumps(task))
-                    self.redis_handler.set(self.config.redis_prefix+':mesos:over:'+str(task['id']),0)
+                    self.redis_handler.rpush(self.config['redis_prefix']+':mesos:running', dumps(task))
+                    self.redis_handler.set(self.config['redis_prefix']+':mesos:over:'+str(task['id']),0)
             driver.launchTasks(offer.id, offer_tasks)
             #tasks = [self.new_task(offer)]
         for task in tasks:
             if not task['mesos_offer']:
                 self.logger.debug('Mesos:Task:Rejected:'+str(task['id']))
-                self.redis_handler.rpush(self.config.redis_prefix+':mesos:rejected', dumps(task))
+                self.redis_handler.rpush(self.config['redis_prefix']+':mesos:rejected', dumps(task))
             #driver.launchTasks(offer.id, tasks)
             #driver.declineOffer(offer.id)
         if tasks:
-            self.redis_handler.set(self.config.redis_prefix+':mesos:offer', 1)
+            self.redis_handler.set(self.config['redis_prefix']+':mesos:offer', 1)
         self.logger.debug('Mesos:Offers:End')
 
     def new_task(self, offer, job, labels=None):
@@ -420,7 +420,7 @@ class MesosScheduler(mesos.interface.Scheduler):
             mesos_ports.name = "ports"
             mesos_ports.type = mesos_pb2.Value.RANGES
             for port in port_list:
-                if self.config.port_allocate:
+                if self.config['port_allocate']:
                     mapped_port = self.get_mapping_port(offer, job)
                 else:
                     mapped_port = port
@@ -484,7 +484,7 @@ class MesosScheduler(mesos.interface.Scheduler):
 
 
 
-        self.redis_handler.set(self.config.redis_prefix+':mesos:over:'+str(update.task_id.value),update.state)
+        self.redis_handler.set(self.config['redis_prefix']+':mesos:over:'+str(update.task_id.value),update.state)
 
     def frameworkMessage(self, driver, executorId, slaveId, message):
         self.logger.debug("Received framework message")
@@ -563,7 +563,7 @@ class Mesos(IExecutorPlugin):
             driver = mesos.native.MesosSchedulerDriver(
                 mesosScheduler,
                 framework,
-                self.cfg.mesos_master,
+                self.cfg['mesos_master'],
                 credential)
         else:
             framework.principal = "godocker-mesos-framework"
@@ -574,7 +574,7 @@ class Mesos(IExecutorPlugin):
             driver = mesos.native.MesosSchedulerDriver(
                 mesosScheduler,
                 framework,
-                self.cfg.mesos_master)
+                self.cfg['mesos_master'])
 
         self.driver = driver
         self.driver.start()
@@ -615,30 +615,30 @@ class Mesos(IExecutorPlugin):
         :return: tuple of submitted and rejected/errored tasks
         '''
         # Add tasks in redis to be managed by mesos
-        self.redis_handler.set(self.cfg.redis_prefix+':mesos:offer', 0)
+        self.redis_handler.set(self.cfg['redis_prefix']+':mesos:offer', 0)
         for task in tasks:
-            self.redis_handler.rpush(self.cfg.redis_prefix+':mesos:pending', dumps(task))
+            self.redis_handler.rpush(self.cfg['redis_prefix']+':mesos:pending', dumps(task))
         # Wait for offer receival and treatment
         self.logger.debug('Mesos:WaitForOffer:Begin')
-        mesos_offer = int(self.redis_handler.get(self.cfg.redis_prefix+':mesos:offer'))
+        mesos_offer = int(self.redis_handler.get(self.cfg['redis_prefix']+':mesos:offer'))
         while mesos_offer != 1 and not self.Terminated:
             self.logger.debug('Mesos:WaitForOffer:Wait')
             time.sleep(1)
-            mesos_offer = int(self.redis_handler.get(self.cfg.redis_prefix+':mesos:offer'))
+            mesos_offer = int(self.redis_handler.get(self.cfg['redis_prefix']+':mesos:offer'))
         self.logger.debug('Mesos:WaitForOffer:End')
         # Get result
         rejected_tasks = []
         running_tasks = []
-        redis_task = self.redis_handler.lpop(self.cfg.redis_prefix+':mesos:running')
+        redis_task = self.redis_handler.lpop(self.cfg['redis_prefix']+':mesos:running')
         while redis_task is not None:
             task = json.loads(redis_task)
             running_tasks.append(task)
-            redis_task = self.redis_handler.lpop(self.cfg.redis_prefix+':mesos:running')
-        redis_task = self.redis_handler.lpop(self.cfg.redis_prefix+':mesos:rejected')
+            redis_task = self.redis_handler.lpop(self.cfg['redis_prefix']+':mesos:running')
+        redis_task = self.redis_handler.lpop(self.cfg['redis_prefix']+':mesos:rejected')
         while redis_task is not None:
             task = json.loads(redis_task)
             rejected_tasks.append(task)
-            redis_task = self.redis_handler.lpop(self.cfg.redis_prefix+':mesos:rejected')
+            redis_task = self.redis_handler.lpop(self.cfg['redis_prefix']+':mesos:rejected')
 
         return (running_tasks,rejected_tasks)
 
@@ -652,7 +652,7 @@ class Mesos(IExecutorPlugin):
         :type over: bool
         '''
         self.logger.debug('Mesos:Task:Check:Running:'+str(task['id']))
-        mesos_task = self.redis_handler.get(self.cfg.redis_prefix+':mesos:over:'+str(task['id']))
+        mesos_task = self.redis_handler.get(self.cfg['redis_prefix']+':mesos:over:'+str(task['id']))
         if mesos_task is not None and int(mesos_task) in [2,3,4,5,7]:
             self.logger.debug('Mesos:Task:Check:IsOver:'+str(task['id']))
             exit_code = int(mesos_task)
@@ -664,7 +664,7 @@ class Mesos(IExecutorPlugin):
                 task['container']['meta']['State']['ExitCode'] = 137
             else:
                 task['container']['meta']['State']['ExitCode'] = 1
-            self.redis_handler.delete(self.cfg.redis_prefix+':mesos:over:'+str(task['id']))
+            self.redis_handler.delete(self.cfg['redis_prefix']+':mesos:over:'+str(task['id']))
             return (task, True)
         else:
             self.logger.debug('Mesos:Task:Check:IsRunning:'+str(task['id']))
@@ -680,7 +680,7 @@ class Mesos(IExecutorPlugin):
         :return: (Task, over) over is True if task could be killed
         '''
         self.logger.debug('Mesos:Task:Kill:Check:'+str(task['id']))
-        mesos_task = self.redis_handler.get(self.cfg.redis_prefix+':mesos:over:'+str(task['id']))
+        mesos_task = self.redis_handler.get(self.cfg['redis_prefix']+':mesos:over:'+str(task['id']))
         if mesos_task is not None and int(mesos_task) in [2,3,4,5,7]:
             self.logger.debug('Mesos:Task:Kill:IsOver:'+str(task['id']))
             exit_code = int(mesos_task)
@@ -692,14 +692,14 @@ class Mesos(IExecutorPlugin):
                 task['container']['meta']['State']['ExitCode'] = 137
             else:
                 task['container']['meta']['State']['ExitCode'] = 1
-            self.redis_handler.delete(self.cfg.redis_prefix+':mesos:over:'+str(task['id']))
-            self.redis_handler.set(self.cfg.redis_prefix+':mesos:kill_pending:'+str(task['id']), 1)
+            self.redis_handler.delete(self.cfg['redis_prefix']+':mesos:over:'+str(task['id']))
+            self.redis_handler.set(self.cfg['redis_prefix']+':mesos:kill_pending:'+str(task['id']), 1)
             return (task, True)
         else:
             self.logger.debug('Mesos:Task:Kill:IsRunning:'+str(task['id']))
-            if self.redis_handler.get(self.cfg.redis_prefix+':mesos:kill_pending:'+str(task['id'])) is None:
-                self.redis_handler.rpush(self.cfg.redis_prefix+':mesos:kill', str(task['id']))
-                self.redis_handler.set(self.cfg.redis_prefix+':mesos:kill_pending:'+str(task['id']), 1)
+            if self.redis_handler.get(self.cfg['redis_prefix']+':mesos:kill_pending:'+str(task['id'])) is None:
+                self.redis_handler.rpush(self.cfg['redis_prefix']+':mesos:kill', str(task['id']))
+                self.redis_handler.set(self.cfg['redis_prefix']+':mesos:kill_pending:'+str(task['id']), 1)
             return (task, None)
 
 

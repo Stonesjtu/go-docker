@@ -11,6 +11,7 @@ config = {
     'author_email': 'olivier.sallou@irisa.fr',
     'version': '1.0.2',
     'install_requires': ['nose',
+                            'PyYAML',
                             'sphinx',
                             'pymongo',
                             'influxdb',

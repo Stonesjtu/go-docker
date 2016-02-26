@@ -1,5 +1,4 @@
 from godocker.daemon import Daemon
-from config import Config
 import time, sys
 import redis
 import json
@@ -11,6 +10,7 @@ import time
 import os
 import socket
 import traceback
+import yaml
 
 from gelfHandler import gelfHandler
 import logstash
@@ -47,41 +47,42 @@ class GoDWatcher(Daemon):
         '''
         Load configuration from file path
         '''
-        cfg_file = file(f)
-        self.cfg = Config(cfg_file)
+        self.cfg= None
+        with open(f, 'r') as ymlfile:
+            self.cfg = yaml.load(ymlfile)
 
         self.hostname = socket.gethostbyaddr(socket.gethostname())[0]
         self.proc_name = 'watcher-'+self.hostname
         if os.getenv('GOD_PROCID'):
             self.proc_name += os.getenv('GOD_PROCID')
 
-        self.r = redis.StrictRedis(host=self.cfg.redis_host, port=self.cfg.redis_port, db=self.cfg.redis_db)
-        self.mongo = MongoClient(self.cfg.mongo_url)
-        self.db = self.mongo[self.cfg.mongo_db]
+        self.r = redis.StrictRedis(host=self.cfg['redis_host'], port=self.cfg['redis_port'], db=self.cfg['redis_db'])
+        self.mongo = MongoClient(self.cfg['mongo_url'])
+        self.db = self.mongo[self.cfg['mongo_db']]
         self.db_jobs = self.db.jobs
         self.db_jobsover = self.db.jobsover
         self.db_users = self.db.users
         self.db_projects = self.db.projects
 
         self.db_influx = None
-        if self.cfg.influxdb_host:
-            host = self.cfg.influxdb_host
-            port = self.cfg.influxdb_port
-            username = self.cfg.influxdb_user
-            password = self.cfg.influxdb_password
-            database = self.cfg.influxdb_db
+        if self.cfg['influxdb_host']:
+            host = self.cfg['influxdb_host']
+            port = self.cfg['influxdb_port']
+            username = self.cfg['influxdb_user']
+            password = self.cfg['influxdb_password']
+            database = self.cfg['influxdb_db']
             self.db_influx = influxdb.InfluxDBClient(host, port, username, password, database)
 
-        if self.cfg.get('log_config', None) is not None:
-            for handler in self.cfg.log_config.handlers.keys():
-                self.cfg.log_config.handlers[handler] = dict(self.cfg.log_config.handlers[handler])
-            logging.config.dictConfig(self.cfg.log_config)
+        if self.cfg['log_config'] is not None:
+            for handler in list(self.cfg['log_config']['handlers'].keys()):
+                self.cfg['log_config']['handlers'][handler] = dict(self.cfg['log_config']['handlers'][handler])
+            logging.config.dictConfig(self.cfg['log_config'])
         self.logger = logging.getLogger('godocker-watcher')
 
 
-        if not self.cfg.plugins_dir:
+        if not self.cfg['plugins_dir']:
             dirname, filename = os.path.split(os.path.abspath(__file__))
-            self.cfg.plugins_dir = os.path.join(dirname, '..', 'plugins')
+            self.cfg['plugins_dir'] = os.path.join(dirname, '..', 'plugins')
 
         #self.store = PairtreeStorage(self.cfg)
         self.store = StorageManager.get_storage(self.cfg)
@@ -92,7 +93,7 @@ class GoDWatcher(Daemon):
         # Build the manager
         simplePluginManager = PluginManager()
         # Tell it the default place(s) where to find plugins
-        simplePluginManager.setPluginPlaces([self.cfg.plugins_dir])
+        simplePluginManager.setPluginPlaces([self.cfg['plugins_dir']])
         simplePluginManager.setCategoriesFilter({
            "Scheduler": ISchedulerPlugin,
            "Executor": IExecutorPlugin,
@@ -106,10 +107,10 @@ class GoDWatcher(Daemon):
         # Activate plugins
         self.status_manager = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Status"):
-           if 'status_policy' not in self.cfg or not self.cfg.status_policy:
+           if 'status_policy' not in self.cfg or not self.cfg['status_policy']:
                print("No status manager in configuration")
                break
-           if pluginInfo.plugin_object.get_name() == self.cfg.status_policy:
+           if pluginInfo.plugin_object.get_name() == self.cfg['status_policy']:
              self.status_manager = pluginInfo.plugin_object
              self.status_manager.set_logger(self.logger)
              self.status_manager.set_redis_handler(self.r)
@@ -122,7 +123,7 @@ class GoDWatcher(Daemon):
         self.scheduler = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Scheduler"):
            #simplePluginManager.activatePluginByName(pluginInfo.name)
-           if pluginInfo.plugin_object.get_name() == self.cfg.scheduler_policy:
+           if pluginInfo.plugin_object.get_name() == self.cfg['scheduler_policy']:
              self.scheduler = pluginInfo.plugin_object
              self.scheduler.set_logger(self.logger)
              self.scheduler.set_redis_handler(self.r)
@@ -134,7 +135,7 @@ class GoDWatcher(Daemon):
         self.executor = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Executor"):
            #simplePluginManager.activatePluginByName(pluginInfo.name)
-           if pluginInfo.plugin_object.get_name() == self.cfg.executor:
+           if pluginInfo.plugin_object.get_name() == self.cfg['executor']:
              self.executor = pluginInfo.plugin_object
              self.executor.set_logger(self.logger)
              self.executor.set_redis_handler(self.r)
@@ -145,8 +146,8 @@ class GoDWatcher(Daemon):
              print("Loading executor: "+self.executor.get_name())
 
         self.watchers = []
-        if 'watchers' in self.cfg and self.cfg.watchers is not None:
-            watchers = self.cfg.watchers.split(',')
+        if 'watchers' in self.cfg and self.cfg['watchers'] is not None:
+            watchers = self.cfg['watchers'].split(',')
         else:
             watchers = []
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Watcher"):
@@ -202,14 +203,14 @@ class GoDWatcher(Daemon):
             if task['status']['primary'] != godutils.STATUS_PENDING:
                 if is_array_task(task):
                     # If an array parent, only checks if some child tasks are still running
-                    #nb_subtasks_running = self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtaskrunning')
-                    nb_subtasks_running = self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtask')
+                    #nb_subtasks_running = self.r.get(self.cfg['redis_prefix']+':job:'+str(task['id'])+':subtaskrunning')
+                    nb_subtasks_running = self.r.get(self.cfg['redis_prefix']+':job:'+str(task['id'])+':subtask')
                     if nb_subtasks_running and int(nb_subtasks_running) > 0:
                         over = False
                         # kill sub tasks
                         for subtask_id in task['requirements']['array']['tasks']:
-                            task_to_kill = self.r.get(self.cfg.redis_prefix+':job:'+str(subtask_id))
-                            self.r.rpush(self.cfg.redis_prefix+':jobs:kill', task_to_kill)
+                            task_to_kill = self.r.get(self.cfg['redis_prefix']+':job:'+str(subtask_id))
+                            self.r.rpush(self.cfg['redis_prefix']+':jobs:kill', task_to_kill)
                     else:
                         over = True
                 else:
@@ -219,27 +220,27 @@ class GoDWatcher(Daemon):
             else:
                 if is_array_task(task):
                     # If an array parent, only checks if some child tasks are still running
-                    nb_subtasks_running = int(self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtask'))
+                    nb_subtasks_running = int(self.r.get(self.cfg['redis_prefix']+':job:'+str(task['id'])+':subtask'))
                     if nb_subtasks_running > 0:
                         over = False
                         # kill sub tasks
                         for subtask_id in task['requirements']['array']['tasks']:
-                            task_to_kill = self.r.get(self.cfg.redis_prefix+':job:'+str(subtask_id))
+                            task_to_kill = self.r.get(self.cfg['redis_prefix']+':job:'+str(subtask_id))
                             if task_to_kill is None:
                                 task_to_kill = dumps(self.db_jobs.find_one({'id': subtask_id}))
-                                self.r.set(self.cfg.redis_prefix+':job:'+str(subtask_id)+':task', task_to_kill)
-                            self.r.rpush(self.cfg.redis_prefix+':jobs:kill', task_to_kill)
-                            self.r.decr(self.cfg.redis_prefix + ':user:' + str(task['user']['id'])+ ':rate')
+                                self.r.set(self.cfg['redis_prefix']+':job:'+str(subtask_id)+':task', task_to_kill)
+                            self.r.rpush(self.cfg['redis_prefix']+':jobs:kill', task_to_kill)
+                            self.r.decr(self.cfg['redis_prefix'] + ':user:' + str(task['user']['id'])+ ':rate')
                     else:
                         over = True
                         self._set_task_exitcode(task, 137)
-                        self.r.decr(self.cfg.redis_prefix+':jobs:queued')
-                        self.r.decr(self.cfg.redis_prefix + ':user:' + str(task['user']['id'])+ ':rate')
+                        self.r.decr(self.cfg['redis_prefix']+':jobs:queued')
+                        self.r.decr(self.cfg['redis_prefix'] + ':user:' + str(task['user']['id'])+ ':rate')
                 else:
                     over = True
                     self._set_task_exitcode(task, 137)
-                    self.r.decr(self.cfg.redis_prefix+':jobs:queued')
-                    self.r.decr(self.cfg.redis_prefix + ':user:' + str(task['user']['id'])+ ':rate')
+                    self.r.decr(self.cfg['redis_prefix']+':jobs:queued')
+                    self.r.decr(self.cfg['redis_prefix'] + ':user:' + str(task['user']['id'])+ ':rate')
             # If not over, executor could not kill the task
             if over:
                 self.logger.debug('Executor:Kill:Success:'+str(task['id']))
@@ -251,7 +252,7 @@ class GoDWatcher(Daemon):
                     for port in original_task['container']['ports']:
                         host = original_task['container']['meta']['Node']['Name']
                         self.logger.debug('Port:Back:'+host+':'+str(port))
-                        self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
+                        self.r.rpush(self.cfg['redis_prefix']+':ports:'+host, port)
 
                 task['container']['ports'] = []
                 # If private registry was used, revert to original name without server address
@@ -259,9 +260,9 @@ class GoDWatcher(Daemon):
 
                 # Check for reschedule request
                 if original_task and original_task['status']['secondary'] == godutils.STATUS_SECONDARY_RESCHEDULE_REQUESTED:
-                    self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
-                    self.r.incr(self.cfg.redis_prefix+':jobs:queued')
-                    self.r.incr(self.cfg.redis_prefix + ':user:' + str(task['user']['id'])+ ':rate')
+                    self.r.delete(self.cfg['redis_prefix']+':job:'+str(task['id'])+':task')
+                    self.r.incr(self.cfg['redis_prefix']+':jobs:queued')
+                    self.r.incr(self.cfg['redis_prefix'] + ':user:' + str(task['user']['id'])+ ':rate')
                     reason = ''
                     if 'reason' in task['status']:
                         reason = task['status']['reason']
@@ -293,13 +294,13 @@ class GoDWatcher(Daemon):
                 del task['_id']
                 task = self.terminate_task(task)
                 self.db_jobsover.insert(task)
-                self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
+                self.r.delete(self.cfg['redis_prefix']+':job:'+str(task['id'])+':task')
                 if is_array_task(task):
-                    self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtaskrunning')
-                    self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtask')
+                    self.r.delete(self.cfg['redis_prefix']+':job:'+str(task['id'])+':subtaskrunning')
+                    self.r.delete(self.cfg['redis_prefix']+':job:'+str(task['id'])+':subtask')
                 if is_array_child_task(task):
-                    self.r.decr(self.cfg.redis_prefix+':job:'+str(task['parent_task_id'])+':subtaskrunning')
-                    self.r.decr(self.cfg.redis_prefix+':job:'+str(task['parent_task_id'])+':subtask')
+                    self.r.decr(self.cfg['redis_prefix']+':job:'+str(task['parent_task_id'])+':subtaskrunning')
+                    self.r.decr(self.cfg['redis_prefix']+':job:'+str(task['parent_task_id'])+':subtask')
                     self.db_jobs.update({'id': task['parent_task_id']}, {'$inc': {'requirements.array.nb_tasks_over': 1}})
 
                 if not is_array_task(task):
@@ -327,7 +328,7 @@ class GoDWatcher(Daemon):
 
                                         }})
                 else:
-                    self.r.rpush(self.cfg.redis_prefix+':jobs:kill',dumps(task))
+                    self.r.rpush(self.cfg['redis_prefix']+':jobs:kill',dumps(task))
 
     def suspend_tasks(self, suspend_list):
         '''
@@ -358,13 +359,13 @@ class GoDWatcher(Daemon):
                 Notify.notify_email(task)
             if over:
                 task['status']['secondary'] = status
-                self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
+                self.r.set(self.cfg['redis_prefix']+':job:'+str(task['id'])+':task', dumps(task))
                 if task['status']['primary'] != godutils.STATUS_OVER:
                     self.db_jobs.update({'id' : task['id']},{'$set': {'status.secondary': status}})
             else:
                 # Could not kill, put back in queue
                 self.logger.warn('Executor:Suspend:Error:'+str(task['id']))
-                self.r.rpush(self.cfg.redis_prefix+':jobs:suspend',dumps(task))
+                self.r.rpush(self.cfg['redis_prefix']+':jobs:suspend',dumps(task))
 
 
 
@@ -391,13 +392,13 @@ class GoDWatcher(Daemon):
                 Notify.notify_email(task)
             if over:
                 task['status']['secondary'] = status
-                self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
+                self.r.set(self.cfg['redis_prefix']+':job:'+str(task['id'])+':task', dumps(task))
                 if task['status']['primary'] != godutils.STATUS_OVER:
                     self.db_jobs.update({'id' : task['id']},{'$set': {'status.secondary': status}})
             else:
                 # Could not resumed, put back in queue
                 self.logger.warn('Executor:Resume:Error:'+str(task['id']))
-                self.r.rpush(self.cfg.redis_prefix+':jobs:resume',dumps(task))
+                self.r.rpush(self.cfg['redis_prefix']+':jobs:resume',dumps(task))
 
 
 
@@ -493,7 +494,7 @@ class GoDWatcher(Daemon):
             last_delta = (last_update - task_user['usage']['last']).days
 
 
-        if last_delta > self.cfg.user_reset_usage_duration:
+        if last_delta > self.cfg['user_reset_usage_duration']:
             self.db_users.update({'id': task['user']['id']},{
                 '$set': {
                     'usage.cpu': task['requirements']['cpu'],
@@ -520,56 +521,56 @@ class GoDWatcher(Daemon):
 
         dt = datetime.datetime.now()
         timestamp = time.mktime(dt.timetuple())
-        group_last = self.r.get(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':last')
+        group_last = self.r.get(self.cfg['redis_prefix']+':group:'+str(task['user']['project'])+':last')
         if group_last is None:
             group_last = timestamp
         else:
             group_last = float(group_last)
         last_delta = (timestamp - group_last) / (3600 * 24) # In days
-        if last_delta > self.cfg.user_reset_usage_duration:
-            self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':cpu', task['requirements']['cpu'])
-            self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':ram', task['requirements']['ram'])
-            self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':time', task_duration)
+        if last_delta > self.cfg['user_reset_usage_duration']:
+            self.r.set(self.cfg['redis_prefix']+':group:'+str(task['user']['project'])+':cpu', task['requirements']['cpu'])
+            self.r.set(self.cfg['redis_prefix']+':group:'+str(task['user']['project'])+':ram', task['requirements']['ram'])
+            self.r.set(self.cfg['redis_prefix']+':group:'+str(task['user']['project'])+':time', task_duration)
         else:
-            self.r.incr(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':cpu', task['requirements']['cpu'])
-            self.r.incr(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':ram', task['requirements']['ram'])
-            self.r.incrbyfloat(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':time', task_duration)
-        group_last = self.r.set(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':last', timestamp)
+            self.r.incr(self.cfg['redis_prefix']+':group:'+str(task['user']['project'])+':cpu', task['requirements']['cpu'])
+            self.r.incr(self.cfg['redis_prefix']+':group:'+str(task['user']['project'])+':ram', task['requirements']['ram'])
+            self.r.incrbyfloat(self.cfg['redis_prefix']+':group:'+str(task['user']['project'])+':time', task_duration)
+        group_last = self.r.set(self.cfg['redis_prefix']+':group:'+str(task['user']['project'])+':last', timestamp)
         '''
-        # Set an RDD like over a time window of self.cfg.user_reset_usage_duration days
+        # Set an RDD like over a time window of self.cfg['user_reset_usage_duration'] days
         dt = datetime.datetime.now()
         date_key = str(dt.year)+'_'+str(dt.month)+'_'+str(dt.day)
         set_expire = True
-        if self.r.exists(self.cfg.redis_prefix+':user:'+str(task['user']['id'])+':cpu:'+date_key):
+        if self.r.exists(self.cfg['redis_prefix']+':user:'+str(task['user']['id'])+':cpu:'+date_key):
             set_expire = False
-        self.r.incr(self.cfg.redis_prefix+':user:'+str(task['user']['id'])+':cpu:'+date_key, task['requirements']['cpu'])
-        self.r.incr(self.cfg.redis_prefix+':user:'+str(task['user']['id'])+':ram:'+date_key, task['requirements']['ram'])
-        self.r.incrbyfloat(self.cfg.redis_prefix+':user:'+str(task['user']['id'])+':time:'+date_key, task_duration)
+        self.r.incr(self.cfg['redis_prefix']+':user:'+str(task['user']['id'])+':cpu:'+date_key, task['requirements']['cpu'])
+        self.r.incr(self.cfg['redis_prefix']+':user:'+str(task['user']['id'])+':ram:'+date_key, task['requirements']['ram'])
+        self.r.incrbyfloat(self.cfg['redis_prefix']+':user:'+str(task['user']['id'])+':time:'+date_key, task_duration)
         if set_expire:
-            expiration_time = self.cfg.user_reset_usage_duration * 24 * 3600
-            self.r.expire(self.cfg.redis_prefix+':user:'+str(task['user']['id'])+':cpu:'+date_key, expiration_time)
-            self.r.expire(self.cfg.redis_prefix+':user:'+str(task['user']['id'])+':ram:'+date_key, expiration_time)
-            self.r.expire(self.cfg.redis_prefix+':user:'+str(task['user']['id'])+':time:'+date_key, expiration_time)
+            expiration_time = self.cfg['user_reset_usage_duration'] * 24 * 3600
+            self.r.expire(self.cfg['redis_prefix']+':user:'+str(task['user']['id'])+':cpu:'+date_key, expiration_time)
+            self.r.expire(self.cfg['redis_prefix']+':user:'+str(task['user']['id'])+':ram:'+date_key, expiration_time)
+            self.r.expire(self.cfg['redis_prefix']+':user:'+str(task['user']['id'])+':time:'+date_key, expiration_time)
 
         set_expire = True
-        if self.r.exists(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':cpu:'+date_key):
+        if self.r.exists(self.cfg['redis_prefix']+':group:'+str(task['user']['project'])+':cpu:'+date_key):
             set_expire = False
-        self.r.incr(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':cpu:'+date_key, task['requirements']['cpu'])
-        self.r.incr(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':ram:'+date_key, task['requirements']['ram'])
-        self.r.incrbyfloat(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':time:'+date_key, task_duration)
+        self.r.incr(self.cfg['redis_prefix']+':group:'+str(task['user']['project'])+':cpu:'+date_key, task['requirements']['cpu'])
+        self.r.incr(self.cfg['redis_prefix']+':group:'+str(task['user']['project'])+':ram:'+date_key, task['requirements']['ram'])
+        self.r.incrbyfloat(self.cfg['redis_prefix']+':group:'+str(task['user']['project'])+':time:'+date_key, task_duration)
         if set_expire:
-            expiration_time = self.cfg.user_reset_usage_duration * 24 * 3600
-            self.r.expire(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':cpu:'+date_key, expiration_time)
-            self.r.expire(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':ram:'+date_key, expiration_time)
-            self.r.expire(self.cfg.redis_prefix+':group:'+str(task['user']['project'])+':time:'+date_key, expiration_time)
+            expiration_time = self.cfg['user_reset_usage_duration'] * 24 * 3600
+            self.r.expire(self.cfg['redis_prefix']+':group:'+str(task['user']['project'])+':cpu:'+date_key, expiration_time)
+            self.r.expire(self.cfg['redis_prefix']+':group:'+str(task['user']['project'])+':ram:'+date_key, expiration_time)
+            self.r.expire(self.cfg['redis_prefix']+':group:'+str(task['user']['project'])+':time:'+date_key, expiration_time)
 
     def notify_msg(self, task):
-        if not self.cfg.live_events:
+        if not self.cfg['live_events']:
             return
         status = task['status']['primary']
         if task['status']['secondary'] == godutils.STATUS_SECONDARY_KILLED:
             status = godutils.STATUS_SECONDARY_KILLED
-        self.r.publish(self.cfg.redis_prefix+':jobs:pubsub', dumps({
+        self.r.publish(self.cfg['redis_prefix']+':jobs:pubsub', dumps({
             'user': task['user']['id'],
             'id': task['id'],
             'status': status,
@@ -584,31 +585,31 @@ class GoDWatcher(Daemon):
         self.logger.debug("Check running jobs")
         nb_elt = 1
         #elts  = self.r.lrange('jobs:running', lmin, lmin+lrange)
-        nb_running_jobs = self.r.llen(self.cfg.redis_prefix+':jobs:running')
-        task_id = self.r.lpop(self.cfg.redis_prefix+':jobs:running')
+        nb_running_jobs = self.r.llen(self.cfg['redis_prefix']+':jobs:running')
+        task_id = self.r.lpop(self.cfg['redis_prefix']+':jobs:running')
         if not task_id:
             return
-        elt = self.r.get(self.cfg.redis_prefix+':job:'+str(task_id)+':task')
+        elt = self.r.get(self.cfg['redis_prefix']+':job:'+str(task_id)+':task')
         while True and not self.stop_daemon:
-            #elts = self.db_jobs.find({'status.primary': 'running'}, limit=self.cfg.max_job_pop)
+            #elts = self.db_jobs.find({'status.primary': 'running'}, limit=self.cfg['max_job_pop'])
             try:
                 if not elt:
                     return
                 task = json.loads(elt)
                 # Has been killed in the meanwhile, already managed
-                if not self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':task'):
+                if not self.r.get(self.cfg['redis_prefix']+':job:'+str(task['id'])+':task'):
                     continue
 
                 # If some dynamic fields are present, check for changes
-                if 'dynamic_fields' in self.cfg and self.cfg.dynamic_fields:
+                if 'dynamic_fields' in self.cfg and self.cfg['dynamic_fields']:
                     mongo_task = self.db_jobs.find_one({'id': task['id']})
-                    for dynamic_field in self.cfg.dynamic_fields:
+                    for dynamic_field in self.cfg['dynamic_fields']:
                         if dynamic_field['name'] in mongo_task['requirements']:
                             task['requirements'][dynamic_field['name']] = mongo_task['requirements'][dynamic_field['name']]
 
                 if is_array_task(task):
                     # If an array parent, only checks if some child tasks are still running
-                    nb_subtasks_running = int(self.r.get(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtaskrunning'))
+                    nb_subtasks_running = int(self.r.get(self.cfg['redis_prefix']+':job:'+str(task['id'])+':subtaskrunning'))
                     if nb_subtasks_running > 0:
                         over = False
                     else:
@@ -631,14 +632,14 @@ class GoDWatcher(Daemon):
                         for port in task['container']['ports']:
                             host = task['container']['meta']['Node']['Name']
                             self.logger.debug('Port:Back:'+host+':'+str(port))
-                            self.r.rpush(self.cfg.redis_prefix+':ports:'+host, port)
+                            self.r.rpush(self.cfg['redis_prefix']+':ports:'+host, port)
                     task['container']['ports'] = []
 
                     if is_array_task(task):
-                        self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':subtaskrunning')
+                        self.r.delete(self.cfg['redis_prefix']+':job:'+str(task['id'])+':subtaskrunning')
                         task['requirements']['array']['nb_tasks_over'] = task['requirements']['array']['nb_tasks']
                     if is_array_child_task(task):
-                        self.r.decr(self.cfg.redis_prefix+':job:'+str(task['parent_task_id'])+':subtaskrunning')
+                        self.r.decr(self.cfg['redis_prefix']+':job:'+str(task['parent_task_id'])+':subtaskrunning')
                         self.db_jobs.update({'id': task['parent_task_id']}, {'$inc': {'requirements.array.nb_tasks_over': 1}})
 
                     remove_result = self.db_jobs.remove({'id': task['id']})
@@ -671,7 +672,7 @@ class GoDWatcher(Daemon):
                     task = self.terminate_task(task)
                     self.db_jobsover.insert(task)
                     #self.r.del('god:job:'+str(task['id'])+':container'
-                    self.r.delete(self.cfg.redis_prefix+':job:'+str(task['id'])+':task')
+                    self.r.delete(self.cfg['redis_prefix']+':job:'+str(task['id'])+':task')
                     if not is_array_task(task):
                         self.update_user_usage(task)
                         self._add_to_stats(task)
@@ -685,17 +686,17 @@ class GoDWatcher(Daemon):
                             can_run = False
                             break
                     if can_run:
-                        self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
-                        self.r.set(self.cfg.redis_prefix+':job:'+str(task['id'])+':task', dumps(task))
+                        self.r.rpush(self.cfg['redis_prefix']+':jobs:running', task['id'])
+                        self.r.set(self.cfg['redis_prefix']+':job:'+str(task['id'])+':task', dumps(task))
             except KeyboardInterrupt:
                 self.logger.warn('Interrupt received, exiting after cleanup')
-                self.r.rpush(self.cfg.redis_prefix+':jobs:running', task['id'])
+                self.r.rpush(self.cfg['redis_prefix']+':jobs:running', task['id'])
                 sys.exit(0)
-            if nb_elt < self.cfg.max_job_pop and nb_elt < nb_running_jobs:
-                task_id = self.r.lpop(self.cfg.redis_prefix+':jobs:running')
+            if nb_elt < self.cfg['max_job_pop'] and nb_elt < nb_running_jobs:
+                task_id = self.r.lpop(self.cfg['redis_prefix']+':jobs:running')
                 if not task_id:
                     return
-                elt = self.r.get(self.cfg.redis_prefix+':job:'+str(task_id)+':task')
+                elt = self.r.get(self.cfg['redis_prefix']+':job:'+str(task_id)+':task')
                 nb_elt += 1
             else:
                 break
@@ -713,9 +714,9 @@ class GoDWatcher(Daemon):
             self.executor.close()
             return
         kill_task_list = []
-        kill_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:kill')
-        for i in range(min(kill_task_length, self.cfg.max_job_pop)):
-            task = self.r.lpop(self.cfg.redis_prefix+':jobs:kill')
+        kill_task_length = self.r.llen(self.cfg['redis_prefix']+':jobs:kill')
+        for i in range(min(kill_task_length, self.cfg['max_job_pop'])):
+            task = self.r.lpop(self.cfg['redis_prefix']+':jobs:kill')
             if task and task != 'None':
                 kill_task_list.append(json.loads(task))
 
@@ -731,9 +732,9 @@ class GoDWatcher(Daemon):
             self.executor.close()
             return
         suspend_task_list = []
-        suspend_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:suspend')
-        for i in range(min(suspend_task_length, self.cfg.max_job_pop)):
-            task = self.r.lpop(self.cfg.redis_prefix+':jobs:suspend')
+        suspend_task_length = self.r.llen(self.cfg['redis_prefix']+':jobs:suspend')
+        for i in range(min(suspend_task_length, self.cfg['max_job_pop'])):
+            task = self.r.lpop(self.cfg['redis_prefix']+':jobs:suspend')
             if task:
                 suspend_task_list.append(json.loads(task))
 
@@ -749,9 +750,9 @@ class GoDWatcher(Daemon):
             self.executor.close()
             return
         resume_task_list = []
-        resume_task_length = self.r.llen(self.cfg.redis_prefix+':jobs:resume')
-        for i in range(min(resume_task_length, self.cfg.max_job_pop)):
-            task = self.r.lpop(self.cfg.redis_prefix+':jobs:resume')
+        resume_task_length = self.r.llen(self.cfg['redis_prefix']+':jobs:resume')
+        for i in range(min(resume_task_length, self.cfg['max_job_pop'])):
+            task = self.r.lpop(self.cfg['redis_prefix']+':jobs:resume')
             if task:
                 resume_task_list.append(json.loads(task))
 

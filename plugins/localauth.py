@@ -202,7 +202,7 @@ class LocalAuth(IAuthPlugin):
         volumes = []
         config_volumes = {}
         if len(requested_volumes) > 0:
-            for vol in self.cfg.volumes:
+            for vol in self.cfg['volumes']:
                 config_volumes[vol['name']] = vol
 
         for req in requested_volumes:

@@ -37,7 +37,7 @@ class FakeWatcher(IWatcherPlugin):
         if 'maxlifespan' not in self.cfg:
             self.logger.error('maxlifespan not defined in config')
             return task
-        maxlifespan = self.cfg.maxlifespan
+        maxlifespan = self.cfg['maxlifespan']
         if 'maxlifespan' in task['requirements'] and task['requirements']['maxlifespan'] is not None:
             maxlifespan = task['requirements']['maxlifespan']
         dt = datetime.datetime.now()

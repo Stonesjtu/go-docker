@@ -20,23 +20,23 @@ class FairShare(ISchedulerPlugin):
 
     def load(self):
         if 'fairshare_waiting_time_weight' in self.cfg:
-            FairShare.waiting_time_weight = self.cfg.fairshare_waiting_time_weight
+            FairShare.waiting_time_weight = self.cfg['fairshare_waiting_time_weight']
         if 'fairshare_user_time_weight' in self.cfg:
-            FairShare.user_time_weight = self.cfg.fairshare_user_time_weight
+            FairShare.user_time_weight = self.cfg['fairshare_user_time_weight']
         if 'fairshare_user_cpu_weight' in self.cfg:
-            FairShare.user_cpu_weight = self.cfg.fairshare_user_cpu_weight
+            FairShare.user_cpu_weight = self.cfg['fairshare_user_cpu_weight']
         if 'fairshare_user_ram_weight' in self.cfg:
-            FairShare.user_ram_weight = self.cfg.fairshare_user_ram_weight
+            FairShare.user_ram_weight = self.cfg['fairshare_user_ram_weight']
         if 'fairshare_group_time_weight' in self.cfg:
-            FairShare.group_time_weight = self.cfg.fairshare_group_time_weight
+            FairShare.group_time_weight = self.cfg['fairshare_group_time_weight']
         if 'fairshare_group_cpu_weight' in self.cfg:
-            FairShare.group_cpu_weight = self.cfg.fairshare_group_cpu_weight
+            FairShare.group_cpu_weight = self.cfg['fairshare_group_cpu_weight']
         if 'fairshare_group_ram_weight' in self.cfg:
-            FairShare.group_ram_weight = self.cfg.fairshare_group_ram_weight
+            FairShare.group_ram_weight = self.cfg['fairshare_group_ram_weight']
         if 'fairshare_user_weight' in self.cfg:
-            FairShare.user_weight = self.cfg.fairshare_user_weight
+            FairShare.user_weight = self.cfg['fairshare_user_weight']
         if 'fairshare_group_weight' in self.cfg:
-            FairShare.group_weight = self.cfg.fairshare_group_weight
+            FairShare.group_weight = self.cfg['fairshare_group_weight']
 
         self.max_waiting_time = 0
         self.min_waiting_time = 0

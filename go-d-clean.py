@@ -15,8 +15,7 @@ from datetime import date, timedelta
 from pymongo import MongoClient
 from pymongo import DESCENDING as pyDESCENDING
 from bson.json_util import dumps
-from config import Config
-
+import yaml
 from godocker.pairtreeStorage import PairtreeStorage
 import godocker.utils as godutils
 
@@ -27,10 +26,11 @@ if __name__ == "__main__":
         if len(sys.argv) == 2:
                 config_file == sys.argv[1]
 
-        cfg_file = file(config_file)
-        cfg = Config(cfg_file)
-        mongo = MongoClient(cfg.mongo_url)
-        db = mongo[cfg.mongo_db]
+        cfg= None
+        with open(config_file, 'r') as ymlfile:
+            cfg = yaml.load(ymlfile)
+        mongo = MongoClient(cfg['mongo_url'])
+        db = mongo[cfg['mongo_db']]
         db_jobsover = db.jobsover
         db_cleanup = db.cleanup
 
@@ -49,7 +49,7 @@ if __name__ == "__main__":
         if 'clean_old' not in cfg:
             clean_old = 30
         else:
-            clean_old = cfg.clean_old
+            clean_old = cfg['clean_old']
 
         quota = True
         if 'disk_default_quota' not in cfg or cfg['disk_default_quota'] is None:

@@ -13,7 +13,7 @@ import time
 import pairtree
 import string
 import random
-from config import Config
+import yaml
 from bson.json_util import dumps
 
 #from mock import patch
@@ -62,7 +62,9 @@ class StorageTests(unittest.TestCase):
     def setUp(self):
         curdir = os.path.dirname(os.path.abspath(__file__))
         cfg_file =os.path.join(curdir,'go-d.ini')
-        self.cfg = Config(cfg_file)
+        self.cfg= None
+        with open(cfg_file, 'r') as ymlfile:
+            self.cfg = yaml.load(ymlfile)
 
     def test_handler_default(self):
         from godocker.pairtreeStorage import PairtreeStorage
@@ -80,12 +82,14 @@ class PairtreeTests(unittest.TestCase):
     def setUp(self):
         curdir = os.path.dirname(os.path.abspath(__file__))
         cfg_file =os.path.join(curdir,'go-d.ini')
-        self.cfg = Config(cfg_file)
-        self.cfg.shared_dir = tempfile.mkdtemp('godshared')
+        self.cfg= None
+        with open(cfg_file, 'r') as ymlfile:
+            self.cfg = yaml.load(ymlfile)
+        self.cfg['shared_dir'] = tempfile.mkdtemp('godshared')
 
     def test_storage_init(self):
         storage = PairtreeStorage(self.cfg)
-        self.assertTrue(os.path.exists(os.path.join(self.cfg.shared_dir,'tasks')))
+        self.assertTrue(os.path.exists(os.path.join(self.cfg['shared_dir'],'tasks')))
 
     def test_manage_object(self):
         storage = PairtreeStorage(self.cfg)
@@ -206,14 +210,14 @@ class SchedulerTest(unittest.TestCase):
         self.scheduler.db_users.insert(self.sample_user)
         self.scheduler.r.flushdb()
 
-        self.scheduler.cfg.shared_dir = tempfile.mkdtemp('godshared')
-        self.watcher.cfg.shared_dir = self.scheduler.cfg.shared_dir
+        self.scheduler.cfg['shared_dir'] = tempfile.mkdtemp('godshared')
+        self.watcher.cfg['shared_dir'] = self.scheduler.cfg['shared_dir']
         #self.scheduler.store = PairtreeStorage(self.scheduler.cfg)
         self.scheduler.store = StorageManager.get_storage(self.scheduler.cfg)
 
     def tearDown(self):
-        if os.path.exists(self.scheduler.cfg.shared_dir):
-            shutil.rmtree(self.scheduler.cfg.shared_dir)
+        if os.path.exists(self.scheduler.cfg['shared_dir']):
+            shutil.rmtree(self.scheduler.cfg['shared_dir'])
         pass
 
     def test_task_create(self):
@@ -253,15 +257,15 @@ class SchedulerTest(unittest.TestCase):
 
     def test_check_redis_restore(self):
         running_tasks = self.test_run_task()
-        nb_running_redis = self.scheduler.r.llen(self.watcher.cfg.redis_prefix+':jobs:running')
-        total_redis = self.scheduler.r.get(self.watcher.cfg.redis_prefix+':jobs')
+        nb_running_redis = self.scheduler.r.llen(self.watcher.cfg['redis_prefix']+':jobs:running')
+        total_redis = self.scheduler.r.get(self.watcher.cfg['redis_prefix']+':jobs')
         self.assertTrue(nb_running_redis > 0)
         self.scheduler.r.flushdb()
-        self.assertTrue(self.scheduler.r.llen(self.watcher.cfg.redis_prefix+':jobs:running') == 0)
+        self.assertTrue(self.scheduler.r.llen(self.watcher.cfg['redis_prefix']+':jobs:running') == 0)
         self.scheduler.check_redis()
-        nb_running_redis_after_restore = self.scheduler.r.llen(self.watcher.cfg.redis_prefix+':jobs:running')
+        nb_running_redis_after_restore = self.scheduler.r.llen(self.watcher.cfg['redis_prefix']+':jobs:running')
         self.assertTrue(nb_running_redis == nb_running_redis_after_restore)
-        total_redis_after_restore = self.scheduler.r.get(self.watcher.cfg.redis_prefix+':jobs')
+        total_redis_after_restore = self.scheduler.r.get(self.watcher.cfg['redis_prefix']+':jobs')
         self.assertTrue(total_redis == total_redis_after_restore)
 
 
@@ -271,6 +275,7 @@ class SchedulerTest(unittest.TestCase):
         over_tasks = self.watcher.db_jobsover.find()
         self.assertTrue(over_tasks.count() == 1)
         for task in over_tasks:
+            print("###### "+str(task['container']))
             self.assertTrue(task['container']['meta']['disk_size'] > 0)
 
     def test_dependent_tasks(self):
@@ -314,7 +319,7 @@ class SchedulerTest(unittest.TestCase):
     def test_kill_task_running(self):
         running_tasks = self.test_run_task()
         task_to_kill = running_tasks[0]
-        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:kill', dumps(task_to_kill))
+        self.watcher.r.rpush(self.watcher.cfg['redis_prefix']+':jobs:kill', dumps(task_to_kill))
         self.watcher.kill_tasks([task_to_kill])
         running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
         self.assertTrue(running_tasks.count() == 0)
@@ -324,7 +329,7 @@ class SchedulerTest(unittest.TestCase):
     def test_kill_task_pending(self):
         pending_tasks = self.test_schedule_task()
         task_to_kill = pending_tasks[0]
-        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:kill', dumps(task_to_kill))
+        self.watcher.r.rpush(self.watcher.cfg['redis_prefix']+':jobs:kill', dumps(task_to_kill))
         self.watcher.kill_tasks([task_to_kill])
         running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
         self.assertTrue(running_tasks.count() == 0)
@@ -349,7 +354,7 @@ class SchedulerTest(unittest.TestCase):
     def test_suspend_task_running(self):
         running_tasks = self.test_run_task()
         task_to_suspend = running_tasks[0]
-        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:suspend', dumps(task_to_suspend))
+        self.watcher.r.rpush(self.watcher.cfg['redis_prefix']+':jobs:suspend', dumps(task_to_suspend))
         self.watcher.suspend_tasks([task_to_suspend])
         suspended_task = self.scheduler.db_jobs.find_one({'id': task_to_suspend['id']})
         self.assertTrue(suspended_task['status']['secondary'] == 'suspended')
@@ -358,7 +363,7 @@ class SchedulerTest(unittest.TestCase):
     def test_suspend_task_pending(self):
         pending_tasks = self.test_schedule_task()
         task_to_suspend = pending_tasks[0]
-        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:suspend', dumps(task_to_suspend))
+        self.watcher.r.rpush(self.watcher.cfg['redis_prefix']+':jobs:suspend', dumps(task_to_suspend))
         self.watcher.suspend_tasks([task_to_suspend])
         suspended_task = self.scheduler.db_jobs.find_one({'id': task_to_suspend['id']})
         self.assertTrue(suspended_task['status']['secondary'] == 'suspend rejected')
@@ -367,7 +372,7 @@ class SchedulerTest(unittest.TestCase):
     def test_resume_task_suspended(self):
         suspended_task = self.test_suspend_task_running()
         suspended_task['status']['secondary'] = 'resume requested'
-        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:resume', dumps(suspended_task))
+        self.watcher.r.rpush(self.watcher.cfg['redis_prefix']+':jobs:resume', dumps(suspended_task))
         self.watcher.resume_tasks([suspended_task])
         resumed_task = self.scheduler.db_jobs.find_one({'id': suspended_task['id']})
         self.assertTrue(resumed_task['status']['secondary'] == 'resumed')
@@ -376,7 +381,7 @@ class SchedulerTest(unittest.TestCase):
     def test_resume_task_pending(self):
         pending_tasks = self.test_schedule_task()
         task_to_resume = pending_tasks[0]
-        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:resume', dumps(task_to_resume))
+        self.watcher.r.rpush(self.watcher.cfg['redis_prefix']+':jobs:resume', dumps(task_to_resume))
         self.watcher.resume_tasks([task_to_resume])
         resumed_task = self.scheduler.db_jobs.find_one({'id': task_to_resume['id']})
         self.assertTrue(resumed_task['status']['secondary'] == 'resume rejected')
@@ -385,7 +390,7 @@ class SchedulerTest(unittest.TestCase):
     def test_resume_task_running(self):
         running_tasks = self.test_run_task()
         task_to_resume = running_tasks[0]
-        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:resume', dumps(task_to_resume))
+        self.watcher.r.rpush(self.watcher.cfg['redis_prefix']+':jobs:resume', dumps(task_to_resume))
         self.watcher.resume_tasks([task_to_resume])
         resumed_task = self.scheduler.db_jobs.find_one({'id': task_to_resume['id']})
         self.assertTrue(resumed_task['status']['secondary'] == 'resume rejected')
@@ -425,11 +430,11 @@ class SchedulerTest(unittest.TestCase):
         pending_task = self.scheduler.db_jobs.find_one({'id': task_id})
         queued_tasks = [pending_task]
         self.scheduler.run_tasks(queued_tasks)
-        ports_allocated = self.scheduler.r.llen(self.scheduler.cfg.redis_prefix+':ports:fake-laptop')
+        ports_allocated = self.scheduler.r.llen(self.scheduler.cfg['redis_prefix']+':ports:fake-laptop')
         self.assertTrue(ports_allocated >= 1)
-        nb_ports_before = self.scheduler.r.llen(self.scheduler.cfg.redis_prefix+':ports:fake-laptop')
+        nb_ports_before = self.scheduler.r.llen(self.scheduler.cfg['redis_prefix']+':ports:fake-laptop')
         self.watcher.check_running_jobs()
-        nb_ports_after = self.scheduler.r.llen(self.scheduler.cfg.redis_prefix+':ports:fake-laptop')
+        nb_ports_after = self.scheduler.r.llen(self.scheduler.cfg['redis_prefix']+':ports:fake-laptop')
         # Check port is released
         self.assertTrue(nb_ports_before + 1 == nb_ports_after)
 
@@ -480,7 +485,7 @@ class SchedulerTest(unittest.TestCase):
                 task_to_kill = running_task
             else:
                 subtasks_to_kill.append(running_task)
-        self.watcher.r.rpush(self.watcher.cfg.redis_prefix+':jobs:kill', dumps(task_to_kill))
+        self.watcher.r.rpush(self.watcher.cfg['redis_prefix']+':jobs:kill', dumps(task_to_kill))
         self.watcher.kill_tasks([task_to_kill])
         self.watcher.kill_tasks(subtasks_to_kill)
         self.watcher.kill_tasks([task_to_kill])
@@ -495,7 +500,7 @@ class SchedulerTest(unittest.TestCase):
 
 
     def test_user_rate_limit(self):
-        self.scheduler.cfg.rate_limit = 1
+        self.scheduler.cfg['rate_limit'] = 1
         task = copy.deepcopy(self.sample_task)
         task_id = self.scheduler.add_task(task)
         pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
@@ -508,7 +513,7 @@ class SchedulerTest(unittest.TestCase):
         self.assertTrue(task_id is None)
 
     def test_global_rate_limit(self):
-        self.scheduler.cfg.rate_limit_all = 1
+        self.scheduler.cfg['rate_limit_all'] = 1
         task = copy.deepcopy(self.sample_task)
         task_id = self.scheduler.add_task(task)
         pending_tasks = self.scheduler.db_jobs.find({'status.primary': 'pending'})
@@ -526,7 +531,7 @@ class SchedulerTest(unittest.TestCase):
         running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
         self.assertTrue(running_tasks.count() == 1)
         self.watcher.check_running_jobs()
-        self.scheduler.cfg.disk_default_quota = '10'
+        self.scheduler.cfg['disk_default_quota'] = '10'
         queued_tasks = self.test_schedule_task()
         quota_job_id = queued_tasks[0]['id']
         self.scheduler.run_tasks(queued_tasks)

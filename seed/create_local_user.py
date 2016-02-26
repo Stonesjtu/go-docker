@@ -3,7 +3,7 @@ import json
 import datetime
 import time
 import logging
-from config import Config
+import yaml
 import argparse
 import sys
 
@@ -32,20 +32,22 @@ def main():
     if not os.path.exists(config_file):
         logging.error("Configuration file not found")
         sys.exit(1)
-    cfg = Config(config_file)
+    cfg= None
+    with open(config_file, 'r') as ymlfile:
+    cfg = yaml.load(ymlfile)
 
-    if not cfg.plugins_dir or not os.path.exists(cfg.plugins_dir):
+    if not cfg['plugins_dir'] or not os.path.exists(cfg['plugins_dir']):
         logging.error("Plugin directory not found")
         sys.exit(1)
 
-    mongo = MongoClient(cfg.mongo_url)
-    db = mongo[cfg.mongo_db]
+    mongo = MongoClient(cfg['mongo_url'])
+    db = mongo[cfg['mongo_db']]
     db_users = db.users
 
     # Build the manager
     simplePluginManager = PluginManager()
     # Tell it the default place(s) where to find plugins
-    simplePluginManager.setPluginPlaces([cfg.plugins_dir])
+    simplePluginManager.setPluginPlaces([cfg['plugins_dir']])
     simplePluginManager.setCategoriesFilter({
        "Auth": IAuthPlugin,
      })
@@ -53,11 +55,11 @@ def main():
     simplePluginManager.collectPlugins()
 
     auth_policy = None
-    if cfg.auth_policy != 'local':
+    if cfg['auth_policy'] != 'local':
         logging.error('Wrong auth policy, only local auth allows user creation')
         sys.exit(1)
     for pluginInfo in simplePluginManager.getPluginsOfCategory("Auth"):
-        if pluginInfo.plugin_object.get_name() == cfg.auth_policy:
+        if pluginInfo.plugin_object.get_name() == cfg['auth_policy']:
              auth_policy = pluginInfo.plugin_object
              auth_policy.set_users_handler(db_users)
              auth_policy.set_config(cfg)

@@ -27,7 +27,7 @@ class Notify:
         '''
         Sends an email to *to*.
         '''
-        if 'email_smtp_host' not in Notify.config or Notify.config.email_smtp_host is None:
+        if 'email_smtp_host' not in Notify.config or Notify.config['email_smtp_host'] is None:
             return
 
         if 'email' not in task['user'] or task['user']['email'] is None:
@@ -45,17 +45,17 @@ class Notify:
         msg = MIMEText(message)
 
         msg['Subject'] = subject
-        msg['From'] = Notify.config.email_from
+        msg['From'] = Notify.config['email_from']
         msg['To'] = to
 
         # Send the message via our own SMTP server, but don't include the
         # envelope header.
         try:
-            s = smtplib.SMTP(Notify.config.email_smtp_host, Notify.config.email_smtp_port)
-            if Notify.config.email_smtp_tls:
+            s = smtplib.SMTP(Notify.config['email_smtp_host'], Notify.config['email_smtp_port'])
+            if Notify.config['email_smtp_tls']:
                 s.starttls()
-            if Notify.config.email_smtp_user:
-                s.login(Notify.config.email_smtp_user, Notify.config.email_smtp_password)
+            if Notify.config['email_smtp_user']:
+                s.login(Notify.config['email_smtp_user'], Notify.config['email_smtp_password'])
             s.sendmail(msg['From'], [msg['To']], msg.as_string())
             s.quit()
         except Exception as e:

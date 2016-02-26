@@ -137,21 +137,21 @@ class PairtreeStorage(IStorage):
 
     def __init__(self, cfg):
         self.cfg = cfg
-        if not self.cfg.shared_dir:
+        if not self.cfg['shared_dir']:
             dirname, filename = os.path.split(os.path.abspath(__file__))
-            self.cfg.shared_dir = os.path.join(dirname, '..', 'godshared')
-            if not os.path.exists(self.cfg.shared_dir):
-                os.makedirs(self.cfg.shared_dir)
+            self.cfg['shared_dir'] = os.path.join(dirname, '..', 'godshared')
+            if not os.path.exists(self.cfg['shared_dir']):
+                os.makedirs(self.cfg['shared_dir'])
 
         #f = pairtree.PairtreeStorageFactory()
         f = PairtreeStorageFactory()
-        self.store = f.get_store(store_dir=os.path.join(self.cfg.shared_dir,'tasks'), uri_base="http://")
+        self.store = f.get_store(store_dir=os.path.join(self.cfg['shared_dir'],'tasks'), uri_base="http://")
 
     def get_task_dir(self, task):
         '''
         Get directory where task files are written
         '''
-        task_dir = os.path.join(self.cfg.shared_dir,'tasks','pairtree_root',self.store.id2path(str(task['id'])),'task')
+        task_dir = os.path.join(self.cfg['shared_dir'],'tasks','pairtree_root',self.store.id2path(str(task['id'])),'task')
         return task_dir
 
     def add_file(self, task, name, content, path=''):
