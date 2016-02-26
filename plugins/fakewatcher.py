@@ -19,6 +19,22 @@ class FakeWatcher(IWatcherPlugin):
             return False
         return True
 
+    def _get_duration(self, duration):
+        duration_in_seconds = -1
+        try:
+            if duration.endswith('d'):
+                duration_in_seconds = int(duration.replace('d','')) * 3600 * 24
+            elif duration.endswith('h'):
+                duration_in_seconds = int(duration.replace('h','')) * 3600
+            elif duration.endswith('s'):
+                duration_in_seconds = int(duration.replace('s',''))
+            else:
+                duration_in_seconds = int(duration.replace('d',''))
+        except Exception as e:
+            duration_in_seconds = -1
+            self.logger.error('maxlifespan conversion error: '+str(e))
+        return duration_in_seconds
+
     def can_run(self, task):
         '''
         Checks if task can continue to run. If task cannot run, this method must kill itself the task.

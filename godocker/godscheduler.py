@@ -85,7 +85,7 @@ class GoDScheduler(Daemon):
         if nb_jobs_mongo >0 or nb_jobs_over_mongo >0:
             # Not the first run
             jobs_counter = self.r.get(self.cfg['redis_prefix']+':jobs')
-            if jobs_counter and jobs_counter > 0:
+            if jobs_counter and int(jobs_counter) > 0:
                 self.logger.info("Redis database looks ok")
                 return
             else:
