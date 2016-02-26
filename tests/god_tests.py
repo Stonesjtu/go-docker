@@ -473,6 +473,10 @@ class SchedulerTest(unittest.TestCase):
         # May need a second pass, need to get all child tasks over first to get parent task over
         self.watcher.check_running_jobs()
         over_tasks = self.watcher.db_jobsover.find()
+        #tasks = self.watcher.db_jobs.find()
+        #for task in tasks:
+        #    print(str(task))
+        #print("###"+str(over_tasks.count()))
         self.assertTrue(over_tasks.count() == 4)
 
     def test_kill_task_running(self):

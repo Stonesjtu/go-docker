@@ -204,7 +204,7 @@ class GoDWatcher(Daemon):
                 if is_array_task(task):
                     # If an array parent, only checks if some child tasks are still running
                     #nb_subtasks_running = self.r.get(self.cfg['redis_prefix']+':job:'+str(task['id'])+':subtaskrunning')
-                    nb_subtasks_running = int(self.r.get(self.cfg['redis_prefix']+':job:'+str(task['id'])+':subtask'))
+                    nb_subtasks_running = self.r.get(self.cfg['redis_prefix']+':job:'+str(task['id'])+':subtask')
                     if nb_subtasks_running and int(nb_subtasks_running) > 0:
                         over = False
                         # kill sub tasks
@@ -220,8 +220,8 @@ class GoDWatcher(Daemon):
             else:
                 if is_array_task(task):
                     # If an array parent, only checks if some child tasks are still running
-                    nb_subtasks_running = int(self.r.get(self.cfg['redis_prefix']+':job:'+str(task['id'])+':subtask'))
-                    if nb_subtasks_running > 0:
+                    nb_subtasks_running = self.r.get(self.cfg['redis_prefix']+':job:'+str(task['id'])+':subtask')
+                    if nb_subtasks_running and int(nb_subtasks_running) > 0:
                         over = False
                         # kill sub tasks
                         for subtask_id in task['requirements']['array']['tasks']:
@@ -609,8 +609,8 @@ class GoDWatcher(Daemon):
 
                 if is_array_task(task):
                     # If an array parent, only checks if some child tasks are still running
-                    nb_subtasks_running = int(self.r.get(self.cfg['redis_prefix']+':job:'+str(task['id'])+':subtaskrunning'))
-                    if nb_subtasks_running > 0:
+                    nb_subtasks_running = self.r.get(self.cfg['redis_prefix']+':job:'+str(task['id'])+':subtaskrunning')
+                    if nb_subtasks_running and int(nb_subtasks_running) > 0:
                         over = False
                     else:
                         over = True
