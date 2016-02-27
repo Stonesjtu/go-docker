@@ -6,6 +6,7 @@ import bcrypt
 import datetime
 import random
 import string
+import sys
 
 class LocalAuth(IAuthPlugin):
     '''
@@ -44,8 +45,13 @@ class LocalAuth(IAuthPlugin):
         user_in_db = self.users_handler.find_one({'id': login})
         if user_in_db is None:
             return None
-
-        if bcrypt.hashpw(password.encode('utf-8'), user_in_db['password'].encode('utf-8')) != user_in_db['password']:
+        encoded_password = password
+        if sys.version_info.major == 2:
+            encoded_password = encoded_password.encode('utf-8')
+        user_encoded_password = user_in_db['password']
+        if sys.version_info.major == 2:
+            user_encoded_password = user_encoded_password.encode('utf-8')
+        if bcrypt.hashpw(encoded_password, user_encoded_password) != user_in_db['password']:
             return None
         try:
             user = {
@@ -62,7 +68,12 @@ class LocalAuth(IAuthPlugin):
         return user
 
     def create_user(self, login, password, email=None, homeDirectory=None, uid=None, gid=None, sgids=None):
-        password_encrypt = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+        encoded_password = password
+        if sys.version_info.major == 2:
+            encoded_password = encoded_password.encode('utf-8')
+
+        password_encrypt = bcrypt.hashpw(encoded_password, bcrypt.gensalt())
 
         try:
             if uid is None:

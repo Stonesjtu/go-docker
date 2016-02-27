@@ -412,6 +412,9 @@ class GoDScheduler(Daemon):
         # Add task directory
         task_dir = self.store.get_task_dir(task)
         parent_task = None
+        task_cmd = task['command']['cmd']
+        if sys.version_info.major == 2:
+            task_cmd = task_cmd.encode('utf-8')
         if is_array_child_task(task):
             parent_task = self.db_jobs.find_one({'id': task['parent_task_id']})
             task_dir = self.store.get_task_dir(parent_task)
@@ -420,13 +423,13 @@ class GoDScheduler(Daemon):
                 os.makedirs(task_dir)
                 os.chmod(task_dir, 0o777)
             script_file = self.store.add_file(parent_task, 'cmd.sh',
-                                              task['command']['cmd'].encode('utf-8'),
+                                              task_cmd,
                                               str(task['requirements']['array']['task_id']))
             os.chmod(script_file, 0o755)
             task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
         else:
             script_file = self.store.add_file(task, 'cmd.sh',
-                                              task['command']['cmd'].encode('utf-8'))
+                                              task_cmd)
             os.chmod(script_file, 0o755)
             task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
 
