@@ -115,7 +115,8 @@ class PairtreeStorageFactory(object):
 
 
     def id2path(self, path):
-        return os.path.join(self.id2ptree(path, relpath=True), 'obj')
+        #return os.path.join(self.id2ptree(path, relpath=True), 'obj')
+        return self.id2ptree(path, relpath=True)
 
     def create_object(self, id):
         obj_path = os.path.join(self.store_dir, self.id2path(id))
