@@ -3,15 +3,15 @@
 ########################################
 
 # PLUGINS ##############################
-plugins_dir: '/opt/go-docker/plugins'
+plugins_dir: '/home/osallou/Development/NOSAVE/go-docker/go-d-sched/plugins'
 
 # DIRECTORIES ##########################
-shared_dir: '/opt/godshared'
+shared_dir: '/home/osallou/Development/NOSAVE/go-docker/godshared'
 
 # DEFAULTS #############################
 
 defaults_cpu: 1
-defaults_ram: 1
+defaults_ram: 2
 
 # Disable network in containers
 # If set , application won't be able to install sudo package if not present.
@@ -24,37 +24,73 @@ allow_root: True
 # Number of days of inactivity after which user usage should be reset
 user_reset_usage_duration: 30
 
+# Constraints #########################
+# See Docker labels
+constraints:
+    - name: 'storage'
+      value: 'ssd,disk'
+    - name: 'resource'
+      value: 'gpu_10.5'
+
+
 # Live notifications ##################
 # Use live notifications on tasks, needs Go-D-Live server
 live_events: False
 #  Go-D-Live websocket URL
 live_events_url: 'http://localhost:8001'
 
-# Constraints #########################
-
-constraints: [
-]
 
 # SECURITY #############################
-secret_passphrase: 'mygodockersecret'
+secret_passphrase: 'mysamplesecret'
 
 # IMAGES ###############################
 # Default container images proposed to user
-default_images: [
-    { name: 'centos', url: 'centos:latest', interactive: False, default: True},
-    { name: 'ubuntu', url: 'rastasheep/ubuntu-sshd', interactive: True}
-]
+default_images:
+    - name: 'centos'
+      url: 'centos:latest'
+      interactive: False
+      default: True
+    - name: 'ubuntu'
+      url: 'rastasheep/ubuntu-sshd'
+      interactive: True
 
 # Needs swarm >= 0.2
-allow_user_images: True
+allow_user_images: False
+
+# Private Registry #####################
+# Allow pull only from a private registry, value is appended to image name
+# Default: null
+# Example value: 'my.registry.com:5000'
+# => pull myimage => pull my.registry.com:5000/myimage
+use_private_registry: null
 
 # VOLUMES ##############################
+# Mandatory fields
+# name: label, home is a reserved label that will map to user home directory
+# acl: rw (read and write) or ro (read-only)
+# path: local path for this directory (ignored for home)
+# Optional fields
+# mount: path in the container, if not set, use the same then path
+#
+# path and mount can specify $USERID variable that will be replaced by user identifier.
 
-volumes: [
-    { name: 'home',
+volumes:
+    - name: 'home'
       acl: 'rw'
-    }
-]
+    - name: 'omaha'
+      acl: 'rw'
+      mount: '/omaha-beach/$USERID'
+      path: '/omaha-beach/$USERID'
+    - name: 'db'
+      acl: 'ro'
+      path: '/db'
+
+# Temporary local volumes
+# Use docker-plugin-zfs Docker volume plugin: True, False
+# Plugin must be running on all slaves and must be supported by framework
+
+plugin_zfs: False
+
 
 # PORTS ###############################
 port_allocate: True  # allocates a port from following range instead of mapping port to itself
@@ -63,19 +99,19 @@ port_range: 1000
 
 
 # MONGODB ##############################
-mongo_url: 'mongodb://god-mongo:27017/'
+mongo_url: 'mongodb://localhost:27017/'
 mongo_db: 'god'
 
 # REDIS ################################
 # Redis configuration
-redis_host: 'god-redis'
+redis_host: 'localhost'
 redis_port:  6379
 # Redis database id
 redis_db: 0
 redis_prefix: 'god'
 
 # INFLUXDB ############################
-influxdb_host: None  # None if not required
+influxdb_host: null # or null if not required
 influxdb_port: 8086
 influxdb_user: 'root'
 influxdb_password: 'root'
@@ -86,44 +122,39 @@ scheduler_policy: 'FiFo'
 max_job_pop: 100
 
 # Execution system #####################
-#executor: 'mesos'
 executor: 'swarm'
 #executor: 'fake'
+#executor: 'mesos'
 
 # Stats ################################
 prometheus_key: 'mysecretkey'
-prometheus_exporter: 'god-web:6543'
+prometheus_exporter: '127.0.0.1:6543'
 
 # Mesos ##
-mesos_master: 'god-mesos:5050'
+mesos_master: '127.0.0.1:5050'
 
 # Authentication #######################
 auth_policy: 'fake'
 
-ldap_host: None
-ldap_port: None
-ldap_dn: None
+ldap_host: null
+ldap_port: null
+ldap_dn: null
 
 # Watchers #############################
-# List of watchers, comma separated
-watchers: 'maxlifespan'
+# List of watchers, comma separated, example 'maxlifespan'
+watchers: null
 
 # Max job life duration expressed in d(days), h(hours), s(seconds) if not specified in task
-maxlifespan: '1d'
+maxlifespan: '7d'
 
-# Requirement dynamic fields ##########
-# fields that can be updated after task submission in requirements
-dynamic_fields: [
-    { name: 'maxlifespan',
-      admin_only: False
-    }
-]
-
-
+# Requirement dynamic fields (optional) ##########
+# fields that can be updated after task submission in requirements, string type only
+#dynamic_fields:
+#    - name: 'maxlifespan'
+#      admin_only: False
 
 # Docker ###############################
-#docker_url: 'tcp://127.0.0.1:2376'
-docker_url: 'tcp://god-swarm:2375'
+docker_url: 'tcp://127.0.0.1:2376'
 # API version from docker version command
 docker_api_version: '1.17'
 
@@ -132,107 +163,109 @@ cadvisor_port: 8080
 # /containers/docker/ to map to /containers/docker/container_id
 cadvisor_url_part: '/containers/docker/'
 # Number of samples (seconds) to display , according to cAdvisor launch option -storage_duration
-cadvisor_samples: 600
-
-# Logging ###############################
-#log_location: ''
-#log_level: 'DEBUG'
-#log_graylog_host: None
-#log_graylog_port: 12201
-#log_logstash_host: '127.0.0.1'
-#log_logstash_port: 59590
+cadvisor_samples: 60
 
 # Email SMTP ################################
 email_from: 'godocker@do-no-reply.fr'
 email_smtp_tls: False
-email_smtp_user: ''
-email_smtp_password: ''
-email_smtp_host: None
-email_smtp_port: 2525
+email_smtp_user: null
+email_smtp_password: null
+email_smtp_host: null
+email_smtp_port: 25
 
-# Cleanup ###################################
+# Clean up ##################################
+# Number of days after which job directory
+# can be deleted by cleanup script
+# Default: 30
 clean_old: 30
 
 # Disk quota ###############################
 # Optional disk quota management
 # Default: None (no quota)
-# Possible values (value + unit): 12 (bytes), 5k (kilobytes), 12M (megabytes),
-# 40G (gigabytes)
-disk_default_quota: None
+# Possible values (value + unit): 12 (bytes), 5k (kilobytes), 12M (megabytes), 40G (gigabytes)
+disk_default_quota: null
+
+
+# Rate limiting ############################
+# Max number of pending tasks for a user
+# New tasks will be rejected if rate is reached
+# It is wise to limit it to limit total number of pending jobs for scheduler.
+# Default: None (no limit)
+# Value example: 1000
+rate_limit: null
+# Max number of pending tasks for all users (to avoid scheduler overload)
+# When limit is reached, new tasks are rejected
+rate_limit_all: 10000
+
 
 # Status Manager ###########################
-status_policy: None
-etcd_prefix: '/godocker'
-etcd_host: '127.0.0.1'
-etcd_port: 4001
+# Uncomment to use etcd monitoring
+#status_policy: 'etcd'
+#etcd_prefix: '/godocker'
+#etcd_host: '127.0.0.1'
+#etcd_port: 4001
 
 # Guest management ########################
 
 # Allow guest (user not having a local account) to login
 guest_allow: False
 # Local user that will run the tasks for the guest
-guest_bind: None
+guest_bind: null
 # Allow guest to run scripts as root in containers
 guest_allow_root: False
-# Home directroy base path for guest, guest home dir will be guest_home_root/guest_userid
-# None => No home directory
-# 'default' empty string, use guest_bind home directory
-guest_home_root: None
+# Home directory base path for guest, guest home dir will be guest_home_root/guest_userid
+# null => No home directory
+# 'default', use guest_bind home directory
+guest_home_root: null
 
 # Logging ##################################
-log_config: {
-    'version': 1,
-    'formatters': {
-        'generic': {
+log_config:
+    'version': 1
+    'formatters':
+        'generic':
             'format': '%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s'
-        }
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'generic',
+    'handlers':
+        'console':
+            'class': 'logging.StreamHandler'
+            'formatter': 'generic'
             'level': 'INFO'
-        },
-        'watcher': {
-            'class': 'logging.FileHandler',
-            'filename': '/var/log/go-docker/godwatcher.log',
-            'formatter': 'generic',
+        'watcher':
+            'class': 'logging.FileHandler'
+            'filename': 'godwatcher.log'
+            'formatter': 'generic'
             'level': 'INFO'
-        },
-        'scheduler': {
-            'class': 'logging.FileHandler',
-            'filename': '/var/log/go-docker/godscheduler.log',
-            'formatter': 'generic',
+        'scheduler':
+            'class': 'logging.FileHandler'
+            'filename': 'godscheduler.log'
+            'formatter': 'generic'
             'level': 'INFO'
-        },
-        'gelf': {
-            'class': 'gelfHandler.gelfHandler',
-            'host': 'localhost',
-            'port':  12201,
-            'formatter': 'generic',
+        'gelf':
+            'class': 'graypy.GELFHandler'
+            'host': 'localhost'
+            'port':  12201
+            'formatter': 'generic'
             'level': 'INFO'
-        },
-        'logstash': {
-            'class': 'logstash.LogstashHandler',
-            'host': 'localhost',
-            'port':  59590,
-            'formatter': 'generic',
+        'logstash':
+            'class': 'logstash.LogstashHandler'
+            'host': 'localhost'
+            'port':  59590
+            'formatter': 'generic'
             'level': 'INFO'
-        }
-    },
-    'loggers': {
-        'root': {
-            'level': 'INFO',
-            'handlers': [ 'console' ]
-        },
-        'godocker-watcher': {
-            'level': 'INFO',
-            'handlers': [ 'console', 'watcher']
-        },
-        'godocker-scheduler': {
-            'level': 'INFO',
-            'handlers': [ 'console', 'scheduler']
-        }
-    },
+    'loggers':
+        'root':
+            'level': 'INFO'
+            'handlers':
+                - 'console'
+        'godocker-watcher':
+            'level': 'INFO'
+            'handlers':
+                - 'console'
+                - 'watcher'
+                - 'gelf'
+        'godocker-scheduler':
+            'level': 'INFO'
+            'handlers':
+                - 'console'
+                - 'scheduler'
+                - 'gelf'
     'disable_existing_logers': False
-}
