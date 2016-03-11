@@ -26,4 +26,5 @@ graypy
 urllib3
 bcrypt==1.1.0
 python-etcd
+python-consul
 PyYAML

@@ -176,7 +176,7 @@ To create a new plugin, create a xx.yapsy-plugin file and a xx.py file following
 * iExecutor execute the job and checks its status
 * iAuth is used by the web interface, to authenticate a user (ldap bind for example), get some user information (uidnumber, home directory...) and ACLs (which volumes can be mounted for this user request for example).
 * iWatcher checks, once a job is running if it should continue or be killed, ...
-* iStatus register processes and get status of processes to an external system (etcd, ...), if none is set, no monitoring will be done
+* iStatus register processes and get status of processes to an external system (etcd, consul, ...), if none is set, no monitoring will be done
 
 Base classes are documented here: http://go-docker.readthedocs.org/en/latest/
 
@@ -199,7 +199,8 @@ Available plugins are:
 * Watcher:
     * maxlifespan: Checks max life duration of a job
 * Status:
-     etcd: register processes to etcd
+    * etcd: register processes to etcd
+    * consul: register processes to Consul
 
 ### Swarm
 
@@ -310,6 +311,13 @@ Configuration:
     etcd_host: 'a.b.c.d' # Ip address where is running etcd
     etcd_port: 4001
 
+### Consul
+
+Installation/setup of Consul is out of the scope here.
+
+Setting up Consul as status manager will register web/scheduler/watchers to Consul with ttl or http checks.
+In addition, web services will be registered in Consul DNS with their ip and port for DNS queries.
+Consul DNS can be used for load balancing to web servers using for example HAProxy.
 
 ## Temporary local storage
 

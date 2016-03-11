@@ -65,6 +65,12 @@ class EtcdStatusAuth(IStatusPlugin):
                 if not etcd_prefix.startswith('/'):
                     etcd_prefix = '/'+etcd_prefix
 
+            dt = datetime.datetime.now()
+            timestamp = int(time.mktime(dt.timetuple()))
+            is_ok = False
+            if timestamp - int(proc.value) < 5*60:
+                is_ok = True
+
             r = client.read(etcd_prefix+'/process')
             for child in r.children:
                 procs = client.read(child.key)
@@ -72,6 +78,7 @@ class EtcdStatusAuth(IStatusPlugin):
                 for proc in procs.children:
                     procs_status.append({'name': proc.key.split('/')[-1],
                                         'timestamp': int(proc.value),
+                                        'status': is_ok,
                                         'type': proc_type})
 
         except Exception as e:

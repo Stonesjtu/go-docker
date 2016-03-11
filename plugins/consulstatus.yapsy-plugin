@@ -1,0 +1,9 @@
+[Core]
+Name = ConsulStatus
+Module = consulstatus
+
+[Documentation]
+Author = Olivier Sallou
+Version = 0.1
+Website =
+Description = Keek-alive/status management via etcd

@@ -26,6 +26,7 @@ config = {
                             'python-logstash',
                             'config',
                             'python-etcd',
+                            'python-consul',
                             'bcrypt' ],
     'packages': find_packages(),
     'include_package_data': True,
