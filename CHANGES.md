@@ -1,3 +1,8 @@
+1.0.3:
+    GOD-21 get used/available resources from executor
+    GOD-20 add Consul as StatusManager
+    GOD-12 Add Python3 support
+    GOD-18 Support multiple sotrage managers
 1.0.2:
     minor error cases handling
     extract container id from TaskStatus in Mesos when available (mesos >= 0.23)
