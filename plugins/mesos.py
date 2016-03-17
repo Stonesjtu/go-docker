@@ -727,3 +727,34 @@ class Mesos(IExecutorPlugin):
         '''
         self.logger.error('Not supported')
         return (task, False)
+
+
+    def usage(self):
+        '''
+        Get resource usage
+
+        :return: array of nodes with used/total resources with
+            {
+                'name': slave_hostname,
+                'cpu': (cpus_used, cpu_total),
+                'mem': (mem_used, mem_total),
+                'disk': (disk_used, disk_total),
+            }
+
+        '''
+        http = urllib3.PoolManager()
+        r = http.urlopen('GET', 'http://'+self.cfg['mesos_master']+'/master/state.json')
+        master = json.loads(r.data)
+
+        slaves = []
+        for slave in master['slaves']:
+            if slave['active']:
+                r = http.urlopen('GET', 'http://'+slave['hostname']+':5051/metrics/snapshot')
+                state = json.loads(r.data)
+                slaves.append({
+                    'name': slave['hostname'],
+                    'cpu': (int(state['slave/cpus_used']), int(state['slave/cpus_total'])),
+                    'mem': (int(state['slave/mem_used']), int(state['slave/mem_total'])),
+                    'disk': (int(state['slave/disk_used']), int(state['slave/disk_total']))
+                })
+        return slaves
