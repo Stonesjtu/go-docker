@@ -13,6 +13,21 @@ class IExecutorPlugin(IGoDockerPlugin):
         '''
         return []
 
+    def usage(self):
+        '''
+        Get resource usage
+
+        :return: array of nodes with used/total resources with
+            {
+                'name': slave_hostname,
+                'cpu': (cpus_used, cpu_total),
+                'mem': (mem_used, mem_total),
+                'disk': (disk_used, disk_total),
+            }
+
+        '''
+        return []
+
     def open(self, proc_type=None):
         '''
         Request start of executor if needed
