@@ -763,6 +763,22 @@ class GoDScheduler(Daemon):
             return True
         return False
 
+
+    def is_master(self, random_key):
+        timeout = 600
+        try:
+            if 'master_timeout' in self.cfg and int(self.cfg['master_timeout']) > 0:
+                timeout = int(self.cfg['master_timeout'])
+        except Exception as e:
+            self.logger.error('invalid master_timeout config parameter')
+        self.r.setnx(self.cfg['redis_prefix']+':master', random_key)
+        master_key = self.r.get(self.cfg['redis_prefix']+':master')
+        if master_key == random_key:
+            self.r.expire(self.cfg['redis_prefix']+':master', 600)
+            return True
+        else:
+            return False
+
     def run(self, loop=True):
         '''
         Main executor loop
@@ -770,8 +786,20 @@ class GoDScheduler(Daemon):
         '''
         self.hostname = None
         infinite = True
+        is_master = False
+        was_master = is_master
+        random_key = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
+        is_master = self.is_master(random_key)
+        while not is_master:
+            if is_master != was_master:
+                self.logger.debug('Switching status: master='+str(is_master))
+            self.logger.debug('Not master, waiting...')
+            time.sleep(2)
+            is_master = self.is_master(random_key)
+
         self.executor.open(0)
         self.logger.warn('Start scheduler')
+
         try:
             while infinite and True and not GoDScheduler.SIGINT:
                 # Schedule timer
@@ -780,6 +808,7 @@ class GoDScheduler(Daemon):
                     self.manage_tasks()
                 else:
                     self.logger.debug('In maintenance, waiting...')
+
                 time.sleep(2)
                 if not loop:
                     infinite = False
@@ -788,3 +817,5 @@ class GoDScheduler(Daemon):
             traceback_msg = traceback.format_exc()
             self.logger.error(traceback_msg)
         self.executor.close()
+        if is_master:
+            self.r.delete(self.cfg['redis_prefix']+':master')

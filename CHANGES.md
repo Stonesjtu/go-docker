@@ -1,5 +1,8 @@
 1.0.3:
     GOD-22 Add Kubernetes executor (experimental)
+    GOD-23 support scheduler failover
+        high availability mode for schedulers (one active at a time)
+        allow mesos reuse of frameworkID atfer a restart or by new leader
     GOD-21 get used/available resources from executor
     GOD-20 add Consul as StatusManager
     GOD-12 Add Python3 support

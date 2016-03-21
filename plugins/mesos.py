@@ -56,6 +56,8 @@ class MesosScheduler(mesos.interface.Scheduler):
         self.frameworkId = frameworkId.value
         self.redis_handler.set(self.config['redis_prefix']+':mesos:frameworkId',
                                self.frameworkId)
+        self.redis_handler.expire(self.config['redis_prefix']+':mesos:frameworkId',
+                                       3600*24*7)
 
     def has_enough_resource(self, offer, requested_resource, quantity):
         '''
@@ -507,6 +509,7 @@ class Mesos(IExecutorPlugin):
     def set_config(self, cfg):
         self.cfg = cfg
         self.Terminated = False
+        self.driver = None
 
 
     def open(self, proc_type):
@@ -528,6 +531,13 @@ class Mesos(IExecutorPlugin):
         framework = mesos_pb2.FrameworkInfo()
         framework.user = "" # Have Mesos fill in the current user.
         framework.name = "Go-Docker Mesos"
+        framework.failover_timeout = 3600 * 24*7 # 1 week
+        frameworkId = self.redis_handler.get(self.cfg['redis_prefix']+':mesos:frameworkId')
+        if frameworkId:
+            # Reuse previous framework identifier
+            mesos_framework_id = mesos_pb2.FrameworkID()
+            mesos_framework_id.value = frameworkId
+            framework.id.MergeFrom(framework_id)
 
         if os.getenv("MESOS_CHECKPOINT"):
             self.logger.info("Enabling checkpoint for the framework")

@@ -130,7 +130,13 @@ executor: 'swarm'
 prometheus_key: 'mysecretkey'
 prometheus_exporter: '127.0.0.1:6543'
 
-# web endpoint #########################
+# Scheduler master election ############
+# Default: 600s
+# Waiting time before a scheduler becomes the new leader if previous one
+# is not active anymore
+master_timeout: 600
+
+# web endpoint
 # Default: http://127.0.0.1:6543
 # Local web server endpoint
 # Used by consul status manager

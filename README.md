@@ -97,6 +97,11 @@ There is only one scheduler running. At startup, scheduler will check if Redis
 database is populated, if not, it will sync it with mongo database. This
 automatic check prevents Redis flushes or loss of data.
 
+While only one scheduler is active, it is possible to execute multiple instances for high-availability.
+If one instance is stopped, an other will take leadership and be the new scheduler master.
+In case of failure, one need to wait for the previous keep-alive timeout for the new scheduler to be the new master (config parameter master_timeout, default to 600s).
+Timeout must be higher than the maximum time needed for a scheduling run.
+
 ## Watcher
 
 watcher checks job status and manage jobs kill/suspend/resume. There can be
