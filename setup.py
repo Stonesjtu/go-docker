@@ -29,7 +29,7 @@ config = {
                             'python-consul',
                             'requests',
                             'strict-rfc3339',
-                            'humanfriendly'
+                            'humanfriendly',
                             'bcrypt' ],
     'packages': find_packages(),
     'include_package_data': True,
