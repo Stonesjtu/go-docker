@@ -27,6 +27,9 @@ config = {
                             'config',
                             'python-etcd',
                             'python-consul',
+                            'requests',
+                            'strict-rfc3339',
+                            'humanfriendly'
                             'bcrypt' ],
     'packages': find_packages(),
     'include_package_data': True,

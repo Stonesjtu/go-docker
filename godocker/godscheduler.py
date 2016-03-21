@@ -358,8 +358,9 @@ class GoDScheduler(Daemon):
                 self.r.rpush(self.cfg['redis_prefix']+':jobs:running', r['id'])
                 #self.r.set('god:job:'+str(r['id'])+':container', r['container']['id'])
                 r['status']['primary'] = godutils.STATUS_RUNNING
-                r['status']['secondary'] = None
-                r['status']['reason'] = ''
+                if 'override' not in r['status'] or not r['status']['override']:
+                    r['status']['secondary'] = None
+                    r['status']['reason'] = ''
                 dt = datetime.datetime.now()
                 r['status']['date_running'] = time.mktime(dt.timetuple())
                 self.r.set(self.cfg['redis_prefix']+':job:'+str(r['id'])+':task', dumps(r))

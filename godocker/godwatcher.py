@@ -616,6 +616,10 @@ class GoDWatcher(Daemon):
                         over = True
                 else:
                     (task, over) = self.executor.watch_tasks(task)
+                    if task is None:
+                        self.logger.debug('TASK:'+str(task_id)+':Cleaned by executor')
+                        continue
+
                 self.logger.debug("TASK:"+str(task['id'])+":"+str(over))
                 if over:
                     original_task = self.db_jobs.find_one({'id': task['id']})

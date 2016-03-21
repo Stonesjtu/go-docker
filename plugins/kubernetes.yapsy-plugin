@@ -1,0 +1,9 @@
+[Core]
+Name = Kubernetes
+Module = kubernetes
+
+[Documentation]
+Author = Olivier Sallou
+Version = 0.1
+Website =
+Description = Kubernetes executor

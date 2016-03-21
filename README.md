@@ -12,7 +12,7 @@ Go-Docker supports a plugin system to manage authentication, scheduling and exec
 
 Go-Docker does not compete against Kuberbenets, Mesos frameworks etc... on the contrary.
 Most of those tools manage efficiently the dispatch of containers, but they are
-not "user aware". All users are equal and equal in time. They do not focus either usually on the need to connect (ssh) into a container for interactive tasks, they focus on executing a task based on what user asks. Go-Docker wants to act as a top layer above those tools and to benefit from those tools. The plugin mechanism provides a way to create an executor for Swarm (provided with the tool), but also Kubernetes etc...
+not "user aware". All users are equal and equal in time. They do not focus either usually on the need to connect (ssh) into a container for interactive tasks, they focus on executing a task based on what user asks. Go-Docker wants to act as a top layer above those tools and to benefit from those tools. The plugin mechanism provides a way to create an executor for Swarm (provided among others with the tool), but also Kubernetes etc...
 
 They also usually focus on running "production" long running tasks (such as a webapp), or regular tasks (Chronos). GO-Docker focus on one computational task. If it fails, there is no automatic restart, user will decide after anaylisis to reschedule it if necessary.
 
@@ -191,6 +191,7 @@ Available plugins are:
 * Executor:
     * swarm (Docker Swarm)
     * mesos (Apache Mesos, tested with mesos 0.22)
+    * Kubernetes (tested with 1.2.0, using API v1)
     * fake  (not be used, for test only, simulate a job execution)
 * Auth:
     * goauth: ldap based authentications.
@@ -217,6 +218,13 @@ Tasks are executed using Mesos executor with Docker. Port allocation (for intera
 Slaves should be started with an attribute "hostname" matching the slave hostname or ip, for example:
 
     mesos-slave.sh --master=10.0.0.1:5050 --containerizers=docker,mesos --attributes='hostname:10.0.0.2'
+
+### Kubernetes
+
+GoDocker has experimental support with Kubernetes (see Kubernetes section in configuration).
+Tasks that cannot be planned doe to overcapacity are deleted from Kubernetes but remain in pending state in GoDocker.
+It does not support GPU reservation has Kubernetes does not support yet arbitrary resource counters (though in roadmap).
+Regarding temporary storage, software makes use of *emptyDir* volume capability of Kubernetes. A local directory is created on node, but no capacity is guaranteed (per user or global). Other kinds of persistent volumes are not supported here.
 
 ## User scripts
 

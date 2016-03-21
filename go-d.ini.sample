@@ -130,14 +130,20 @@ executor: 'swarm'
 prometheus_key: 'mysecretkey'
 prometheus_exporter: '127.0.0.1:6543'
 
-# web endpoint
+# web endpoint #########################
 # Default: http://127.0.0.1:6543
 # Local web server endpoint
 # Used by consul status manager
-web_endpoint: 'http://131.254.17.40'
+web_endpoint: 'http://127.0.0.1:6543'
 
-# Mesos ##
+# Mesos ################################
 mesos_master: '127.0.0.1:5050'
+
+# Kubernetes ###########################
+# API Version: 1
+kube_server: 'http://127.0.0.1:8080'
+# If token set on server for authentication
+kube_token: null
 
 # Authentication #######################
 auth_policy: 'fake'

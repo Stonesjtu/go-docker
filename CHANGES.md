@@ -1,4 +1,5 @@
 1.0.3:
+    GOD-22 Add Kubernetes executor (experimental)
     GOD-21 get used/available resources from executor
     GOD-20 add Consul as StatusManager
     GOD-12 Add Python3 support
