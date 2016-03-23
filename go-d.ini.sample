@@ -286,4 +286,4 @@ log_config:
                 - 'console'
                 - 'scheduler'
                 - 'gelf'
-    'disable_existing_logers': False
+    'disable_existing_loggers': False
