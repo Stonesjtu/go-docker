@@ -2,6 +2,7 @@ from godocker.iAuthPlugin import IAuthPlugin
 import logging
 import pwd
 import grp
+import os
 
 class FakeAuth(IAuthPlugin):
     def get_name(self):
@@ -164,6 +165,10 @@ class FakeAuth(IAuthPlugin):
 
             if root_access:
                 req['acl'] = 'ro'
+            self.logger.error("####"+str(self.cfg['volumes_check']))
+            if 'volumes_check' in self.cfg and self.cfg['volumes_check'] and not os.path.exists(req['path']):
+                self.logger.error('Volume path '+str(req['path'])+' does not exists')
+                continue
 
             volumes.append(req)
         return volumes

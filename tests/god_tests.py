@@ -219,6 +219,31 @@ class SchedulerTest(unittest.TestCase):
             shutil.rmtree(self.scheduler.cfg['shared_dir'])
         pass
 
+    def test_auth_volumes(self):
+        self.scheduler.cfg['volumes'].append({
+            'name': 'test',
+             'acl': 'ro',
+             'path': '/fakefalsedir'
+        })
+        vols = self.scheduler.auth_policy.get_volumes({'id': 'test'},[{'name': 'test'}])
+        found = False
+        for vol in vols:
+            if vol['name'] == 'test':
+                found = True
+        self.assertFalse(found)
+        self.scheduler.cfg['volumes'].append({
+            'name': 'test2',
+             'acl': 'ro',
+             'path': '/tmp'
+        })
+        vols = self.scheduler.auth_policy.get_volumes({'id': 'test'},[{'name': 'test2'}])
+        found = False
+        for vol in vols:
+            if vol['name'] == 'test2':
+                found = True
+        self.assertTrue(found)
+
+
     def test_task_create(self):
         task = copy.deepcopy(self.sample_task)
         task_id = self.scheduler.add_task(task)

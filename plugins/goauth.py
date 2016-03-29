@@ -1,6 +1,7 @@
 from godocker.iAuthPlugin import IAuthPlugin
 import logging
 import grp
+import os
 
 from ldap3 import Server, Connection, ALL, SUBTREE
 
@@ -250,7 +251,9 @@ class GoAuth(IAuthPlugin):
                 req['acl'] = 'ro'
             if root_access:
                 req['acl'] = 'ro'
-
+            if 'volumes_check' in self.cfg and self.cfg['volumes_check'] and not os.path.exists(req['path']):
+                self.logger.error('Volume path '+str(req['path'])+' does not exists')
+                continue
             volumes.append(req)
 
         return volumes

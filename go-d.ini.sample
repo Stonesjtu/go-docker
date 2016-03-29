@@ -74,6 +74,9 @@ use_private_registry: null
 #
 # path and mount can specify $USERID variable that will be replaced by user identifier.
 
+# Check if volume exists (on scheduler) before mounting it
+volumes_check: True
+
 volumes:
     - name: 'home'
       acl: 'rw'
