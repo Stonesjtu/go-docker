@@ -5,6 +5,32 @@ class IAuthPlugin(IGoDockerPlugin):
     ACL plugins interface
     '''
 
+
+    def get_quotas(self, id, is_group=False):
+        '''
+        Get quota related info for user id.
+
+        :param id: user or group identifier
+        :type id: str
+        :param is_group: define if identifier is a group
+        :type is_group: bool
+        :return: dict
+                    {
+                        'prio': 50,
+                        'quota_time': 0,
+                        'quota_cpu': 0,
+                        'quota_ram': 0
+                    }
+
+        Zero value means unlimited, 0 < prio < 100
+        '''
+        return {
+            'prio': 50,
+            'quota_time': 0,
+            'quota_cpu': 0,
+            'quota_ram': 0
+        }
+
     def can_run(self, task):
         '''
         Check if task can run (according to user etc...). If return False, then task is rejected

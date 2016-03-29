@@ -101,13 +101,7 @@ class LocalAuth(IAuthPlugin):
                     'private': '',
                     'public': ''
                 },
-                'usage':
-                    {
-                        'prio': 50,
-                        'quota_time': 0,
-                        'quota_cpu': 0,
-                        'quota_ram': 0
-                    }
+                'usage': self.get_quotas(login)
                 }
 
         self.users_handler.insert(user)
