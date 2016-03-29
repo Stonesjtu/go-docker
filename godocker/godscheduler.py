@@ -527,7 +527,12 @@ class GoDScheduler(Daemon):
             cmd += "if [ -n \"$(command -v yum)\" ]; then\n"
             cmd += "     yum -y install openssh-server\n"
             cmd += "     ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa\n"
-            cmd += "else\n"
+            cmd += "fi\n"
+            cmd += "if [ -n \"$(command -v apk)\" ]; then\n"
+            cmd += "     apk add openssh\n"
+            cmd += "     ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa\n"
+            cmd += "fi\n"
+            cmd += "if [ -n \"$(command -v apt-get)\" ]; then\n"
             cmd += "    apt-get update\n"
             cmd += "    apt-get install -y openssh-server\n"
             cmd += "    mkdir /var/run/sshd\n"
@@ -544,14 +549,34 @@ class GoDScheduler(Daemon):
         cmd += str(self.store.get_post_command())+"\n"
         cmd += "exit $ret_code\n"
 
+        wrapper = "#!/bin/sh\n"
+        wrapper += "if hash bash 2>/dev/null; then\n"
+        wrapper += "    echo OK\n"
+        wrapper += "else\n"
+        wrapper += "    if hash apk 2>/dev/null; then\n"
+        wrapper += "        apk --update add bash\n"
+        wrapper += "        apk --update --repository http://dl-4.alpinelinux.org/alpine/edge/testing add shadow\n"
+        wrapper += "        echo \"auth       sufficient pam_rootok.so\" > /etc/pam.d/su\n"
+        wrapper += "        if [ ! -e /home/" + user_id + " ]; then"
+        wrapper += "            mkdir -p /home/" + user_id + "\n"
+        wrapper += "        fi\n"
+        wrapper += "    fi\n"
+        wrapper += "fi\n"
+
         if is_array_child_task(task):
             script_file = self.store.add_file(parent_task, 'godocker.sh', cmd, str(task['requirements']['array']['task_id']))
             os.chmod(script_file, 0o755)
-            task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
+            wrapper += os.path.join('/mnt/go-docker',os.path.basename(script_file))
+            wrapper_file = self.store.add_file(parent_task, 'wrapper.sh', wrapper, str(task['requirements']['array']['task_id']))
+            os.chmod(wrapper_file, 0o755)
+            task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(wrapper_file))
         else:
             script_file = self.store.add_file(task, 'godocker.sh', cmd)
             os.chmod(script_file, 0o755)
-            task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
+            wrapper += os.path.join('/mnt/go-docker',os.path.basename(script_file))
+            wrapper_file = self.store.add_file(task, 'wrapper.sh', wrapper)
+            os.chmod(wrapper_file, 0o755)
+            task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(wrapper_file))
 
     def run_tasks(self, queued_list):
         '''
