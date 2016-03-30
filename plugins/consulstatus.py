@@ -68,7 +68,7 @@ class ConsulStatusAuth(IStatusPlugin):
             for check in list(checks.keys()):
                 status = {
                 'name': checks[check]['ServiceID'],
-                'proctype': checks[check]['ServiceName']
+                'type': checks[check]['ServiceName']
                 }
                 if checks[check]['Status'] == 'passing':
                     status['status'] = True
