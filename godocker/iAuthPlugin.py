@@ -6,7 +6,7 @@ class IAuthPlugin(IGoDockerPlugin):
     '''
 
 
-    def get_quotas(self, id, is_group=False):
+    def get_quotas(self, id, is_group=False, guest=None):
         '''
         Get quota related info for user id.
 
@@ -14,6 +14,8 @@ class IAuthPlugin(IGoDockerPlugin):
         :type id: str
         :param is_group: define if identifier is a group
         :type is_group: bool
+        :param guest: user id is authenticated via social auth (google, ...)
+        :type guest: str
         :return: dict
                     {
                         'prio': 50,
