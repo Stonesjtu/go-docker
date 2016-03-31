@@ -67,24 +67,24 @@ class Kubernetes(IExecutorPlugin):
                 #job  = json.loads(task)
                 job = task
                 port_list = []
+                job['container']['port_mapping'] = []
+                if 'ports' in job['requirements']:
+                    port_list = job['requirements']['ports']
                 if job['command']['interactive']:
-                    port_list = [22]
+                    port_list.append(22)
+                for port in port_list:
+                    job['container']['port_mapping'].append({'host': port, 'container': port})
                 #self.logger.warn('Reservation: '+str(job['requirements']['cpu'])+','+str(job['requirements']['ram'])+'g')
                 vol_list = []
-                self.logger.error('DEBUG OSALLOU prevolumes '+str(job['container']['volumes']))
                 for v in job['container']['volumes']:
                     if v['mount'] is None:
                         v['mount'] = v['path']
                     vol_list.append(v['mount'])
-                self.logger.error('DEBUG OSALLOU 1')
                 constraints = []
                 if 'label' in job['requirements'] and job['requirements']['label']:
-                    self.logger.error('DEBUG OSALLOU label '+str(job['requirements']['label']))
                     for label in job['requirements']['label']:
                         constraints.append('constraint:'+label)
 
-                self.logger.error('DEBUG OSALLOU 2')
-                self.logger.error(str(job))
                 if not job['container']['meta']:
                     job['container']['meta'] = {}
                 if 'Node' not in job['container']['meta']:

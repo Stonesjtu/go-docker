@@ -65,8 +65,11 @@ class Swarm(IExecutorPlugin):
                 #job  = json.loads(task)
                 job = task
                 port_list = []
+                if 'ports' in job['requirements']:
+                    port_list = job['requirements']['ports']
                 if job['command']['interactive']:
-                    port_list = [22]
+                    port_list.append(22)
+
                 #self.logger.warn('Reservation: '+str(job['requirements']['cpu'])+','+str(job['requirements']['ram'])+'g')
                 vol_list = []
                 for v in job['container']['volumes']:
@@ -98,12 +101,16 @@ class Swarm(IExecutorPlugin):
                     # issue to store the information in db
                     del job['container']['meta']['Config']['Labels']
 
+                job['container']['port_mapping'] = []
                 port_mapping = {}
                 for port in port_list:
                     if self.cfg['port_allocate']:
                         mapped_port = self.get_mapping_port(job['container']['meta']['Node']['Name'], job)
+                        if mapped_port is None:
+                            raise Exception('no port available')
                     else:
                         mapped_port = port
+                    job['container']['port_mapping'].append({'host': mapped_port, 'container': port})
                     port_mapping[port] = mapped_port
                 vol_binds = {}
                 for v in job['container']['volumes']:

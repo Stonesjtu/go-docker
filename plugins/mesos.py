@@ -102,6 +102,7 @@ class MesosScheduler(mesos.interface.Scheduler):
         #port = self.redis_handler.lpop(self.config['redis_prefix']+':ports:'+host)
 
         # Get first free port
+        port = None
         for resource in offer.resources:
             if resource.name == "ports":
                 for mesos_range in resource.ranges.range:
@@ -109,6 +110,8 @@ class MesosScheduler(mesos.interface.Scheduler):
                         port = str(mesos_range.begin)
                         mesos_range.begin += 1
                         break
+        if port is None:
+            return None
         self.logger.debug('Port:Give:'+task['container']['meta']['Node']['Name']+':'+str(port))
         if not 'ports' in task['container']:
             task['container']['ports'] = []
@@ -296,7 +299,11 @@ class MesosScheduler(mesos.interface.Scheduler):
                             else:
                                 task['requirements']['tmpstorage'] = { 'path': None, 'size': ''}
 
-                    offer_tasks.append(self.new_task(offer, task, labels))
+                    new_task = self.new_task(offer, task, labels)
+                    if new_task is None:
+                        self.logger.debug('Mesos:Task:Error:Failed to create new task '+str(task['id']))
+                        continue
+                    offer_tasks.append(new_task)
                     offerCpus -= task['requirements']['cpu']
                     offerMem -= task['requirements']['ram']*1000
                     task['mesos_offer'] = True
@@ -416,16 +423,22 @@ class MesosScheduler(mesos.interface.Scheduler):
         docker.force_pull_image = True
 
         port_list = []
+        job['container']['port_mapping'] = []
+        if 'ports' in job['requirements']:
+            port_list = job['requirements']['ports']
         if job['command']['interactive']:
-            port_list = [22]
+            port_list.append(22)
             mesos_ports = task.resources.add()
             mesos_ports.name = "ports"
             mesos_ports.type = mesos_pb2.Value.RANGES
             for port in port_list:
                 if self.config['port_allocate']:
                     mapped_port = self.get_mapping_port(offer, job)
+                    if mapped_port is None:
+                        return None
                 else:
                     mapped_port = port
+                job['container']['port_mapping'].append({'host': mapped_port, 'container': port})
                 docker_port = docker.port_mappings.add()
                 docker_port.host_port = mapped_port
                 docker_port.container_port = port
