@@ -428,6 +428,7 @@ class MesosScheduler(mesos.interface.Scheduler):
             port_list = job['requirements']['ports']
         if job['command']['interactive']:
             port_list.append(22)
+        if port_list:
             mesos_ports = task.resources.add()
             mesos_ports.name = "ports"
             mesos_ports.type = mesos_pb2.Value.RANGES
