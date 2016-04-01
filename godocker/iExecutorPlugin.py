@@ -69,6 +69,10 @@ class IExecutorPlugin(IGoDockerPlugin):
         '''
         Execute task list on executor system
 
+        Method must update:
+            - task['container']['port_mapping'] to append port mappings is some ports are opened with format {'host': mapped_port, 'container': port}
+            - task['container']['ports'] array must also contain the list of host ports. Those are sets automatically if using get_mapping_port method.
+
         :param tasks: list of tasks to run
         :type tasks: list
         :param callback: callback function to update tasks status (running/rejected)
@@ -116,11 +120,13 @@ class IExecutorPlugin(IGoDockerPlugin):
         '''
         Get a port mapping for interactive tasks
 
+        If None is returned, task should rejected.
+
         :param host: hostname of the container
         :type host: str
         :param task: task
         :type task: int
-        :return: available port
+        :return: available port, None if no port is available
         '''
         if not self.redis_handler.exists(self.cfg['redis_prefix']+':ports:'+host):
             for i in range(self.cfg['port_range']):

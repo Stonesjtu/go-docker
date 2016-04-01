@@ -37,6 +37,7 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 * optional *guest* support, i.e. accepting users connecting with Google, GitHub, ... and not in system. Guest will map to a system user for execution.
 * node reservation (mesos)
 * experimental resource reservation (GPU, etc.)
+* open some ports in container
 
 ## LICENSE
 
