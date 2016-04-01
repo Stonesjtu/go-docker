@@ -551,7 +551,7 @@ class Mesos(IExecutorPlugin):
             # Reuse previous framework identifier
             mesos_framework_id = mesos_pb2.FrameworkID()
             mesos_framework_id.value = frameworkId
-            framework.id.MergeFrom(framework_id)
+            framework.id.MergeFrom(mesos_framework_id)
 
         if os.getenv("MESOS_CHECKPOINT"):
             self.logger.info("Enabling checkpoint for the framework")
