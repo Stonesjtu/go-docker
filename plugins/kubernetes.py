@@ -93,16 +93,13 @@ class Kubernetes(IExecutorPlugin):
                     # Use required fields and place them like in swarm
                     job['container']['meta']['Node'] = {'Name': 'localhost'}
 
-                self.logger.error('DEBUG OSALLOU 3')
                 if 'Config' in job['container']['meta'] and 'Labels' in job['container']['meta']['Config']:
                     # We don't need labels and some labels with dots create
                     # issue to store the information in db
                     del job['container']['meta']['Config']['Labels']
 
                 vol_binds = {}
-                self.logger.error('DEBUG OSALLOU volumes')
                 for v in job['container']['volumes']:
-                    self.logger.error('DEBUG OSALLOU v: '+str(v))
                     if v['mount'] is None:
                         v['mount'] = v['path']
                     ro = True
@@ -113,7 +110,6 @@ class Kubernetes(IExecutorPlugin):
                         'ro': ro,
                         'name': v['name']
                     }
-                self.logger.error('DEBUG OSALLOU after volumes '+str(vol_binds))
 
                 container_id = self._get_pod_id(job['id'])
                 pod = {
@@ -145,7 +141,6 @@ class Kubernetes(IExecutorPlugin):
                     "volumes": []
                   }
                 }
-                self.logger.error('DEBUG OSALLOU port_list')
                 for port in port_list:
                     pod['spec']['containers'][0]['ports'].append(
                                               {
@@ -154,10 +149,8 @@ class Kubernetes(IExecutorPlugin):
                     )
                     job['container']['ports'].append(port)
 
-                self.logger.error('DEBUG OSALLOU vol_binds '+str(vol_binds))
                 for vol_path in vol_binds:
                     vol = vol_binds[vol_path]
-                    self.logger.error('DEBUG OSALLOU vol_binds '+str(vol))
                     pod['spec']['containers'][0]['volumeMounts'].append({
                         "name": vol['name'],
                         "mountPath": vol['bind'],
@@ -169,9 +162,7 @@ class Kubernetes(IExecutorPlugin):
                             "path": vol_path
                         }
                     })
-                self.logger.error('DEBUG OSALLOU after vol_binds')
                 # Tmp dir, size is not controlled
-                self.logger.error('DEBUG OSALLOU tmpstorage: '+str( job['requirements']['tmpstorage']))
                 if job['requirements']['tmpstorage'] and job['requirements']['tmpstorage']['path'] is not None:
                     pod['spec']['containers'][0]['volumeMounts'].append({
                                             "name":'tmp-data',
@@ -184,7 +175,6 @@ class Kubernetes(IExecutorPlugin):
                     })
 
                 # Node selection based on constraints
-                self.logger.error('DEBUG OSALLOU label')
                 if 'label' in job['requirements'] and job['requirements']['label']:
                     pod['spec']['nodeSelector'] = {}
                     for label in job['requirements']['label']:
@@ -194,9 +184,7 @@ class Kubernetes(IExecutorPlugin):
                 self.logger.debug('Kube pod: '+str(pod))
                 r = requests.post('http://localhost:8080/api/v1/namespaces/default/pods', data=json.dumps(pod))
                 kube_request = r.json()
-                self.logger.error('DEBUG OSALLOU KUBRES:'+str(r.json()))
                 kube_ok = True
-                self.logger.error('DEBUG OSALLOU KUB STATUS CODE '+str(r.status_code))
                 if r.status_code != requests.codes.ok and r.status_code != 201:
                     kube_ok = False
                 status = kube_request['status']['phase']
@@ -209,7 +197,6 @@ class Kubernetes(IExecutorPlugin):
                         self.logger.error('Execute:Job:'+str(job['id'])+':'+str(kube_request['status']['message']))
                     else:
                         self.logger.error('Execute:Job:'+str(job['id'])+':'+str(status))
-                self.logger.error('DEBUG OSALLOU KUB OK? '+str(kube_ok))
                 if kube_ok:
                     job['container']['id'] = container_id
                     running_tasks.append(job)
@@ -252,7 +239,6 @@ class Kubernetes(IExecutorPlugin):
                 return (task, over)
 
             kube_status = r.json()
-            self.logger.error('DEBUG OSALLOU KUB WATCH: '+str(kube_status))
 
             if kube_status['status']['phase'] == 'Pending':
                 # ? still pending ? check if scheduling issue
@@ -263,11 +249,9 @@ class Kubernetes(IExecutorPlugin):
                     self.logger.debug('Failed to get events for '+container_id+', scheduler may not have yet processed task')
                 events = r.json()
                 for event in events['items']:
-                    self.logger.error('DEBUG OSALLOU event: '+str(event))
                     if event['reason'] == 'FailedScheduling':
                         # Not enough resources, set as rescheduled
                         requests.delete(self.cfg['kube_server']+'/api/v1/namespaces/'+namespace+'/pods/'+pod_id, headers=headers)
-                        self.logger.error('DEBUG OSALLOU delete pod')
                         self.jobs_handler.update({
                                                 'id': task['id']
                                                 },{
@@ -280,7 +264,6 @@ class Kubernetes(IExecutorPlugin):
                                                     }
                                                 })
                         # Drop from running, set back to pending
-                        self.logger.error('DEBUG OSALLOU back to pending')
                         return (None, False)
 
 
@@ -294,7 +277,6 @@ class Kubernetes(IExecutorPlugin):
 
                 task['status']['date_running'] = strict_rfc3339.rfc3339_to_timestamp(kube_status['status']['containerStatuses'][0]['state']['terminated']['startedAt'])
                 task['status']['date_over'] = strict_rfc3339.rfc3339_to_timestamp(kube_status['status']['containerStatuses'][0]['state']['terminated']['finishedAt'])
-            self.logger.error('DEBUG OSALLOU '+str(task['status']))
 
 
             update = None
@@ -367,7 +349,6 @@ class Kubernetes(IExecutorPlugin):
             pod_id = self._get_pod_id(task['id'])
             namespace = self._get_namespace()
             r = requests.delete(self.cfg['kube_server']+'/api/v1/namespaces/'+namespace+'/pods/'+pod_id, headers=headers)
-            self.logger.error('DEBUG OSALLOU KILL:'+str(r.status_code)+":"+str(r.json()))
             if r.status_code == 404:
                 over = True
             elif r.status_code != requests.codes.ok:
