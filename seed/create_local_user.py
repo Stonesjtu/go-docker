@@ -34,7 +34,7 @@ def main():
         sys.exit(1)
     cfg= None
     with open(config_file, 'r') as ymlfile:
-    cfg = yaml.load(ymlfile)
+        cfg = yaml.load(ymlfile)
 
     if not cfg['plugins_dir'] or not os.path.exists(cfg['plugins_dir']):
         logging.error("Plugin directory not found")
