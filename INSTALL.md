@@ -4,18 +4,18 @@ Here is basic install for a single node.
 
 ## Create python virtualenv
 
-$ virtualenv envgodocker
-$ . envgodocker/bin/activate
+    $ virtualenv envgodocker
+    $ . envgodocker/bin/activate
 
 ## Get code
 
-$ git clone https://bitbucket.org/osallou/go-docker.git
-$ git clone https://bitbucket.org/osallou/go-docker-web.git
+    $git clone https://bitbucket.org/osallou/go-docker.git
+    $git clone https://bitbucket.org/osallou/go-docker-web.git
 
 ## Dependencies
 
-$apt-get install python-dev libldap2-dev gcc libsasl2-dev
-$apt-get install openssl libpython-dev libffi-dev libssl-dev
+    $apt-get install python-dev libldap2-dev gcc libsasl2-dev
+    $apt-get install openssl libpython-dev libffi-dev libssl-dev
 
 (see README.md for CentOS)
 
