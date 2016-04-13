@@ -1,0 +1,12 @@
+[Unit]
+Description=godocker ftp
+
+[Service]
+WorkingDirectory=/opt/go-docker
+ExecStart=/usr/bin/python go-d-ftp.py
+ExecStop=/bin/kill -9 $MAINPID
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+

@@ -75,7 +75,7 @@ class IAuthPlugin(IGoDockerPlugin):
         '''
         return None
 
-    def bind_api(self, apikey):
+    def bind_api(self, login, apikey):
         '''
         Check api key and return user info (same than bind_credentials)
         '''

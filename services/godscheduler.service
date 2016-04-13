@@ -1,0 +1,13 @@
+[Unit]
+Description=godocker scheduler
+
+[Service]
+Environment=GOD_PID=/var/run/godockerscheduler.pid
+WorkingDirectory=/opt/go-docker
+ExecStart=/usr/bin/python go-d-scheduler.py start
+ExecStop=/usr/bin/python go-d-scheduler.py stop
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+

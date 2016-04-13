@@ -11,6 +11,7 @@
     Add optional volumes_check config param to check if a volume exists before mounting it
     Add get_quota method in auth plugins so that user quota can be extracted from an external system, auth dependant.
     GOD-28 Add possiblity to open additional ports in container
+    GOD-27 Add FTP server to upload user data (read only in container), directory available in container with $GODOCKER_DATA
 1.0.2:
     minor error cases handling
     extract container id from TaskStatus in Mesos when available (mesos >= 0.23)

@@ -239,6 +239,17 @@ guest_allow_root: False
 # 'default', use guest_bind home directory
 guest_home_root: null
 
+
+# FTP storage per user ######################################
+# Available in $GODOCKER_DATA in container
+# Credentials: user_id / api_key
+ftp:
+    listen: '127.0.0.1'
+    port: 2121
+    quota: '1M'
+    # Public ftp url to access the FTP server if behind a proxy
+    public_endpoint: 'ftp://127.0.0.1:2121'
+
 # Logging ##################################
 log_config:
     'version': 1

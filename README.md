@@ -38,6 +38,7 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 * node reservation (mesos)
 * experimental resource reservation (GPU, etc.)
 * open some ports in container
+* FTP server for user data upload (with quota)
 
 ## LICENSE
 

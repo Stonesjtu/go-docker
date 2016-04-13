@@ -118,6 +118,10 @@ As we use swarm, let's comment mesos plugin (to avoid its dependencies installat
     $python go-d-scheduler.py start
     $python go-d-watcher.py start
 
+Optionally, start the FTP server (for user upload of data)
+
+    $python go-d-ftp.py
+
 # Web interface
 
 ## Setup

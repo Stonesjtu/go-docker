@@ -440,6 +440,20 @@ class GoDScheduler(Daemon):
             'path': task_dir,
             'mount': '/mnt/go-docker'
         })
+
+        ftp_user = {
+            'id': 'user_'+task['user']['id']
+        }
+        ftp_dir = self.store.get_task_dir(ftp_user)
+        if os.path.exists(ftp_dir):
+            task['container']['volumes'].append({
+                'name': 'god-ftp',
+                'acl': 'ro',
+                'path': ftp_dir,
+                'mount': '/mnt/god-data'
+            })
+
+
         # Write wrapper script to run script with user uidNumber/guidNumber
         # Chown files in shared dir to gives files ACLs to user at the end
         # Exit with code of executed cmd.sh
@@ -487,6 +501,7 @@ class GoDScheduler(Daemon):
 
         cmd += "export GODOCKER_JID="+str(task['id'])+"\n"
         cmd += "export GODOCKER_PWD=/mnt/go-docker\n"
+        cmd += "export GODOCKER_DATA=/mnt/god-data\n"
         vol_home = "export GODOCKER_HOME=/mnt/go-docker"
         for v in task['container']['volumes']:
             if v['name'] == 'home':
@@ -498,7 +513,7 @@ class GoDScheduler(Daemon):
         cmd += str(self.store.get_pre_command())+"\n"
 
         if not task['container']['root']:
-            cmd += "su - "+user_id+" -c \""+vol_home + array_cmd + " ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\"\n"
+            cmd += "su - "+user_id+" -c \""+vol_home + array_cmd + " ; export GODOCKER_DATA=/mnt/god-data ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\"\n"
         else:
             cmd += "/mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\n"
 
@@ -550,18 +565,19 @@ class GoDScheduler(Daemon):
         cmd += "exit $ret_code\n"
 
         wrapper = "#!/bin/sh\n"
-        wrapper += "if hash bash 2>/dev/null; then\n"
-        wrapper += "    echo OK\n"
-        wrapper += "else\n"
-        wrapper += "    if hash apk 2>/dev/null; then\n"
-        wrapper += "        apk --update add bash\n"
-        wrapper += "        apk --update --repository http://dl-4.alpinelinux.org/alpine/edge/testing add shadow\n"
-        wrapper += "        echo \"auth       sufficient pam_rootok.so\" > /etc/pam.d/su\n"
-        wrapper += "        if [ ! -e /home/" + user_id + " ]; then"
-        wrapper += "            mkdir -p /home/" + user_id + "\n"
-        wrapper += "        fi\n"
-        wrapper += "    fi\n"
-        wrapper += "fi\n"
+        if task['command']['interactive']:
+            wrapper += "if hash bash 2>/dev/null; then\n"
+            wrapper += "    echo OK\n"
+            wrapper += "else\n"
+            wrapper += "    if hash apk 2>/dev/null; then\n"
+            wrapper += "        apk --update add bash\n"
+            wrapper += "        apk --update --repository http://dl-4.alpinelinux.org/alpine/edge/testing add shadow\n"
+            wrapper += "        echo \"auth       sufficient pam_rootok.so\" > /etc/pam.d/su\n"
+            wrapper += "        if [ ! -e /home/" + user_id + " ]; then"
+            wrapper += "            mkdir -p /home/" + user_id + "\n"
+            wrapper += "        fi\n"
+            wrapper += "    fi\n"
+            wrapper += "fi\n"
 
         if is_array_child_task(task):
             script_file = self.store.add_file(parent_task, 'godocker.sh', cmd, str(task['requirements']['array']['task_id']))

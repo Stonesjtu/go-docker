@@ -31,3 +31,6 @@ PyYAML
 requests
 strict-rfc3339
 humanfriendly
+pyopenssl
+pysendfile
+pyftpdlib

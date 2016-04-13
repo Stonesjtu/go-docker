@@ -1,0 +1,13 @@
+[Unit]
+Description=godocker watcher
+
+[Service]
+Environment=GOD_PID=/var/run/godockerwatcher.pid
+WorkingDirectory=/opt/go-docker
+ExecStart=/usr/bin/python go-d-watcher.py start
+ExecStop=/usr/bin/python go-d-watcher.py stop
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+

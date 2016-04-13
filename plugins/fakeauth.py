@@ -78,11 +78,11 @@ class FakeAuth(IAuthPlugin):
                }
         return user
 
-    def bind_api(self, apikey):
+    def bind_api(self, login, apikey):
         '''
         Check api key and return user info (same than bind_credentials)
         '''
-        return None
+        return self.bind_credentials(login, apikey)
 
     def get_volumes(self, user, requested_volumes, root_access=False):
         '''
@@ -149,6 +149,8 @@ class FakeAuth(IAuthPlugin):
         for req in requested_volumes:
             if req['name'] == 'go-docker':
                 continue
+            if req['name'] == 'god-ftp':
+                continue
             if req['name'] == 'home':
                 req['path'] = user['homeDirectory']
                 req['mount'] = '/mnt/home'
@@ -165,7 +167,7 @@ class FakeAuth(IAuthPlugin):
 
             if root_access:
                 req['acl'] = 'ro'
-            self.logger.error("####"+str(self.cfg['volumes_check']))
+            self.logger.debug("####"+str(self.cfg['volumes_check']))
             if 'volumes_check' in self.cfg and self.cfg['volumes_check'] and not os.path.exists(req['path']):
                 self.logger.error('Volume path '+str(req['path'])+' does not exists')
                 continue

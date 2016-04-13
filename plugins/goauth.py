@@ -164,11 +164,28 @@ class GoAuth(IAuthPlugin):
 
 
 
-    def bind_api(self, apikey):
+    def bind_api(self, login, apikey):
         '''
         Check api key and return user info (same than bind_credentials)
         '''
-        return None
+        user_in_db = self.users_handler.find_one({'id': login})
+        if user_in_db is None:
+            return None
+        if apikey != user_in_db['credentials']['apikey']:
+            return None
+        try:
+            user = {
+                 'id' :login,
+                 'uidNumber': user_in_db['uid'],
+                 'gidNumber': user_in_db['gid'],
+                 'sgids': user_in_db['sgids'],
+                 'email': user_in_db['email'],
+                 'homeDirectory': user_in_db['homeDirectory']
+               }
+        except Exception:
+            return None
+
+        return user
 
     def get_volumes(self, user, requested_volumes, root_access=False):
         '''
@@ -235,6 +252,8 @@ class GoAuth(IAuthPlugin):
         for req in requested_volumes:
             if req['name'] == 'go-docker':
                 continue
+            if req['name'] == 'god-ftp':
+                continue                
             if req['name'] == 'home':
                 req['path'] = user['homeDirectory']
                 req['mount'] = '/mnt/home'
