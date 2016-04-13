@@ -105,7 +105,10 @@ class GoAuth(IAuthPlugin):
             ldap_host = self.cfg['ldap_host']
             ldap_port = self.cfg['ldap_port']
             s = Server(host=ldap_host, port=int(ldap_port), use_ssl=False, get_info='ALL')
-            con = Connection(s)
+            if 'ldap_admin_dn' in self.cfg and self.cfg['ldap_admin_dn']:
+                con = Connection(s, user=self.cfg['ldap_admin_dn'], password=self.cfg['ldap_admin_password'])
+            else:
+                con = Connection(s)
         except Exception as err:
             self.logger.error(str(err))
             return None
@@ -253,7 +256,7 @@ class GoAuth(IAuthPlugin):
             if req['name'] == 'go-docker':
                 continue
             if req['name'] == 'god-ftp':
-                continue                
+                continue
             if req['name'] == 'home':
                 req['path'] = user['homeDirectory']
                 req['mount'] = '/mnt/home'
