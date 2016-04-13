@@ -51,6 +51,12 @@ See COPYRIGHT file. Go-Docker is developped at IRISA.
 * FireWorks module: submit FireWorks workflow commands to go-docker, https://bitbucket.org/osallou/go-docker-fireworks/
 * Live: view job logs in real-time, https://bitbucket.org/osallou/go-docker-live/
 
+## Python
+
+go-docker and its components (go-docker-web, ...) are Python 2.7+ and Python 3 compatible.
+However, Mesos does not provide yet Python 3 libraries.
+
+If you do not plan to use mesos, you can simply delete plugins/mesos.* files.
 
 ## Dependencies
 
@@ -78,6 +84,10 @@ InfluxDB is optional but recommended. Grafana will help getting charts of usage 
 
 go-d-docker needs a shared directory between go-d-scheduler, go-d-watcher and
 container nodes.
+
+## Install
+
+See INSTALL.md
 
 ## Status
 
