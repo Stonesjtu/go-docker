@@ -465,8 +465,9 @@ class GoDScheduler(Daemon):
         # Create secondary groups
         if 'sgids' in task['user']:
             for sgid in task['user']['sgids']:
-                cmd += "groupadd --gid "+str(sgid)+" group"+str(sgid)+"\n"
-                cmd += "usermod -a -G group"+str(sgid)+" "+user_id+"\n"
+                cmd += "groupadd --gid "+str(sgid)+" group"+str(sgid)+"; "
+                #cmd += "usermod -a -G group"+str(sgid)+" "+user_id+"\n"
+                cmd += "usermod -a -G "+str(sgid)+" "+user_id+"\n"
 
         # docker-plugin-zfs
         if 'plugin_zfs' in self.cfg and self.cfg['plugin_zfs']:
@@ -532,7 +533,7 @@ class GoDScheduler(Daemon):
             cmd +="echo \"" + task['user']['credentials']['public'] + "\" > "+ssh_dir+"/authorized_keys\n"
             cmd +="chmod 600 " + ssh_dir +"/authorized_keys\n"
             if not task['container']['root']:
-                cmd +="chown -R "+user_id+":"+user_id+" /home/"+user_id+"\n"
+                cmd +="chown -R "+user_id+":"+str(task['user']['gid'])+" /home/"+user_id+"\n"
                 cmd +="chmod 644 /home/"+user_id+"/.ssh/authorized_keys\n"
 
             cmd += "\nif hash sshd 2>/dev/null; then\n"
@@ -560,7 +561,7 @@ class GoDScheduler(Daemon):
         cmd += "ret_code=$?\n"
         cmd += "echo $startprocess > /mnt/go-docker/god.info\n"
         cmd += "date +%s >> /mnt/go-docker/god.info\n"
-        cmd += "chown -R "+user_id+":"+user_id+" /mnt/go-docker/*\n"
+        cmd += "chown -R "+user_id+":"+str(task['user']['gid'])+" /mnt/go-docker/*\n"
         cmd += str(self.store.get_post_command())+"\n"
         cmd += "exit $ret_code\n"
 
