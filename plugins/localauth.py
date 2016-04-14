@@ -62,7 +62,8 @@ class LocalAuth(IAuthPlugin):
                  'email': user_in_db['email'],
                  'homeDirectory': user_in_db['homeDirectory']
                }
-        except Exception:
+        except Exception as e:
+            self.logger.error('Error getting user info: '+str(e))
             return None
 
         return user
