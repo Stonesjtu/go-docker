@@ -67,6 +67,15 @@ class LocalAuth(IAuthPlugin):
 
         return user
 
+
+    def delete_user(self, login):
+        user_exists = self.users_handler.find_one({'id': login})
+        if not user_exists:
+            self.logger.error("User does not exists: " + login)
+            return None
+        self.users_handler.delete_one({'id': login})
+        return user_exists
+
     def create_user(self, login, password, email=None, homeDirectory=None, uid=None, gid=None, sgids=None):
 
         encoded_password = password
