@@ -247,6 +247,7 @@ class GoDScheduler(Daemon):
                  self.auth_policy = pluginInfo.plugin_object
                  self.auth_policy.set_logger(self.logger)
                  self.auth_policy.set_config(self.cfg)
+                 self.auth_policy.set_users_handler(self.db_users)
                  print("Loading auth policy: "+self.auth_policy.get_name())
 
         self.check_redis()
