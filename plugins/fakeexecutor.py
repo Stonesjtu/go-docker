@@ -3,6 +3,9 @@ import logging
 from godocker.utils import is_array_child_task, is_array_task
 
 class FakeExecutor(IExecutorPlugin):
+
+    fail_on = 5
+
     def get_name(self):
         return "fake"
 
@@ -50,7 +53,7 @@ class FakeExecutor(IExecutorPlugin):
                 running_tasks.append(task)
                 self.logger.debug('Execute:Job:'+str(task['id'])+':Skip:Array')
                 continue
-            if i < 5:
+            if i < self.fail_on:
                 self.logger.debug("Run:Fake:task:run:"+str(task['id']))
                 running_tasks.append(task)
                 if task['command']['interactive']:

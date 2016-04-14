@@ -136,7 +136,7 @@ class SchedulerTest(unittest.TestCase):
                 'public': ''
             },
             'uidNumber': 1001,
-            'uidNumber': 1001,
+            'gidNumber': 1001,
             'homeDirectory': '/home/osallou',
             'email': 'fakeemail@no.mail',
             'usage':
