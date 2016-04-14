@@ -34,12 +34,18 @@ class ConsulStatusAuth(IStatusPlugin):
 
         try:
             c = consul.Consul()
-
             if proctype == 'web':
                 if name not in ConsulStatusAuth.services:
                     c.agent.service.register(proctype, service_id=name, port=6543, tags=[proctype])
                     ConsulStatusAuth.services[name] = True
                     check= consul.Check.http(url=self.cfg['web_endpoint'], interval=20)
+                    c.agent.check.register(name+'_check', check=check, service_id=name)
+            elif proctype == 'ftp':
+                if name not in ConsulStatusAuth.services:
+                    hostname = socket.gethostbyaddr(socket.gethostname())[0]
+                    c.agent.service.register(proctype, service_id=name, port=self.cfg['ftp']['port'], tags=[proctype])
+                    ConsulStatusAuth.services[name] = True
+                    check= consul.Check.tcp(host=hostname, port=self.cfg['ftp']['port'], interval=20)
                     c.agent.check.register(name+'_check', check=check, service_id=name)
             else:
                 if name not in ConsulStatusAuth.services:

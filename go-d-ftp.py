@@ -7,6 +7,7 @@ import time
 import os
 import traceback
 import yaml
+import socket
 
 import redis
 from pymongo import MongoClient
@@ -268,9 +269,6 @@ class GodFTP(object):
              self.status_manager = pluginInfo.plugin_object
              self.status_manager.set_logger(self.logger)
              self.status_manager.set_redis_handler(self.r)
-             self.status_manager.set_jobs_handler(self.db_jobs)
-             self.status_manager.set_users_handler(self.db_users)
-             self.status_manager.set_projects_handler(self.db_projects)
              self.status_manager.set_config(self.cfg)
              print("Loading status manager: "+self.status_manager.get_name())
 
@@ -296,10 +294,12 @@ class GodFTP(object):
         self.handler.logger = self.logger
 
     def start(self):
-        server = FTPServer((self.cfg['ftp']['listen'], self.cfg['ftp']['port']), self.handler)
-        server.serve_forever()
+        self.hostname = socket.gethostbyaddr(socket.gethostname())[0]
+        self.proc_name = 'scheduler-'+self.hostname
         if self.status_manager is not None:
             self.status_manager.keep_alive(self.proc_name, 'ftp')
+        server = FTPServer((self.cfg['ftp']['listen'], self.cfg['ftp']['port']), self.handler)
+        server.serve_forever()
 
 
 ftp_handler = GodFTP()
