@@ -3,6 +3,7 @@ import json
 import datetime
 import time
 import logging
+import logging.config
 import yaml
 import argparse
 import sys
@@ -40,6 +41,15 @@ def main():
         logging.error("Plugin directory not found")
         sys.exit(1)
 
+
+    logger = logging.getLogger('root')
+    if cfg['log_config'] is not None:
+        for handler in list(cfg['log_config']['handlers'].keys()):
+            cfg['log_config']['handlers'][handler] = dict(cfg['log_config']['handlers'][handler])
+        logging.config.dictConfig(cfg['log_config'])
+        logger = logging.getLogger('root')
+
+
     mongo = MongoClient(cfg['mongo_url'])
     db = mongo[cfg['mongo_db']]
     db_users = db.users
@@ -54,6 +64,7 @@ def main():
     # Load all plugins
     simplePluginManager.collectPlugins()
 
+
     auth_policy = None
     if cfg['auth_policy'] != 'local':
         logging.error('Wrong auth policy, only local auth allows user creation')
@@ -63,6 +74,7 @@ def main():
              auth_policy = pluginInfo.plugin_object
              auth_policy.set_users_handler(db_users)
              auth_policy.set_config(cfg)
+             auth_policy.set_logger(logger)
              print "Loading auth policy: "+auth_policy.get_name()
 
     sgids = []
@@ -78,7 +90,10 @@ def main():
         sys.exit(1)
 
     user = auth_policy.create_user(args.login, args.password, args.email, args.homeDirectory, uid, gid, sgids)
-    logging.info("User created: "+str(user))
+    if user is not None:
+        logging.info("User created: "+str(user))
+    else:
+        logging.error("Could not create user")
 
 if __name__ == '__main__':
     main()

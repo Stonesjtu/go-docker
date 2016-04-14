@@ -75,6 +75,11 @@ class LocalAuth(IAuthPlugin):
 
         password_encrypt = bcrypt.hashpw(encoded_password, bcrypt.gensalt())
 
+        user_exists = self.users_handler.find_one({'id': login})
+        if user_exists:
+            self.logger.error("User already exists: " + login)
+            return None
+
         try:
             if uid is None:
                 uid = pwd.getpwnam( login ).pw_uid
@@ -230,7 +235,7 @@ class LocalAuth(IAuthPlugin):
             if req['name'] == 'go-docker':
                 continue
             if req['name'] == 'god-ftp':
-                continue                
+                continue
             if req['name'] == 'home':
                 if user['homeDirectory'] is None:
                     continue
