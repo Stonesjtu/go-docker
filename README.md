@@ -42,7 +42,7 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 
 ## LICENSE
 
-See COPYRIGHT file. Go-Docker is developped at IRISA.
+See COPYRIGHT file. Go-Docker is developed at IRISA.
 
 ## Other components
 
@@ -79,7 +79,7 @@ Graphics can be displayed with Grafana on series *god_task_usage*
 
 InfluxDB can also be used with cAdvisor to archive usage statistics (see go-docker-web)
 
-InfluxDB is optional but recommended. Grafana will help getting charts of usage recorded in InfluxDB.
+InfluxDB is optional. Grafana will help getting charts of usage recorded in InfluxDB.
 
 ## Directories
 
@@ -121,7 +121,7 @@ multiple watchers running in parallel
 
 ## Configuration
 
-Configuration is in file go-d.ini. One can define the scheduler and executor to use. It must be one of the classes defined in plugins. One can easily add new ones following godocker/iExecutorPlugin and iSchedulterPlugin interfaces
+Configuration is in file go-d.ini. One can define the scheduler and executor to use. It must be one of the classes defined in plugins. One can easily add new ones following godocker/iExecutorPlugin and iSchedulerPlugin interfaces
 
 File is in YAML format.
 
@@ -135,7 +135,7 @@ Logging is defined in log_config field. One can set logging for logstash, graylo
 
 ### Fairshare
 
-FairShare plugin adds additional, optional configuration to manage different weight to apply on paramerers:
+FairShare plugin adds additional, optional configuration to manage different weight to apply on parameters:
 
 
     fairshare_waiting_time_weight = 0.1  # weight apply to waiting time of tasks
@@ -222,7 +222,7 @@ Available plugins are:
 
 ### Swarm
 
-To integrate with Swarm, swarm process needs to listen on a tcp socker (tcp://ip_address:2376 for example). Swarm is in charge of dispatching tasks to the Docker instances on slaves.
+To integrate with Swarm, swarm process needs to listen on a tcp socket (tcp://ip_address:2376 for example). Swarm is in charge of dispatching tasks to the Docker instances on slaves.
 
 ### Mesos
 
@@ -353,7 +353,7 @@ At this moment, this works only with mesos plugin, not swarm due to swarm manage
 
 ## Guest support
 
-The guest feature is optional and supported by the guest_XXX parameters in go-d.ini file. Guest users connect with Google, GitHub, ... and are not in system (ldap, ...). All guests are mapped/binded to a system user for execution. They do not have direct access to theur *home directory*, which will be created as a subdirectory of a specified, existing, directory.
+The guest feature is optional and supported by the guest_XXX parameters in go-d.ini file. Guest users connect with Google, GitHub, ... and are not in system (ldap, ...). All guests are mapped/binded to a system user for execution. They do not have direct access to their *home directory*, which will be created as a subdirectory of a specified, existing, directory.
 
 Administrator, via the web interface, must activate the users after their first login. Guest can be disabled afterward.
 
