@@ -567,19 +567,18 @@ class GoDScheduler(Daemon):
         cmd += "exit $ret_code\n"
 
         wrapper = "#!/bin/sh\n"
-        if task['command']['interactive']:
-            wrapper += "if hash bash 2>/dev/null; then\n"
-            wrapper += "    echo OK\n"
-            wrapper += "else\n"
-            wrapper += "    if hash apk 2>/dev/null; then\n"
-            wrapper += "        apk --update add bash\n"
-            wrapper += "        apk --update --repository http://dl-4.alpinelinux.org/alpine/edge/testing add shadow\n"
-            wrapper += "        echo \"auth       sufficient pam_rootok.so\" > /etc/pam.d/su\n"
-            wrapper += "        if [ ! -e /home/" + user_id + " ]; then"
-            wrapper += "            mkdir -p /home/" + user_id + "\n"
-            wrapper += "        fi\n"
-            wrapper += "    fi\n"
-            wrapper += "fi\n"
+        wrapper += "if hash bash 2>/dev/null; then\n"
+        wrapper += "    echo OK\n"
+        wrapper += "else\n"
+        wrapper += "    if hash apk 2>/dev/null; then\n"
+        wrapper += "        apk --update add bash\n"
+        wrapper += "        apk --update --repository http://dl-4.alpinelinux.org/alpine/edge/testing add shadow\n"
+        wrapper += "        echo \"auth       sufficient pam_rootok.so\" > /etc/pam.d/su\n"
+        wrapper += "        if [ ! -e /home/" + user_id + " ]; then"
+        wrapper += "            mkdir -p /home/" + user_id + "\n"
+        wrapper += "        fi\n"
+        wrapper += "    fi\n"
+        wrapper += "fi\n"
 
         if is_array_child_task(task):
             script_file = self.store.add_file(parent_task, 'godocker.sh', cmd, str(task['requirements']['array']['task_id']))
