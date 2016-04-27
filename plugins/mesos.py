@@ -231,6 +231,9 @@ class MesosScheduler(mesos.interface.Scheduler):
             for attr in offer.attributes:
                 if attr.type == 3:
                     labels[attr.name] = attr.text.value
+            self.logger.debug("Mesos:Labels:"+str(labels))
+            if 'hostname' not in labels:
+                self.logger.error('Mesos:Error:Configuration: missing label hostname')
 
             self.logger.debug("Mesos:Received offer %s with cpus: %s and mem: %s" \
                   % (offer.id.value, offerCpus, offerMem))
@@ -270,6 +273,7 @@ class MesosScheduler(mesos.interface.Scheduler):
                                 has_enough_resources = False
                                 break
                         if not has_enough_resources:
+                            self.logger.debug("Not enough specific resources for task "+str(task['id']))
                             del task['requirements']['resources']
                             continue
 
@@ -285,10 +289,12 @@ class MesosScheduler(mesos.interface.Scheduler):
                                 is_ok = False
                                 break
                         if not is_ok:
+                            self.logger.debug("Label requirements do not match for task "+str(task['id']))
                             continue
 
                     (res, zfs_path) = self.plugin_zfs_mount(labels['hostname'], task)
                     if not res:
+                        self.logger.debug("Zfs mount not possible for task "+str(task['id']))
                         continue
                     else:
                         if zfs_path is not None:
