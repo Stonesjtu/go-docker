@@ -1,3 +1,8 @@
+1.0.4:
+    Add LDAP with auth
+    Add debug logs
+    Add install doc
+
 1.0.3:
     GOD-22 Add Kubernetes executor (experimental)
     GOD-23 support scheduler failover

@@ -9,7 +9,7 @@ config = {
     'url': '',
     'download_url': '',
     'author_email': 'olivier.sallou@irisa.fr',
-    'version': '1.0.3',
+    'version': '1.0.4',
     'install_requires': ['nose',
                             'PyYAML',
                             'sphinx',
