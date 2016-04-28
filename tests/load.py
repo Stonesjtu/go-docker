@@ -24,6 +24,10 @@ from godocker.pairtreeStorage import PairtreeStorage
 from godocker.storageManager import StorageManager
 import godocker.utils as godutils
 
+import plotly.plotly as py
+import plotly.graph_objs as go
+
+
 def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-c', '--config', dest="config", help="Configuration file")
@@ -214,7 +218,7 @@ def main():
         schedule_dt = datetime.datetime.now()
         queued_tasks = scheduler.schedule_tasks(task_list)
         schedule_time = datetime.datetime.now() - schedule_dt
-        stat['schedule_time'] =  schedule_time
+        stat['schedule_time'] =  schedule_time.total_seconds()
         # Run tasks in fake env
         scheduler.run_tasks(queued_tasks)
         watch_dt = datetime.datetime.now()
@@ -224,7 +228,7 @@ def main():
             running_tasks = scheduler.db_jobs.find({'status.primary': 'running'}).count()
             logger.info("Nb tasks running: "+str(running_tasks))
         watch_time = datetime.datetime.now() - watch_dt
-        stat['watch_time'] =  watch_time
+        stat['watch_time'] =  watch_time.total_seconds()
 
         logger.info(stat)
         stats.append(stat)
@@ -234,8 +238,68 @@ def main():
     scheduler.db.drop_collection('jobsover')
     scheduler.db.drop_collection('users')
     scheduler.db.drop_collection('projects')
-    return stats
+
+    info = {
+        'users': nb_users,
+        'jobs': nb_jobs,
+        'loops': nb_loop
+    }
+
+    result = {'stats': stats, 'info': info}
+
+    plot_url = None
+
+    if 'plotly' not in cfg:
+        cfg['plotly'] = { 'username': None, 'api_key': None}
+
+    plotly_username = os.getenv('PLOTLY_USERNAME', None)
+    if plotly_username:
+        cfg['plotly']['username'] = plotly_username
+    plotly_apikey = os.getenv('PLOTLY_APIKEY', None)
+    if plotly_apikey:
+        cfg['plotly']['api_key'] = plotly_apikey
+
+    if cfg['plotly']['username'] and cfg['plotly']['api_key']:
+        plot_url = plotly_stats(result, cfg)
+
+
+    return (result, plot_url)
+
+def plotly_stats(stat_data, cfg):
+    logging.warn('Generate plotly chart')
+    statinfo = stat_data['stats']
+    info = stat_data['info']
+
+    x = []
+    schedule = []
+    watch = []
+    for i in range(len(statinfo)):
+        x.append(str(i))
+        schedule.append(statinfo[i]['schedule_time'])
+        watch.append(statinfo[i]['watch_time'])
+    trace1 = go.Bar(
+    x=x,
+    y=schedule,
+    name='Schedule time'
+    )
+    trace2 = go.Bar(
+        x=x,
+        y=watch,
+        name='Watch time'
+    )
+    data = [trace1, trace2]
+    layout = go.Layout(
+        barmode='group'
+    )
+    fig = go.Figure(data=data, layout=layout)
+    py.sign_in(cfg['plotly']['username'], cfg['plotly']['api_key'])
+    title = 'GoDocker load tests '+ cfg['scheduler_policy']+'['+str(info['users'])+','+str(info['jobs'])+','+str(info['loops'])+']'
+    plot_url = py.plot(fig, filename=title)
+    logging.info('plot_url: '+plot_url)
+    return plot_url
 
 if __name__ == '__main__':
-    stats = main()
-    logging.warn(stats)
+    (stat_info, plot_url) = main()
+    logging.warn(stat_info)
+    if plot_url:
+        logging.warn('plotly url: '+plot_url)
