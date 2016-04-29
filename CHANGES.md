@@ -1,3 +1,6 @@
+1.0.5:
+
+
 1.0.4:
     Add LDAP with auth
     Add debug logs

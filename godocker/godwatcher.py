@@ -242,6 +242,10 @@ class GoDWatcher(Daemon):
                     self.r.decr(self.cfg['redis_prefix']+':jobs:queued')
                     self.r.decr(self.cfg['redis_prefix'] + ':user:' + str(task['user']['id'])+ ':rate')
             # If not over, executor could not kill the task
+            if 'tentative' in task['status'] and task['status']['kill_tentative'] > 10:
+                over = True
+                task['status']['reason'] = 'Failed to kill task nicely, kill forced'
+
             if over:
                 self.logger.debug('Executor:Kill:Success:'+str(task['id']))
 
@@ -796,17 +800,24 @@ class GoDWatcher(Daemon):
         infinite = True
         self.executor.open(1)
         self.logger.warn('Start watcher')
-        try:
-            while infinite and True and not GoDWatcher.SIGINT:
+        while infinite and True and not GoDWatcher.SIGINT:
                 # Schedule timer
+            try:
                 self.update_status()
+            except Exception as e:
+                self.logger.error('Watcher:'+str(self.hostname)+':'+str(e))
+                traceback_msg = traceback.format_exc()
+                self.logger.error(traceback_msg)
+            try:
                 self.manage_tasks()
-                time.sleep(2)
-                if not loop:
-                    infinite = False
-        except Exception as e:
-            self.logger.error('Watcher:'+str(self.hostname)+':'+str(e))
-            traceback_msg = traceback.format_exc()
-            self.logger.error(traceback_msg)
+            except Exception as e:
+                self.logger.error('Watcher:'+str(self.hostname)+':'+str(e))
+                traceback_msg = traceback.format_exc()
+                self.logger.error(traceback_msg)
+
+            time.sleep(2)
+            if not loop:
+                infinite = False
+
 
         self.executor.close()
