@@ -245,6 +245,7 @@ class GoDWatcher(Daemon):
             if 'tentative' in task['status'] and task['status']['kill_tentative'] > 10:
                 over = True
                 task['status']['reason'] = 'Failed to kill task nicely, kill forced'
+                self.logger.error('Kill:Force:'+str(task['id']))
 
             if over:
                 self.logger.debug('Executor:Kill:Success:'+str(task['id']))
