@@ -46,7 +46,11 @@ class GoAuth(IAuthPlugin):
             self.logger.error(str(err))
             return None
         ldap_dn = self.cfg['ldap_dn']
-        base_dn = 'ou=People,' + ldap_dn
+        ldap_base_dn_filter = 'ou=People'
+        if 'ldap_base_dn_filter' in self.cfg and self.cfg['ldap_base_dn_filter']:
+            ldap_base_dn_filter = self.cfg['ldap_base_dn_filter']
+        base_dn = ldap_base_dn_filter + ',' + ldap_dn
+                
         filter = "(&""(|(uid=" + login + ")(mail=" + login + ")))"
         try:
             if not con.bind():
@@ -117,7 +121,10 @@ class GoAuth(IAuthPlugin):
             self.logger.error(str(err))
             return None
         ldap_dn = self.cfg['ldap_dn']
-        base_dn = 'ou=People,' + ldap_dn
+        ldap_base_dn_filter = 'ou=People'
+        if 'ldap_base_dn_filter' in self.cfg and self.cfg['ldap_base_dn_filter']:
+            ldap_base_dn_filter = self.cfg['ldap_base_dn_filter']
+        base_dn = ldap_base_dn_filter + ',' + ldap_dn
         filter = "(&""(|(uid=" + login + ")(mail=" + login + ")))"
         try:
             if not con.bind():

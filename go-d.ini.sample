@@ -160,6 +160,7 @@ auth_policy: 'fake'
 ldap_host: null
 ldap_port: null
 ldap_dn: null
+ldap_base_dn_filter: 'ou=People'
 ldap_admin_dn: null
 ldap_admin_password: null
 

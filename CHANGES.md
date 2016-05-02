@@ -1,5 +1,6 @@
 1.0.5:
-
+    Fix cas of kill failure
+    Add ldap_base_dn_filter parameter in go-d.ini to filter LDAP directory search
 
 1.0.4:
     Add LDAP with auth
