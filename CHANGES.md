@@ -1,6 +1,7 @@
 1.0.5:
     Fix cas of kill failure
     Add ldap_base_dn_filter parameter in go-d.ini to filter LDAP directory search
+    GOD-34 Usage error with mesos plugin if mesos_master refers to zookeeper address
 
 1.0.4:
     Add LDAP with auth
