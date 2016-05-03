@@ -53,6 +53,31 @@ class MesosScheduler(mesos.interface.Scheduler):
 
     def registered(self, driver, frameworkId, masterInfo):
         self.logger.info("Registered with framework ID %s" % frameworkId.value)
+        master_address = None
+        master_ip = None
+        master_port = 5050
+        try:
+            master_address = masterInfo.address.hostname
+            master_ip = masterInfo.address.ip
+            master_port = masterInfo.address.port
+        except Exception:
+            self.logger.warn("Address not available from master")
+        if master_address is None and master_ip is None:
+            try:
+                master_address = masterInfo.hostname
+                master_port = masterInfo.port
+            except Exception:
+                self.logger.warn("Could not get master address info")
+
+        if master_ip is not None and master_address is None:
+            master_address  = master_ip
+
+        if master_address is not None:
+            self.logger.info("Master hostname: "+str(master_address))
+            self.logger.info("Master port: "+str(master_port))
+            self.redis_handler.set(self.config['redis_prefix']+':mesos:master',
+                                   master_address+':'+str(master_port))
+
         self.frameworkId = frameworkId.value
         self.redis_handler.set(self.config['redis_prefix']+':mesos:frameworkId',
                                self.frameworkId)
@@ -772,8 +797,12 @@ class Mesos(IExecutorPlugin):
             }
 
         '''
+        mesos_master = self.redis_handler.get(self.cfg['redis_prefix']+':mesos:master')
+        if not mesos_master:
+            return []
+
         http = urllib3.PoolManager()
-        r = http.urlopen('GET', 'http://'+self.cfg['mesos_master']+'/master/state.json')
+        r = http.urlopen('GET', 'http://' + mesos_master + '/master/state.json')
         master = json.loads(r.data)
 
         slaves = []
