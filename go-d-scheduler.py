@@ -33,6 +33,9 @@ if __name__ == "__main__":
                 elif 'status' == sys.argv[1]:
                         status = daemon.status()
                         print("Last keep-alive: %s" % str(status))
+                elif 'config-reload' == sys.argv[1]:
+                        daemon.ask_reload_config()
+                        sys.exit(0)
                 else:
                         print("Unknown command")
                         sys.exit(2)

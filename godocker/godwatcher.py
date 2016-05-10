@@ -42,11 +42,34 @@ class GoDWatcher(Daemon):
 
     SIGINT = False
 
+    def reload_config(self):
+        '''
+        Reload config if last reload command if recent
+        '''
+        config_last_update = self.r.get(self.cfg['redis_prefix']+':config:last')
+        if config_last_update is not None:
+            config_last_update = float(config_last_update)
+            if config_last_update > self.config_last_loaded:
+                self.logger.warn('Reloading configuration')
+                with open(self.config_file, 'r') as ymlfile:
+                    self.cfg = yaml.load(ymlfile)
+                    dt = datetime.datetime.now()
+                    self.config_last_loaded = time.mktime(dt.timetuple())
+
+    def ask_reload_config(self):
+        dt = datetime.datetime.now()
+        config_last_loaded = time.mktime(dt.timetuple())
+        self.r.set(self.cfg['redis_prefix']+':config:last', config_last_loaded)
 
     def load_config(self, f):
         '''
         Load configuration from file path
         '''
+        self.config_file = f
+        dt = datetime.datetime.now()
+        self.config_last_loaded = time.mktime(dt.timetuple())
+
+
         self.cfg= None
         with open(f, 'r') as ymlfile:
             self.cfg = yaml.load(ymlfile)
@@ -815,7 +838,7 @@ class GoDWatcher(Daemon):
                 self.logger.error('Watcher:'+str(self.hostname)+':'+str(e))
                 traceback_msg = traceback.format_exc()
                 self.logger.error(traceback_msg)
-
+            self.reload_config()
             time.sleep(2)
             if not loop:
                 infinite = False
