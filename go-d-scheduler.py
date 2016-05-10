@@ -41,5 +41,5 @@ if __name__ == "__main__":
                         sys.exit(2)
                 sys.exit(0)
         else:
-                print("usage: %s start|stop|restart|init|once" % sys.argv[0])
+                print("usage: %s start|stop|restart|init|once|config-reload" % sys.argv[0])
                 sys.exit(2)
