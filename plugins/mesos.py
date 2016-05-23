@@ -566,6 +566,7 @@ class Mesos(IExecutorPlugin):
         self.cfg = cfg
         self.Terminated = False
         self.driver = None
+        self.redis_handler = redis.StrictRedis(host=self.cfg['redis_host'], port=self.cfg['redis_port'], db=self.cfg['redis_db'], decode_responses=True)
 
 
     def open(self, proc_type):
