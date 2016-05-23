@@ -167,7 +167,7 @@ class FakeAuth(IAuthPlugin):
 
             if root_access:
                 req['acl'] = 'ro'
-            self.logger.debug("####"+str(self.cfg['volumes_check']))
+            #self.logger.debug("####"+str(self.cfg['volumes_check']))
             if 'volumes_check' in self.cfg and self.cfg['volumes_check'] and not os.path.exists(req['path']):
                 self.logger.error('Volume path '+str(req['path'])+' does not exists')
                 continue
