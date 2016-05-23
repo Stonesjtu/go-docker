@@ -3,6 +3,7 @@
     Add ldap_base_dn_filter parameter in go-d.ini to filter LDAP directory search
     GOD-34 Usage error with mesos plugin if mesos_master refers to zookeeper address
     Add dynamic reload of config via go-d-scheduler config-reload command
+    Add support to access private image in Docker registry (see README.md, Private registry/images)
 1.0.4:
     Add LDAP with auth
     Add debug logs

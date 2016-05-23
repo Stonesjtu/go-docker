@@ -400,6 +400,13 @@ Still in previous example, if system selects in available resources the slot 0 o
 
 It is possible to specify in task multiple resource requirements.
 
+## Private registry/images
+
+To access a Docker registry/image with authentication, user needs to:
+
+* Create an archive in his home directory named docker.tar.gz containing the .docker directory (.docker/, /.docker/config.json ) after a successful login
+* Add *home* volume in his task (to access docker.tar.gz archive)
+
 ## Tips
 
 Remove old containers

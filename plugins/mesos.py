@@ -401,6 +401,8 @@ class MesosScheduler(mesos.interface.Scheduler):
                             volume.mode = 1
             del job['requirements']['resources']
 
+        dockercfg = None
+
         for v in job['container']['volumes']:
             if v['mount'] is None:
                 v['mount'] = v['path']
@@ -411,6 +413,10 @@ class MesosScheduler(mesos.interface.Scheduler):
                 volume.mode = 1 # mesos_pb2.Volume.Mode.RW
             else:
                 volume.mode = 2 # mesos_pb2.Volume.Mode.RO
+            if v['name'] == 'home':
+                if os.path.exists(os.path.join(v['path'],'docker.tar.gz')):
+                    self.logger.debug('Add .dockercfg ' + os.path.join(v['mount'],'docker.tar.gz'))
+                    dockercfg = os.path.join(v['path'],'docker.tar.gz')
 
         if job['requirements']['tmpstorage']['path'] is not None:
             volume = container.volumes.add()
@@ -422,6 +428,11 @@ class MesosScheduler(mesos.interface.Scheduler):
 
         command = mesos_pb2.CommandInfo()
         command.value = job['command']['script']
+        if dockercfg:
+            dockerconfig = command.uris.add()
+            dockerconfig.value = dockercfg
+            #dockerconfig.output_file = ".dockercfg"
+
         task.command.MergeFrom(command)
         task.task_id.value = tid
         task.slave_id.value = offer.slave_id.value
@@ -526,7 +537,7 @@ class MesosScheduler(mesos.interface.Scheduler):
         self.logger.debug('Mesos:Task:Over:'+str(update.task_id.value))
         if int(update.state) in [2,3,4,5,7]:
             job = self.jobs_handler.find_one({'id': int(update.task_id.value)})
-            if job is not None:
+            if job is not None and 'meta' in job['container'] and 'Node' in job['container']['meta']:
                 self.plugin_zfs_unmount(job['container']['meta']['Node']['Name'], job)
 
 
