@@ -415,7 +415,7 @@ class MesosScheduler(mesos.interface.Scheduler):
                 volume.mode = 2 # mesos_pb2.Volume.Mode.RO
             if v['name'] == 'home':
                 if os.path.exists(os.path.join(v['path'],'docker.tar.gz')):
-                    self.logger.debug('Add .dockercfg ' + os.path.join(v['mount'],'docker.tar.gz'))
+                    self.logger.debug('Add .dockercfg ' + os.path.join(v['path'],'docker.tar.gz'))
                     dockercfg = os.path.join(v['path'],'docker.tar.gz')
 
         if job['requirements']['tmpstorage']['path'] is not None:
