@@ -402,6 +402,8 @@ It is possible to specify in task multiple resource requirements.
 
 ## Private registry/images
 
+### Mesos
+
 To access a Docker registry/image with authentication, user needs to:
 
 * Create an archive in his home directory named docker.tar.gz containing the .docker directory (.docker/, /.docker/config.json ) after a successful login
