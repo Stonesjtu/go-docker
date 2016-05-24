@@ -537,7 +537,7 @@ class MesosScheduler(mesos.interface.Scheduler):
         self.logger.debug('Mesos:Task:Over:'+str(update.task_id.value))
         if int(update.state) in [2,3,4,5,7]:
             job = self.jobs_handler.find_one({'id': int(update.task_id.value)})
-            if job is not None and 'meta' in job['container'] and 'Node' in job['container']['meta']:
+            if job is not None and 'meta' in job['container'] and job['container']['meta'] is not None and 'Node' in job['container']['meta']:
                 self.plugin_zfs_unmount(job['container']['meta']['Node']['Name'], job)
 
 
