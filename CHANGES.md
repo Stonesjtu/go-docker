@@ -5,6 +5,8 @@
     Add dynamic reload of config via go-d-scheduler config-reload command
     Add support to access private image in Docker registry (see README.md, Private registry/images)
     Fix resource usage in Mesos
+    Extract mesos failure reason for failure info
+    Add optional requirements.uris task parameter (list of URIs), list is saved in task dir as godocker-uris.txt
 1.0.4:
     Add LDAP with auth
     Add debug logs
