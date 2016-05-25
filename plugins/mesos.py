@@ -541,7 +541,8 @@ class MesosScheduler(mesos.interface.Scheduler):
                 self.plugin_zfs_unmount(job['container']['meta']['Node']['Name'], job)
 
 
-
+        if update.reason:
+            self.redis_handler.set(self.config['redis_prefix']+':mesos:over:'+str(update.task_id.value)+':reason',update.reason)
         self.redis_handler.set(self.config['redis_prefix']+':mesos:over:'+str(update.task_id.value),update.state)
 
     def frameworkMessage(self, driver, executorId, slaveId, message):
@@ -731,7 +732,13 @@ class Mesos(IExecutorPlugin):
                 task['container']['meta']['State']['ExitCode'] = 137
             else:
                 task['container']['meta']['State']['ExitCode'] = 1
+            if int(mesos_task) in [3,5,7]:
+                reason = self.redis_handler.get(self.cfg['redis_prefix']+':mesos:over:'+str(task['id'])+':reason')
+                if not reason:
+                    reason = 'Unknown'
+                task['status']['reason'] = 'System crashed or failed to start the task: ' + str(reason)
             self.redis_handler.delete(self.cfg['redis_prefix']+':mesos:over:'+str(task['id']))
+            self.redis_handler.delete(self.cfg['redis_prefix']+':mesos:over:'+str(task['id'])+':reason')
             return (task, True)
         else:
             self.logger.debug('Mesos:Task:Check:IsRunning:'+str(task['id']))
