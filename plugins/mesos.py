@@ -265,74 +265,81 @@ class MesosScheduler(mesos.interface.Scheduler):
             for task in tasks:
                 if not task['mesos_offer'] and task['requirements']['cpu'] <= offerCpus and task['requirements']['ram']*1000 <= offerMem:
                     # check for reservation constraints, if any
-                    self.logger.debug("Try to place task "+str(task['id']))
-                    if 'reservation' in labels:
-                        self.logger.debug("Node has reservation")
-                        reservations = labels['reservation'].split(',')
-                        offer_hostname = "undefined"
-                        if 'hostname' in labels:
-                            offer_hostname = labels['hostname']
-                        self.logger.debug("Check reservation for "+ offer_hostname)
-                        if task['user']['id'] not in reservations and task['user']['project'] not in reservations:
-                            self.logger.debug("User "+task['user']['id']+" not allowed to execute on "+ offer_hostname)
-                            continue
-
-                    # check for resources
-                    if 'label' in task['requirements'] and task['requirements']['label']:
-                        task['requirements']['resources'] = {}
-                        for task_resource in task['requirements']['label']:
-                            if not task_resource or not task_resource.startswith('resource=='):
-                                continue
-                            requested_resource = task_resource.split('==')
-                            requested_resource = requested_resource[1]
-                            if requested_resource not in task['requirements']['resources']:
-                                task['requirements']['resources'][requested_resource] = 1
-                            else:
-                                task['requirements']['resources'][requested_resource] += 1
-                        # check if enough resources
-                        has_enough_resources = True
-                        for requested_resource in task['requirements']['resources']:
-                            quantity = task['requirements']['resources'][requested_resource]
-                            if not self.has_enough_resource(offer, requested_resource, quantity):
-                                self.logger.debug('Not enough '+requested_resource+' on this node')
-                                has_enough_resources = False
-                                break
-                        if not has_enough_resources:
-                            self.logger.debug("Not enough specific resources for task "+str(task['id']))
-                            del task['requirements']['resources']
-                            continue
-
-                    # check for label constraints, if any
-                    if 'label' in task['requirements'] and task['requirements']['label']:
-                        is_ok = True
-                        for req in task['requirements']['label']:
-                            if not req:
-                                continue
-                            reqlabel = req.split('==')
-                            if reqlabel[0] == 'resource':
+                    try:
+                        self.logger.debug("Try to place task "+str(task['id']))
+                        if 'reservation' in labels:
+                            self.logger.debug("Node has reservation")
+                            reservations = labels['reservation'].split(',')
+                            offer_hostname = "undefined"
+                            if 'hostname' in labels:
+                                offer_hostname = labels['hostname']
+                            self.logger.debug("Check reservation for "+ offer_hostname)
+                            if task['user']['id'] not in reservations and task['user']['project'] not in reservations:
+                                self.logger.debug("User "+task['user']['id']+" not allowed to execute on "+ offer_hostname)
                                 continue
 
-                            if reqlabel[0] not in labels or reqlabel[1] != labels[reqlabel[0]]:
-                                is_ok = False
-                                break
-                        if not is_ok:
-                            self.logger.debug("Label requirements do not match for task "+str(task['id']))
-                            continue
+                        # check for resources
+                        if 'label' in task['requirements'] and task['requirements']['label']:
+                            task['requirements']['resources'] = {}
+                            for task_resource in task['requirements']['label']:
+                                if not task_resource or not task_resource.startswith('resource=='):
+                                    continue
+                                requested_resource = task_resource.split('==')
+                                requested_resource = requested_resource[1]
+                                if requested_resource not in task['requirements']['resources']:
+                                    task['requirements']['resources'][requested_resource] = 1
+                                else:
+                                    task['requirements']['resources'][requested_resource] += 1
+                            # check if enough resources
+                            has_enough_resources = True
+                            for requested_resource in task['requirements']['resources']:
+                                quantity = task['requirements']['resources'][requested_resource]
+                                if not self.has_enough_resource(offer, requested_resource, quantity):
+                                    self.logger.debug('Not enough '+requested_resource+' on this node')
+                                    has_enough_resources = False
+                                    break
+                            if not has_enough_resources:
+                                self.logger.debug("Not enough specific resources for task "+str(task['id']))
+                                del task['requirements']['resources']
+                                continue
 
-                    (res, zfs_path) = self.plugin_zfs_mount(labels['hostname'], task)
-                    if not res:
-                        self.logger.debug("Zfs mount not possible for task "+str(task['id']))
-                        continue
-                    else:
-                        if zfs_path is not None:
-                            task['requirements']['tmpstorage']['path'] = zfs_path
+                        # check for label constraints, if any
+                        if 'label' in task['requirements'] and task['requirements']['label']:
+                            is_ok = True
+                            for req in task['requirements']['label']:
+                                if not req:
+                                    continue
+                                reqlabel = req.split('==')
+                                if reqlabel[0] == 'resource':
+                                    continue
+
+                                if reqlabel[0] not in labels or reqlabel[1] != labels[reqlabel[0]]:
+                                    is_ok = False
+                                    break
+                            if not is_ok:
+                                self.logger.debug("Label requirements do not match for task "+str(task['id']))
+                                continue
+
+                        (res, zfs_path) = self.plugin_zfs_mount(labels['hostname'], task)
+                        if not res:
+                            self.logger.debug("Zfs mount not possible for task "+str(task['id']))
+                            continue
                         else:
-                            if task['requirements']['tmpstorage'] is not None:
-                                task['requirements']['tmpstorage']['path'] = None
+                            if zfs_path is not None:
+                                task['requirements']['tmpstorage']['path'] = zfs_path
                             else:
-                                task['requirements']['tmpstorage'] = { 'path': None, 'size': ''}
+                                if task['requirements']['tmpstorage'] is not None:
+                                    task['requirements']['tmpstorage']['path'] = None
+                                else:
+                                    task['requirements']['tmpstorage'] = { 'path': None, 'size': ''}
 
-                    new_task = self.new_task(offer, task, labels)
+                        new_task = self.new_task(offer, task, labels)
+
+                    except Exception as e:
+                        self.logger.error("Error with task "+str(task['id'])+": "+e)
+                        task['status']['reason'] = 'Invalid task'
+                        # An error occur, switch to next task
+                        continue
                     if new_task is None:
                         self.logger.debug('Mesos:Task:Error:Failed to create new task '+str(task['id']))
                         continue
