@@ -281,7 +281,7 @@ class MesosScheduler(mesos.interface.Scheduler):
                     if 'label' in task['requirements'] and task['requirements']['label']:
                         task['requirements']['resources'] = {}
                         for task_resource in task['requirements']['label']:
-                            if not task_resource.startswith('resource=='):
+                            if not task_resource or not task_resource.startswith('resource=='):
                                 continue
                             requested_resource = task_resource.split('==')
                             requested_resource = requested_resource[1]
@@ -306,6 +306,8 @@ class MesosScheduler(mesos.interface.Scheduler):
                     if 'label' in task['requirements'] and task['requirements']['label']:
                         is_ok = True
                         for req in task['requirements']['label']:
+                            if not req:
+                                continue
                             reqlabel = req.split('==')
                             if reqlabel[0] == 'resource':
                                 continue
