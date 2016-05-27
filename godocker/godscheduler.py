@@ -249,7 +249,7 @@ class GoDScheduler(Daemon):
 
         self.watchers = []
         if 'watchers' in self.cfg and self.cfg['watchers'] is not None:
-            watchers = self.cfg['watchers'].split(',')
+            watchers = self.cfg['watchers']
         else:
             watchers = []
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Watcher"):
@@ -604,6 +604,10 @@ class GoDScheduler(Daemon):
         wrapper += "    fi\n"
         wrapper += "fi\n"
 
+        uris = None
+        if 'uris' in task['requirements']:
+            uris = '\n'.join(task['requirements']['uris'])
+
         if is_array_child_task(task):
             script_file = self.store.add_file(parent_task, 'godocker.sh', cmd, str(task['requirements']['array']['task_id']))
             os.chmod(script_file, 0o755)
@@ -611,6 +615,8 @@ class GoDScheduler(Daemon):
             wrapper_file = self.store.add_file(parent_task, 'wrapper.sh', wrapper, str(task['requirements']['array']['task_id']))
             os.chmod(wrapper_file, 0o755)
             task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(wrapper_file))
+            if uris:
+                self.store.add_file(parent_task, 'godocker-uris.txt', uris, str(task['requirements']['array']['task_id']))
         else:
             script_file = self.store.add_file(task, 'godocker.sh', cmd)
             os.chmod(script_file, 0o755)
@@ -618,6 +624,8 @@ class GoDScheduler(Daemon):
             wrapper_file = self.store.add_file(task, 'wrapper.sh', wrapper)
             os.chmod(wrapper_file, 0o755)
             task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(wrapper_file))
+            if uris:
+                self.store.add_file(task, 'godocker-uris.txt', uris)
 
     def run_tasks(self, queued_list):
         '''

@@ -42,6 +42,8 @@ live_events_url: 'http://localhost:8001'
 
 # SECURITY #############################
 secret_passphrase: 'mysamplesecret'
+# secret shared among different applications
+shared_secret_passphrase: 'mysamplesecret'
 
 # IMAGES ###############################
 # Default container images proposed to user
@@ -165,8 +167,11 @@ ldap_admin_dn: null
 ldap_admin_password: null
 
 # Watchers #############################
-# List of watchers, comma separated, example 'maxlifespan'
+# List of watchers, example
+# watchers:
+#     - 'maxlifespan'
 watchers: null
+
 
 # Max job life duration expressed in d(days), h(hours), s(seconds) if not specified in task
 maxlifespan: '7d'
@@ -252,6 +257,14 @@ ftp:
     quota: '1M'
     # Public ftp url to access the FTP server if behind a proxy
     public_endpoint: 'ftp://127.0.0.1:2121'
+
+# GoDocker flow ############################
+
+flow:
+    max_parallel_event: 2
+    fake_user: 'osallou'
+    frontend: 'http://127.0.0.1:5000'
+
 
 # Logging ##################################
 log_config:

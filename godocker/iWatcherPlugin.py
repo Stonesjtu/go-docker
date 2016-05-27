@@ -27,3 +27,12 @@ class IWatcherPlugin(IGoDockerPlugin):
         :return: Task or None if running checks should continue
         '''
         return task
+
+    def done(self, task):
+        '''
+        Inform watcher of task termination
+
+        :param task: current task
+        :type task: Task
+        '''
+        return None

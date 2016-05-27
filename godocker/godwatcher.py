@@ -170,7 +170,7 @@ class GoDWatcher(Daemon):
 
         self.watchers = []
         if 'watchers' in self.cfg and self.cfg['watchers'] is not None:
-            watchers = self.cfg['watchers'].split(',')
+            watchers = self.cfg['watchers']
         else:
             watchers = []
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Watcher"):
@@ -502,6 +502,8 @@ class GoDWatcher(Daemon):
                     folder_size = godutils.get_folder_size(volume['path'])
                     self.db_users.update({'id': task['user']['id']}, {'$set': {'usage.guest_home': folder_size}})
                     break
+        for watcher in self.watchers:
+            watcher.done(task)
         return task
 
     def update_user_usage(self, task):
