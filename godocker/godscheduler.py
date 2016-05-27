@@ -249,7 +249,7 @@ class GoDScheduler(Daemon):
 
         self.watchers = []
         if 'watchers' in self.cfg and self.cfg['watchers'] is not None:
-            watchers = self.cfg['watchers'].split(',')
+            watchers = self.cfg['watchers']
         else:
             watchers = []
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Watcher"):

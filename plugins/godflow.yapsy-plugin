@@ -1,0 +1,9 @@
+[Core]
+Name = GodFlowWatcher
+Module = godflowwatcher
+
+[Documentation]
+Author = Olivier Sallou
+Version = 0.1
+Website =
+Description = integrates with GodFlow
