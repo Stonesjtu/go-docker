@@ -8,6 +8,8 @@
     Extract mesos failure reason for failure info
     GOD-37 Add optional requirements.uris task parameter (list of URIs), list is saved in task dir as godocker-uris.txt
     GOD-38 Add godflowwatcher watcher plugin to integrate with go-docker-flow
+    Fix replay issues with port mapping
+    Fix replay issues with Mesos
 1.0.4:
     Add LDAP with auth
     Add debug logs
