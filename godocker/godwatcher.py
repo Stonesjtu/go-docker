@@ -283,6 +283,7 @@ class GoDWatcher(Daemon):
                         self.r.rpush(self.cfg['redis_prefix']+':ports:'+host, port)
 
                 task['container']['ports'] = []
+                task['container']['port_mapping'] = []
                 # If private registry was used, revert to original name without server address
                 task['container']['image'] = original_task['container']['image']
 

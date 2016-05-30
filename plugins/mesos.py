@@ -475,6 +475,7 @@ class MesosScheduler(mesos.interface.Scheduler):
 
         port_list = []
         job['container']['port_mapping'] = []
+        job['container']['ports'] = []
         if 'ports' in job['requirements']:
             port_list = job['requirements']['ports']
         if job['command']['interactive']:
@@ -776,13 +777,14 @@ class Mesos(IExecutorPlugin):
             else:
                 task['container']['meta']['State']['ExitCode'] = 1
             self.redis_handler.delete(self.cfg['redis_prefix']+':mesos:over:'+str(task['id']))
-            self.redis_handler.set(self.cfg['redis_prefix']+':mesos:kill_pending:'+str(task['id']), 1)
+            #self.redis_handler.set(self.cfg['redis_prefix']+':mesos:kill_pending:'+str(task['id']), 1)
             return (task, True)
         else:
             self.logger.debug('Mesos:Task:Kill:IsRunning:'+str(task['id']))
-            if self.redis_handler.get(self.cfg['redis_prefix']+':mesos:kill_pending:'+str(task['id'])) is None:
-                self.redis_handler.rpush(self.cfg['redis_prefix']+':mesos:kill', str(task['id']))
-                self.redis_handler.set(self.cfg['redis_prefix']+':mesos:kill_pending:'+str(task['id']), 1)
+            self.redis_handler.rpush(self.cfg['redis_prefix']+':mesos:kill', str(task['id']))
+            #if self.redis_handler.get(self.cfg['redis_prefix']+':mesos:kill_pending:'+str(task['id'])) is None:
+            #    self.redis_handler.rpush(self.cfg['redis_prefix']+':mesos:kill', str(task['id']))
+            #    self.redis_handler.set(self.cfg['redis_prefix']+':mesos:kill_pending:'+str(task['id']), 1)
             return (task, None)
 
 

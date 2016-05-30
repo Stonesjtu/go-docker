@@ -459,6 +459,16 @@ class GoDScheduler(Daemon):
             os.chmod(script_file, 0o755)
             task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
 
+        # Avoid getting twice same volume and task dir in case of replay
+        cleared_volumes = []
+        volume_names = []
+        for requested_volume in task['container']['volumes']:
+            if requested_volume['name'] not in volume_names:
+                if requested_volume['name'] not in ['go-docker', 'god-ftp']:
+                    volume_names.append(requested_volume['name'])
+                    cleared_volumes.append(requested_volume)
+        task['container']['volumes'] = cleared_volumes
+
         task['container']['volumes'].append({
             'name': 'go-docker',
             'acl': 'rw',
