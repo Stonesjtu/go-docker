@@ -724,6 +724,13 @@ class Mesos(IExecutorPlugin):
         '''
         Get task status
 
+        Must update task with following params if task is over:
+            task['container']['meta']['State']['ExitCode']
+        In case of node failure:
+            task['status']['failure'] = { 'reason': reason_of_failure,
+                                           'nodes': [ node(s)_where_failure_occured]}
+
+
         :param task: current task
         :type task: Task
         :param over: is task over
@@ -745,8 +752,15 @@ class Mesos(IExecutorPlugin):
             if int(mesos_task) in [3,5,7]:
                 reason = self.redis_handler.get(self.cfg['redis_prefix']+':mesos:over:'+str(task['id'])+':reason')
                 if not reason:
-                    reason = 'Unknown'
+                    reason = None
                 task['status']['reason'] = 'System crashed or failed to start the task: ' + str(reason)
+                node_name = None
+                if 'Node' in task['container']['meta'] and 'Name' in task['container']['meta']['Node']:
+                    node_name = task['container']['meta']['Node']['Name']
+                if 'failure' not in task['status']:
+                    task['status']['failure'] = { 'reason': reason, 'nodes': []}
+                if node_name:
+                    task['status']['failure']['nodes'].append(node_name)
             self.redis_handler.delete(self.cfg['redis_prefix']+':mesos:over:'+str(task['id']))
             self.redis_handler.delete(self.cfg['redis_prefix']+':mesos:over:'+str(task['id'])+':reason')
             return (task, True)
