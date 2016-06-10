@@ -109,6 +109,12 @@ class IExecutorPlugin(IGoDockerPlugin):
         '''
         Get task status
 
+        Must update task with following params if task is over:
+            task['container']['meta']['State']['ExitCode']
+        In case of node failure:
+            task['status']['failure'] = { 'reason': reason_of_failure,
+                                           'nodes': [ node(s)_where_failure_occured]}        
+
         :param task: current task
         :type task: Task
         :param over: is task over

@@ -265,6 +265,11 @@ flow:
     fake_user: 'osallou'
     frontend: 'http://127.0.0.1:5000'
 
+# Failure strategy #########################
+
+failure_policy:
+    # 0: no restart, N: retry N times
+    strategy: 0
 
 # Logging ##################################
 log_config:

@@ -670,6 +670,34 @@ class GoDWatcher(Daemon):
                             self.r.rpush(self.cfg['redis_prefix']+':ports:'+host, port)
                     task['container']['ports'] = []
 
+                    # Should it be rescheduled ni case of node crash/error?
+                    if 'failure_policy' in self.cfg and self.cfg['failure_policy']['strategy'] > 0:
+                        # We have a reason failure and not reached max number of restart
+                        if 'failure' in task['status'] and task['status']['failure']['reason'] is not None:
+                            if 'failure' not in original_task['status']:
+                                original_task['status']['failure'] = {'nodes': [], 'reason': None, 'count': 0}
+
+                            task['status']['failure']['count'] = original_task['status']['failure']['count'] + 1
+                            task['status']['failure']['nodes'] += original_task['status']['failure']['nodes']
+
+                            if original_task['status']['failure']['count'] < self.cfg['failure_policy']['strategy']:
+
+                                self.logger.debug('Error:Reschedule:' + str(task['id']) + ":" + str(task['status']['failure']['count']))
+                                self.r.delete(self.cfg['redis_prefix'] + ':job:' + str(task['id'])+':task')
+                                self.r.incr(self.cfg['redis_prefix'] + ':jobs:queued')
+                                self.r.incr(self.cfg['redis_prefix'] + ':user:' + str(task['user']['id'])+ ':rate')
+                                reason = ''
+                                if 'reason' in task['status']:
+                                    reason = task['status']['reason']
+                                self.db_jobs.update({'id': task['id']}, {'$set': {
+                                    'status.primary' : godutils.STATUS_PENDING,
+                                    'status.secondary': godutils.STATUS_SECONDARY_RESCHEDULED,
+                                    'status.reason': reason,
+                                    'status.failure': task['status']['failure']
+                                }})
+                                self.r.delete(self.cfg['redis_prefix']+':job:'+str(task['id'])+':task')
+                                continue
+
                     if is_array_task(task):
                         self.r.delete(self.cfg['redis_prefix']+':job:'+str(task['id'])+':subtaskrunning')
                         task['requirements']['array']['nb_tasks_over'] = task['requirements']['array']['nb_tasks']
@@ -684,6 +712,10 @@ class GoDWatcher(Daemon):
                         self.db_jobsover.remove({'id': task['id']})
                     task['status']['primary'] = godutils.STATUS_OVER
                     task['status']['secondary'] = ''
+
+                    if 'failure' in original_task['status']:
+                        task['status']['failure'] = original_task['status']['failure']
+
                     try:
                         task['status']['exitcode'] = task['container']['meta']['State']['ExitCode']
                     except Exception:
