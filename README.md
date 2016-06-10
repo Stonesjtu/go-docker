@@ -24,6 +24,9 @@ With the plugin schedulers, it is possible to reorder the pending jobs before ru
 ## Limitations
 
 docker images used to submit jobs must have *bash* installed.
+On Alpine linux, if *bash* is not installed, GoDocker will try to install it but it will delay command startup.
+
+For interactive jobs, GoDocker expects openssh server to be installed. If not in image, it will automatically install it but this will delay session startup.
 
 ## Features
 
