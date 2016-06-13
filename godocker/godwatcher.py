@@ -677,8 +677,13 @@ class GoDWatcher(Daemon):
                             self.r.rpush(self.cfg['redis_prefix']+':ports:'+host, port)
                     task['container']['ports'] = []
 
+                    if 'failure_policy' not in self.cfg:
+                        self.cfg['failure_policy'] = {'strategy': 0, 'skip_failed_nodes': False}
+
+                    if 'failure_policy' not in task['requirements'] or task['requirements']['failure_policy'] > self.cfg['failure_policy']['strategy']:
+                        task['requirements']['failure_policy'] = self.cfg['failure_policy']['strategy']
                     # Should it be rescheduled ni case of node crash/error?
-                    if 'failure_policy' in self.cfg and self.cfg['failure_policy']['strategy'] > 0 and original_task['status']['secondary'] != godutils.STATUS_SECONDARY_KILL_REQUESTED:
+                    if  task['requirements']['failure_policy'] > 0 and original_task['status']['secondary'] != godutils.STATUS_SECONDARY_KILL_REQUESTED:
                         # We have a reason failure and not reached max number of restart
                         if 'failure' in task['status'] and task['status']['failure']['reason'] is not None:
                             if 'failure' not in original_task['status']:
@@ -687,7 +692,7 @@ class GoDWatcher(Daemon):
                             task['status']['failure']['count'] = original_task['status']['failure']['count'] + 1
                             task['status']['failure']['nodes'] += original_task['status']['failure']['nodes']
 
-                            if original_task['status']['failure']['count'] < self.cfg['failure_policy']['strategy']:
+                            if original_task['status']['failure']['count'] <  task['requirements']['failure_policy']:
 
                                 self.logger.debug('Error:Reschedule:' + str(task['id']) + ":" + str(task['status']['failure']['count']))
                                 self.r.delete(self.cfg['redis_prefix'] + ':job:' + str(task['id'])+':task')
