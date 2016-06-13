@@ -21,6 +21,13 @@ They also usually focus on running "production" long running tasks (such as a we
 This application mainly targets systems where you know your users (not an open cloud platform) which have a home directory they usually access to via SSH/SCP/... , working dirs, ... With Go-Docker, they can ask to get their home directroy mounted in the container (read-only when root access is required for example, and rw for basic access), as well as other pre-defined directories to do... what they need to do. The Authentication plugin will define what users can mount or not.
 With the plugin schedulers, it is possible to reorder the pending jobs before running them, based on previous user usage for example, or to reject a job because user reached some quota.
 
+## Limitations
+
+docker images used to submit jobs must have *bash* installed.
+On Alpine linux, if *bash* is not installed, GoDocker will try to install it but it will delay command startup.
+
+For interactive jobs, GoDocker expects openssh server to be installed. If not in image, it will automatically install it but this will delay session startup.
+
 ## Features
 
 * job submission
