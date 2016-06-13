@@ -699,7 +699,9 @@ class GoDScheduler(Daemon):
             else:
                 # Create run script
                 if 'use_private_registry' in self.cfg and self.cfg['use_private_registry'] is not None:
-                    task['container']['image'] = self.cfg['use_private_registry'] + '/' + task['container']['image']
+                    if not task['container']['image'].startswith(self.cfg['use_private_registry']):
+                        # In case of replay, or user put the complete url name of the image.
+                        task['container']['image'] = self.cfg['use_private_registry'] + '/' + task['container']['image']
                 try:
                     self._create_command(task)
                 except Exception as e:
