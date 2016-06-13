@@ -614,16 +614,24 @@ class GoDWatcher(Daemon):
         Checks if running jobs are over
         '''
         self.logger.debug("Check running jobs")
-        nb_elt = 1
-        #elts  = self.r.lrange('jobs:running', lmin, lmin+lrange)
+
         nb_running_jobs = self.r.llen(self.cfg['redis_prefix']+':jobs:running')
-        task_id = self.r.lpop(self.cfg['redis_prefix']+':jobs:running')
-        if not task_id:
-            return
-        elt = self.r.get(self.cfg['redis_prefix']+':job:'+str(task_id)+':task')
+
+        nb_elt = 0
         while True and not self.stop_daemon:
             #elts = self.db_jobs.find({'status.primary': 'running'}, limit=self.cfg['max_job_pop'])
             try:
+                task_id = None
+                elt = None
+                if nb_elt < self.cfg['max_job_pop'] and nb_elt < nb_running_jobs:
+                    task_id = self.r.lpop(self.cfg['redis_prefix']+':jobs:running')
+                    if not task_id:
+                        return
+                    elt = self.r.get(self.cfg['redis_prefix']+':job:'+str(task_id)+':task')
+                    nb_elt += 1
+                else:
+                    break
+
                 if not elt:
                     return
                 task = json.loads(elt)
@@ -650,7 +658,6 @@ class GoDWatcher(Daemon):
                     if task is None:
                         self.logger.debug('TASK:'+str(task_id)+':Cleaned by executor')
                         continue
-
                 self.logger.debug("TASK:"+str(task['id'])+":"+str(over))
                 if over:
                     original_task = self.db_jobs.find_one({'id': task['id']})
@@ -671,7 +678,7 @@ class GoDWatcher(Daemon):
                     task['container']['ports'] = []
 
                     # Should it be rescheduled ni case of node crash/error?
-                    if 'failure_policy' in self.cfg and self.cfg['failure_policy']['strategy'] > 0:
+                    if 'failure_policy' in self.cfg and self.cfg['failure_policy']['strategy'] > 0 and original_task['status']['secondary'] != godutils.STATUS_SECONDARY_KILL_REQUESTED:
                         # We have a reason failure and not reached max number of restart
                         if 'failure' in task['status'] and task['status']['failure']['reason'] is not None:
                             if 'failure' not in original_task['status']:
@@ -759,14 +766,6 @@ class GoDWatcher(Daemon):
                 self.logger.warn('Interrupt received, exiting after cleanup')
                 self.r.rpush(self.cfg['redis_prefix']+':jobs:running', task['id'])
                 sys.exit(0)
-            if nb_elt < self.cfg['max_job_pop'] and nb_elt < nb_running_jobs:
-                task_id = self.r.lpop(self.cfg['redis_prefix']+':jobs:running')
-                if not task_id:
-                    return
-                elt = self.r.get(self.cfg['redis_prefix']+':job:'+str(task_id)+':task')
-                nb_elt += 1
-            else:
-                break
 
 
 

@@ -267,6 +267,13 @@ class MesosScheduler(mesos.interface.Scheduler):
                     # check for reservation constraints, if any
                     try:
                         self.logger.debug("Try to place task "+str(task['id']))
+                        if 'hostname' in labels and 'skip_failed_nodes' in self.config['failure_policy'] and self.config['failure_policy']['skip_failed_nodes']:
+                            #task['status']['failure'] = { 'reason': reason, 'nodes': []}
+                            if 'failure' in task['status'] and task['status']['failure']['nodes']:
+                                if labels['hostname'] in task['status']['failure']['nodes']:
+                                    # Task previsouly failed on this node, skip this node
+                                    self.logger.debug("Task:"+str(task['id'])+":Failure:Skip:"+labels['hostname'])
+                                    continue
                         if 'reservation' in labels:
                             self.logger.debug("Node has reservation")
                             reservations = labels['reservation'].split(',')
@@ -796,6 +803,7 @@ class Mesos(IExecutorPlugin):
         else:
             self.logger.debug('Mesos:Task:Kill:IsRunning:'+str(task['id']))
             self.redis_handler.rpush(self.cfg['redis_prefix']+':mesos:kill', str(task['id']))
+
             #if self.redis_handler.get(self.cfg['redis_prefix']+':mesos:kill_pending:'+str(task['id'])) is None:
             #    self.redis_handler.rpush(self.cfg['redis_prefix']+':mesos:kill', str(task['id']))
             #    self.redis_handler.set(self.cfg['redis_prefix']+':mesos:kill_pending:'+str(task['id']), 1)
