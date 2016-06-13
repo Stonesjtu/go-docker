@@ -10,6 +10,7 @@
     GOD-38 Add godflowwatcher watcher plugin to integrate with go-docker-flow
     Fix replay issues with port mapping
     Fix replay issues with Mesos
+    GOD-44 on node failure, reschedule job
 1.0.4:
     Add LDAP with auth
     Add debug logs
