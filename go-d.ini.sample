@@ -270,6 +270,8 @@ flow:
 failure_policy:
     # 0: no restart, N: retry N times
     strategy: 0
+    # Do not reschedule on nodes where task previously failed
+    skip_failed_nodes: False
 
 # Logging ##################################
 log_config:
