@@ -59,4 +59,4 @@ class Notify:
             s.sendmail(msg['From'], [msg['To']], msg.as_string())
             s.quit()
         except Exception as e:
-            self.logger.error('Email error: '+str(e))
+            Notify.logger.error('Email error: '+str(e))
