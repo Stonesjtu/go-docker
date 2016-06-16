@@ -523,12 +523,13 @@ class MesosScheduler(mesos.interface.Scheduler):
             try:
                 if str(update.data) != "":
                     containers = json.loads(update.data)
+                    self.logger.debug("OSALLOU "+str(update.data))
                     containerId = str(containers[0]["Name"]).split(".")
                     containerId = "mesos-"+containerId[1]
-                    self.jobs_handler.update({'id': int(update.task_id.value)},{'$set': {'container.id': container}})
+                    self.jobs_handler.update({'id': int(update.task_id.value)},{'$set': {'container.id': containerId}})
 
             except Exception as e:
-                self.logger.debug("Could not extract container id from TaskStatus")
+                self.logger.debug("Could not extract container id from TaskStatus: "+str(e))
                 containerId = None
 
             # Mesos <= 0.22, container id is not in TaskStatus, let's query mesos
