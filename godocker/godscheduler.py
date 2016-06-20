@@ -400,6 +400,8 @@ class GoDScheduler(Daemon):
                                         'status.date_running': r['status']['date_running'],
                                         'container': r['container']}})
                 Notify.notify_email(r)
+                for watcher in self.watchers:
+                    watcher.started(r)
         if rejected_tasks:
             for r in rejected_tasks:
                 if 'ticket_share' not in r['requirements']:

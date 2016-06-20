@@ -15,6 +15,9 @@ class IWatcherPlugin(IGoDockerPlugin):
     def started(self, task):
         '''
         Task  is started, this is an information event
+
+        Task startup may be cancelled due to other watchers, quotas etc.... Resource reservation etc. should be effective only at this time.
+        Resources will ke kept reserved until job termination or kill (*done* method)
         '''
         pass
 
