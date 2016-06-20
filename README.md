@@ -68,9 +68,9 @@ If you do not plan to use mesos, you can simply delete plugins/mesos.* files.
 
 ## Dependencies
 
-apt-get install python-dev libldap2-dev gcc libsasl2-dev (Debian/Ubuntu)
+apt-get install python-dev libldap2-dev gcc libsasl2-dev openssl libpython-dev libffi-dev libssl-dev (Debian/Ubuntu)
 
-yum install python-devel libldap-devel gcc cyrus-sasl-devel (Fedora/CentOS)
+yum install python-devel libldap-devel gcc cyrus-sasl-devel openssl python-devel libffi-devel openssl-devel(Fedora/CentOS)
 
 pip install -r requirements.txt
 
