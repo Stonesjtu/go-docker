@@ -12,6 +12,12 @@ class IWatcherPlugin(IGoDockerPlugin):
         '''
         return True
 
+    def started(self, task):
+        '''
+        Task  is started, this is an information event
+        '''
+        pass
+
     def can_run(self, task):
         '''
         Checks if task can continue to run. If task cannot run, this method must kill itself the task.
