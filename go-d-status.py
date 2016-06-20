@@ -104,8 +104,8 @@ if __name__ == "__main__":
                         watcher_status = 0
                         web_status = 0
                         for proc_state in status:
-                            print "Status:\n"
-                            print "\t - "+proc_state['name']+'[' + str(proc_state['type']) + ']: '+str(proc_state['status'])+"\n"
+                            print("Status:\n")
+                            print("\t - "+proc_state['name']+'[' + str(proc_state['type']) + ']: '+str(proc_state['status'])+"\n")
                             if not proc_state['status']:
                                 global_status = False
                             if proc_state['type'] == 'scheduler' and proc_state['status']:
@@ -115,13 +115,13 @@ if __name__ == "__main__":
                             if proc_state['type'] == 'web' and proc_state['status']:
                                 web_status += 1
                         if scheduler_status == 0:
-                            print "Error: no scheduler running"
+                            print("Error: no scheduler running")
                             global_status = False
                         if watcher_status == 0:
-                            print "Error: no watcher running"
+                            print("Error: no watcher running")
                             global_status = False
                         if web_status == 0:
-                            print "Warning: no web server running or monitored"
+                            print("Warning: no web server running or monitored")
                         if global_status:
                             sys.exit(0)
                         else:
