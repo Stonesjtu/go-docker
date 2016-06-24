@@ -81,8 +81,8 @@ class MesosScheduler(mesos.interface.Scheduler):
         self.frameworkId = frameworkId.value
         self.redis_handler.set(self.config['redis_prefix']+':mesos:frameworkId',
                                self.frameworkId)
-        self.redis_handler.expire(self.config['redis_prefix']+':mesos:frameworkId',
-                                       3600*24*7)
+        #self.redis_handler.expire(self.config['redis_prefix']+':mesos:frameworkId',
+        #                               3600*24*7)
 
     def has_enough_resource(self, offer, requested_resource, quantity):
         '''
@@ -611,6 +611,7 @@ class Mesos(IExecutorPlugin):
         frameworkId = self.redis_handler.get(self.cfg['redis_prefix']+':mesos:frameworkId')
         if frameworkId:
             # Reuse previous framework identifier
+            self.logger.info("Mesos:FrameworkId:"+str(frameworkId))
             mesos_framework_id = mesos_pb2.FrameworkID()
             mesos_framework_id.value = frameworkId
             framework.id.MergeFrom(mesos_framework_id)
