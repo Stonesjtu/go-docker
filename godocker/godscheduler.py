@@ -590,6 +590,10 @@ class GoDScheduler(Daemon):
             cmd += "    apt-get install -y openssh-server\n"
             cmd += "    mkdir /var/run/sshd\n"
             cmd += "fi\n"
+            cmd += "if [ -n \"$(command -v zypper)\" ]; then\n"
+            cmd += "    zypper install -y  openssh\n"
+            cmd += "    ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa\n"            
+            cmd += "fi\n"
             cmd += "sed -ri 's/^PermitRootLogin\s+.*/PermitRootLogin yes/' /etc/ssh/sshd_config\n"
             cmd += "fi\n"
 
