@@ -81,6 +81,21 @@ class MesosScheduler(mesos.interface.Scheduler):
         self.frameworkId = frameworkId.value
         self.redis_handler.set(self.config['redis_prefix']+':mesos:frameworkId',
                                self.frameworkId)
+
+        # Reconcile at startup
+        if 'mesos' in self.config and 'reconcile' in self.config['mesos'] and self.config['mesos']['reconcile']:
+            self.logger.info("Reconcile any running task")
+            tasks = self.jobs_handler.find({'status.primary': 'running'})
+            running_tasks = []
+            for task in tasks:
+                task_status = mesos_pb2.TaskStatus()
+                task_id = mesos_pb2.TaskID()
+                task_id.value = str(task['id'])
+                task_status.task_id.MergeFrom(task_id)
+                task_status.state = 1
+                self.logger.debug('Mesos:Reconcile:Task:'+str(task['id']))
+                running_tasks.append(task_status)
+            driver.reconcileTasks(running_tasks)
         #self.redis_handler.expire(self.config['redis_prefix']+':mesos:frameworkId',
         #                               3600*24*7)
 
