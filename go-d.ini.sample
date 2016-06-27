@@ -150,6 +150,9 @@ web_endpoint: 'http://127.0.0.1:6543'
 # Mesos ################################
 mesos_master: '127.0.0.1:5050'
 
+mesos:
+    reconcile: True
+
 # Kubernetes ###########################
 # API Version: 1
 kube_server: 'http://127.0.0.1:8080'

@@ -14,6 +14,7 @@
     GOD-44 on node failure, reschedule job (new config parameters: failure_policy, see go-d.ini.sample)
     Fix rescheduling when using private registry
     Fix Mesos frameworkID lifetime, do not expire after 7 days.
+    Add optional mesos/reconcile param in go-d.ini. If enabled, at scheduler start, scheduler will check godocker running task vs mesos running task status for reconciliation.
 1.0.4:
     Add LDAP with auth
     Add debug logs
