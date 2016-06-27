@@ -214,7 +214,7 @@ Available plugins are:
     * fairshare: Fair share user tasks repartition (prio, previous usage, ...)
 * Executor:
     * swarm (Docker Swarm)
-    * mesos (Apache Mesos, tested with mesos 0.22)
+    * mesos (Apache Mesos, tested with mesos 0.28)
     * Kubernetes (tested with 1.2.0, using API v1)
     * fake  (not be used, for test only, simulate a job execution)
 * Auth:
