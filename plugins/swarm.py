@@ -117,7 +117,7 @@ class Swarm(IExecutorPlugin):
                     if v['mount'] is None:
                         v['mount'] = v['path']
                     ro = True
-                    if v['acl'] == 'rw':
+                    if 'acl' in v and v['acl'] == 'rw':
                         ro = False
                     vol_binds[v['path']] = {
                         'bind': v['mount'],

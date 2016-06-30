@@ -440,7 +440,7 @@ class MesosScheduler(mesos.interface.Scheduler):
             volume = container.volumes.add()
             volume.container_path = v['mount']
             volume.host_path = v['path']
-            if v['acl'] == 'rw':
+            if 'acl' in v and v['acl'] == 'rw':
                 volume.mode = 1 # mesos_pb2.Volume.Mode.RW
             else:
                 volume.mode = 2 # mesos_pb2.Volume.Mode.RO
