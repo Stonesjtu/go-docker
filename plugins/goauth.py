@@ -50,7 +50,7 @@ class GoAuth(IAuthPlugin):
         if 'ldap_base_dn_filter' in self.cfg and self.cfg['ldap_base_dn_filter']:
             ldap_base_dn_filter = self.cfg['ldap_base_dn_filter']
         base_dn = ldap_base_dn_filter + ',' + ldap_dn
-                
+
         filter = "(&""(|(uid=" + login + ")(mail=" + login + ")))"
         try:
             if not con.bind():
@@ -280,6 +280,8 @@ class GoAuth(IAuthPlugin):
                     req['mount'] = req['path']
                 else:
                     req['mount'] = config_volumes[req['name']]['mount'].replace('$USERID', user['id'])
+            if 'acl' not in req:
+                req['acl'] = 'ro'
             if config_volumes[req['name']]['acl'] == 'ro':
                 req['acl'] = 'ro'
             if root_access:
