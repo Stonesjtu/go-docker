@@ -6,6 +6,6 @@ pipelines:
         script:
           - apt-get update
           - apt-get install -y libldap-dev libsasl2-dev
-          - pip install -r requirements.txt --use-mirrors
+          - pip install -r requirements.txt
           - nosetests --with-coverage --cover-package=godocker
           - codecov --token=$CODECOVTOKEN
