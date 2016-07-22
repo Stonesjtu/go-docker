@@ -1,0 +1,10 @@
+image: python:3.4-wheezy
+   
+pipelines:
+  default:
+    - step:
+        script:
+          - apt-get install -y libldap-dev libsasl2-dev
+          - pip install -r requirements.txt --use-mirrors
+          - nosetests --with-coverage --cover-package=godocker
+          - codecov --token=$CODECOVTOKEN
