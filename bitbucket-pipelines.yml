@@ -4,6 +4,7 @@ pipelines:
   default:
     - step:
         script:
+          - echo "deb http://ftp.debian.org/debian wheezy-backports main" >> /etc/apt/sources.list
           - apt-get update
           - apt-get install -y libldap-dev libsasl2-dev
           - apt-get install -y redis-server mongodb-server
