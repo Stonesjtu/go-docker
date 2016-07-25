@@ -11,5 +11,6 @@ pipelines:
           - service mongodb start
           - service redis-server start
           - pip install -r requirements.txt
+          - cat /var/log/mongodb/mongodb.log
           - nosetests --with-coverage --cover-package=godocker
           - codecov --token=$CODECOVTOKEN
