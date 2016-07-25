@@ -7,7 +7,7 @@ pipelines:
           - echo "deb http://ftp.debian.org/debian wheezy-backports main" >> /etc/apt/sources.list
           - apt-get update
           - apt-get install -y libldap-dev libsasl2-dev
-          - apt-get -y -t wheezy-backports redis-server
+          - apt-get -t wheezy-backports install -y redis-server
           - apt-get install -y mongodb-server
           - service mongodb start
           - service redis-server start
