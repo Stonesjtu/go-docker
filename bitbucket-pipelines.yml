@@ -6,6 +6,9 @@ pipelines:
         script:
           - apt-get update
           - apt-get install -y libldap-dev libsasl2-dev
+          - apt-get install -y redis-server mongodb-server
+          - service mongodb start
+          - service redis-server start
           - pip install -r requirements.txt
           - nosetests --with-coverage --cover-package=godocker
           - codecov --token=$CODECOVTOKEN
