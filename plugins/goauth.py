@@ -66,11 +66,11 @@ class GoAuth(IAuthPlugin):
                 uidNumber = None
                 gidNumber = None
                 homeDirectory = None
-                user_dn = None
+                # user_dn = None
                 for res in results:
-                  dn = entry['dn']
+                  # dn = res['dn']
                   entry = res['raw_attributes']
-                  user_dn = str(dn)
+                  # user_dn = str(dn)
                   if 'uid' not in entry:
                     self.logger.error('Uid not set for user '+user)
                   userId = entry['uid'][0]
