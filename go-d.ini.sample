@@ -32,6 +32,9 @@ constraints:
     - name: 'resource'
       value: 'gpu_10.5'
 
+# Projects ############################
+# Allow users of the same project to view/manage other users tasks
+share_project_tasks: False
 
 # Live notifications ##################
 # Use live notifications on tasks, needs Go-D-Live server
@@ -162,6 +165,10 @@ kube_token: null
 # Authentication #######################
 auth_policy: 'fake'
 
+# Allow HTTP_REMOTE_USER header for authentication
+allow_proxy_remote_user: False
+
+# LDAP
 ldap_host: null
 ldap_port: null
 ldap_dn: null
