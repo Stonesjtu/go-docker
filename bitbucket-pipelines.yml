@@ -1,0 +1,17 @@
+image: python:3.4-wheezy
+   
+pipelines:
+  default:
+    - step:
+        script:
+          - echo "deb http://ftp.debian.org/debian wheezy-backports main" >> /etc/apt/sources.list
+          - apt-get update
+          - apt-get install -y libldap-dev libsasl2-dev
+          - apt-get -t wheezy-backports install -y redis-server
+          - apt-get install -y mongodb-server
+          - service mongodb start
+          - service redis-server start
+          - pip install -r requirements.txt
+          - cat /var/log/mongodb/mongodb.log
+          - nosetests --with-coverage --cover-package=godocker
+          - codecov --token=$CODECOVTOKEN
