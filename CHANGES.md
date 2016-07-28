@@ -1,3 +1,4 @@
+1.2
 1.1:
     Fix case of kill failure
     Add ldap_base_dn_filter parameter in go-d.ini to filter LDAP directory search
