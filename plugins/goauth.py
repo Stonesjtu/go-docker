@@ -56,7 +56,12 @@ class GoAuth(IAuthPlugin):
             if not con.bind():
                 self.logger.error('LDAP simple anon bind failed')
                 return None
-            attrs = ['mail', 'uid', 'uidNumber', 'gidNumber', 'homeDirectory']
+
+            homeDirectoryField = 'homeDirectory'
+            if 'ldap' in self.cfg and 'fields' in self.cfg['ldap'] and 'homeDirectory' in self.cfg['ldap']['fields']:
+                homeDirectoryField = self.cfg['ldap']['fields']['homeDirectory']
+
+            attrs = ['mail', 'uid', 'uidNumber', 'gidNumber', homeDirectoryField]
             con.search(search_base=base_dn, search_scope = SUBTREE,
                         search_filter=filter,attributes=attrs)
             results = con.response
@@ -76,7 +81,7 @@ class GoAuth(IAuthPlugin):
                   userId = entry['uid'][0]
                   uidNumber = entry['uidNumber'][0]
                   gidNumber = entry['gidNumber'][0]
-                  homeDirectory = entry['homeDirectory'][0]
+                  homeDirectory = entry[homeDirectoryField][0]
                   if 'mail' in entry:
                     ldapMail = entry['mail'][0]
 
@@ -131,7 +136,11 @@ class GoAuth(IAuthPlugin):
                 self.logger.error('LDAP anon bind failed')
                 return None
 
-            attrs = ['mail', 'uid', 'uidNumber', 'gidNumber', 'homeDirectory']
+            homeDirectoryField = 'homeDirectory'
+            if 'ldap' in self.cfg and 'fields' in self.cfg['ldap'] and 'homeDirectory' in self.cfg['ldap']['fields']:
+                homeDirectoryField = self.cfg['ldap']['fields']['homeDirectory']
+
+            attrs = ['mail', 'uid', 'uidNumber', 'gidNumber', homeDirectoryField]
             con.search(search_base=base_dn, search_scope = SUBTREE,
                         search_filter=filter,attributes=attrs)
             results = con.response
@@ -153,7 +162,7 @@ class GoAuth(IAuthPlugin):
                   userId = entry['uid'][0]
                   uidNumber = entry['uidNumber'][0]
                   gidNumber = entry['gidNumber'][0]
-                  homeDirectory = entry['homeDirectory'][0]
+                  homeDirectory = entry[homeDirectoryField][0]
                   if 'mail' in entry:
                     ldapMail = entry['mail'][0]
 

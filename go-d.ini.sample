@@ -176,6 +176,11 @@ ldap_base_dn_filter: 'ou=People'
 ldap_admin_dn: null
 ldap_admin_password: null
 
+ldap:
+    # LDAP field mapping
+    fields:
+        homeDirectory: 'homeDirectory'
+
 # Watchers #############################
 # List of watchers, example
 # watchers:
