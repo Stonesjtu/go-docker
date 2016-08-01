@@ -113,7 +113,7 @@ class IExecutorPlugin(IGoDockerPlugin):
             task['container']['meta']['State']['ExitCode']
         In case of node failure:
             task['status']['failure'] = { 'reason': reason_of_failure,
-                                           'nodes': [ node(s)_where_failure_occured]}        
+                                           'nodes': [ node(s)_where_failure_occured]}
 
         :param task: current task
         :type task: Task
@@ -121,6 +121,16 @@ class IExecutorPlugin(IGoDockerPlugin):
         :type over: bool
         '''
         return (task, True)
+
+
+    def release_port(self, task):
+        '''
+        Release a port mapping
+        '''
+        for port in task['container']['ports']:
+            host = task['container']['meta']['Node']['Name']
+            self.logger.debug('Port:Back:'+host+':'+str(port))
+            self.redis_handler.rpush(self.cfg['redis_prefix']+':ports:'+host, port)
 
     def get_mapping_port(self, host, task):
         '''

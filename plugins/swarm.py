@@ -19,6 +19,41 @@ class Swarm(IExecutorPlugin):
         '''
         return ['kill', 'pause']
 
+    def release_port(self, task):
+        '''
+        Release a port mapping
+        '''
+        for port in task['container']['ports']:
+            host = 'godocker-swarm'
+            self.logger.debug('Port:Back:'+host+':'+str(port))
+            self.redis_handler.rpush(self.cfg['redis_prefix']+':ports:'+host, port)
+
+    def get_mapping_port(self, host, task):
+        '''
+        Get a port mapping for interactive tasks
+
+        If None is returned, task should rejected.
+
+        :param host: hostname of the container
+        :type host: str
+        :param task: task
+        :type task: int
+        :return: available port, None if no port is available
+        '''
+        host = 'godocker-swarm'
+        if not self.redis_handler.exists(self.cfg['redis_prefix']+':ports:'+host):
+            for i in range(self.cfg['port_range']):
+                self.redis_handler.rpush(self.cfg['redis_prefix']+':ports:'+host, self.cfg['port_start'] + i)
+        port = self.redis_handler.lpop(self.cfg['redis_prefix']+':ports:'+host)
+        if port is None:
+            return None
+        self.logger.debug('Port:Give:'+host+':'+str(port))
+        if not 'ports' in task['container']:
+            task['container']['ports'] = []
+        task['container']['ports'].append(port)
+        return int(port)
+
+
     def set_config(self, cfg):
         self.cfg = cfg
 
@@ -82,14 +117,49 @@ class Swarm(IExecutorPlugin):
                     for label in job['requirements']['label']:
                         constraints.append('constraint:'+label)
 
+                vol_binds = {}
+                for v in job['container']['volumes']:
+                    if v['mount'] is None:
+                        v['mount'] = v['path']
+                    mode = 'ro'
+                    if 'acl' in v and v['acl'] == 'rw':
+                        mode = 'rw'
+                    vol_binds[v['path']] = {
+                        'bind': v['mount'],
+                        'mode': mode
+                    }
+
+                job['container']['port_mapping'] = []
+                port_mapping = {}
+                for port in port_list:
+                    if self.cfg['port_allocate']:
+                        mapped_port = self.get_mapping_port('godocker-swarm', job)
+                        if mapped_port is None:
+                            raise Exception('no port available')
+                    else:
+                        mapped_port = port
+                    job['container']['port_mapping'].append({'host': mapped_port, 'container': port})
+                    port_mapping[port] = mapped_port
+
+
+                host_config = self.docker_client.create_host_config(
+                                        mem_limit=str(job['requirements']['ram'])+'g',
+                                        network_mode='bridge',
+                                        binds=vol_binds,
+                                        port_bindings=port_mapping
+                                        )
+
+
                 container = self.docker_client.create_container(image=job['container']['image'],
                                                                 entrypoint=[job['command']['script']],
                                                                 cpu_shares=job['requirements']['cpu'],
-                                                                mem_limit=str(job['requirements']['ram'])+'g',
+                                                                #mem_limit=str(job['requirements']['ram'])+'g',
                                                                 ports=port_list,
                                                                 network_disabled=self.cfg['network_disabled'],
                                                                 environment=constraints,
-                                                                volumes=vol_list)
+                                                                host_config=host_config,
+                                                                volumes=vol_list
+                                                                )
                 job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
                 if 'Node' not in job['container']['meta']:
                     # If using 1 Docker instance, for tests, intead of swarm,
@@ -101,6 +171,7 @@ class Swarm(IExecutorPlugin):
                     # issue to store the information in db
                     del job['container']['meta']['Config']['Labels']
 
+                '''
                 job['container']['port_mapping'] = []
                 port_mapping = {}
                 for port in port_list:
@@ -123,13 +194,15 @@ class Swarm(IExecutorPlugin):
                         'bind': v['mount'],
                         'ro': ro
                     }
+
                 response = self.docker_client.start(container=container.get('Id'),
                                         network_mode='bridge',
                                         #publish_all_ports=True
                                         port_bindings=port_mapping,
                                         binds=vol_binds
                                         )
-
+                '''
+                response = self.docker_client.start(container=container.get('Id'))
                 job['container']['id'] = container['Id']
                 #job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
                 running_tasks.append(job)

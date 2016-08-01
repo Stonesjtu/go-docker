@@ -277,10 +277,13 @@ class GoDWatcher(Daemon):
                 if original_task is None:
                     continue
                 if 'resources.port' not in self.executor.features():
+                    self.executor.release_port(original_task)
+                    '''
                     for port in original_task['container']['ports']:
                         host = original_task['container']['meta']['Node']['Name']
                         self.logger.debug('Port:Back:'+host+':'+str(port))
                         self.r.rpush(self.cfg['redis_prefix']+':ports:'+host, port)
+                    '''
 
                 task['container']['ports'] = []
                 task['container']['port_mapping'] = []
@@ -672,10 +675,13 @@ class GoDWatcher(Daemon):
                     # Free ports
                     # Put back mapping allocated ports if not managed by executor
                     if 'resources.port' not in self.executor.features():
+                        self.executor.release_port(original_task)
+                        '''
                         for port in original_task['container']['ports']:
                             host = original_task['container']['meta']['Node']['Name']
                             self.logger.debug('Port:Back:'+host+':'+str(port))
                             self.r.rpush(self.cfg['redis_prefix']+':ports:'+host, port)
+                        '''
                     task['container']['ports'] = []
 
                     if 'failure_policy' not in self.cfg:
