@@ -63,23 +63,27 @@ class Swarm(IExecutorPlugin):
         if 'docker' in self.cfg:
             tls_config = False
             if self.cfg['docker']['tls']:
-                if not self.cfg['docker']['tls_verify']:
+                # https://docker-py.readthedocs.io/en/stable/tls/
+                # Authenticate server based on public/default CA pool
+                if not self.cfg['docker']['ca_cert'] and not self.cfg['docker']['client_cert']:
                     tls_config = tls.TLSConfig(verify=False)
-                else:
-                    if self.cfg['docker']['ca_cert'] and not self.cfg['docker']['client_cert']:
-                        tls_config = tls.TLSConfig(
-                            ca_cert=self.cfg['docker']['ca_cert']
-                            )
-                    if not self.cfg['docker']['ca_cert'] and self.cfg['docker']['client_cert']:
-                        tls_config = tls.TLSConfig(
-                            client_cert=(self.cfg['docker']['client_cert'], self.cfg['docker']['client_key']),
-                            verify=False
-                            )
-                    if self.cfg['docker']['ca_cert'] and self.cfg['docker']['client_cert']:
-                        tls_config = tls.TLSConfig(
-                            client_cert=(self.cfg['docker']['client_cert'], self.cfg['docker']['client_key']),
-                            verify=self.cfg['docker']['ca_cert']
-                            )
+                # Authenticate server based on given CA
+                if self.cfg['docker']['ca_cert'] and not self.cfg['docker']['client_cert']:
+                    tls_config = tls.TLSConfig(
+                        ca_cert=self.cfg['docker']['ca_cert']
+                        )
+                # Authenticate with client certificate, do not authenticate server based on given CA
+                if not self.cfg['docker']['ca_cert'] and self.cfg['docker']['client_cert']:
+                    tls_config = tls.TLSConfig(
+                        client_cert=(self.cfg['docker']['client_cert'], self.cfg['docker']['client_key']),
+                        verify=False
+                        )
+                # Authenticate with client certificate, authenticate server based on given CA
+                if self.cfg['docker']['ca_cert'] and self.cfg['docker']['client_cert']:
+                    tls_config = tls.TLSConfig(
+                        client_cert=(self.cfg['docker']['client_cert'], self.cfg['docker']['client_key']),
+                        verify=self.cfg['docker']['ca_cert']
+                        )
             self.docker_client = Client(base_url=self.cfg['docker']['url'], version=self.cfg['docker']['api_version'], tls=tls_config)
 
         else:
