@@ -198,9 +198,17 @@ maxlifespan: '7d'
 #      admin_only: False
 
 # Docker ###############################
-docker_url: 'tcp://127.0.0.1:2376'
-# API version from docker version command
-docker_api_version: 'auto'
+docker:
+    # tcp://127.0.0.1:2375 if not tls, else https://127.0.0.1:2375
+    url: 'tcp://127.0.0.1:2375'
+    api_version: 'auto'
+    tls: True
+    tls_verify: False
+    # Authenticate server based on given CA => '/path/to/ca.pem'
+    ca_cert: null
+    # Authenticate with client certificate => '/path/to/client-cert.pem', '/path/to/client-key.pem'
+    client_cert: null
+    client_key: null
 
 # CAdvisor #############################
 cadvisor_port: 8080

@@ -57,9 +57,34 @@ class Swarm(IExecutorPlugin):
     def set_config(self, cfg):
         self.cfg = cfg
 
-        from docker import Client
+        from docker import Client, tls
 
-        self.docker_client = Client(base_url=self.cfg['docker_url'], version=self.cfg['docker_api_version'])
+        base_url = None
+        if 'docker' in self.cfg:
+            tls_config = False
+            if self.cfg['docker']['tls']:
+                if not self.cfg['docker']['tls_verify']:
+                    tls_config = tls.TLSConfig(verify=False)
+                else:
+                    if self.cfg['docker']['ca_cert'] and not self.cfg['docker']['client_cert']:
+                        tls_config = tls.TLSConfig(
+                            ca_cert=self.cfg['docker']['ca_cert']
+                            )
+                    if not self.cfg['docker']['ca_cert'] and self.cfg['docker']['client_cert']:
+                        tls_config = tls.TLSConfig(
+                            client_cert=(self.cfg['docker']['client_cert'], self.cfg['docker']['client_key']),
+                            verify=False
+                            )
+                    if self.cfg['docker']['ca_cert'] and self.cfg['docker']['client_cert']:
+                        tls_config = tls.TLSConfig(
+                            client_cert=(self.cfg['docker']['client_cert'], self.cfg['docker']['client_key']),
+                            verify=self.cfg['docker']['ca_cert']
+                            )
+            self.docker_client = Client(base_url=self.cfg['docker']['url'], version=self.cfg['docker']['api_version'], tls=tls_config)
+
+        else:
+            base_url = self.cfg['docker_url']
+            self.docker_client = Client(base_url=self.cfg['docker_url'], version=self.cfg['docker_api_version'])
 
 
     def run_all_tasks(self, tasks, callback=None):
