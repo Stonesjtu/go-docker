@@ -4,6 +4,7 @@
        - change go-d.ini docker_api_version => 'auto'
     Fix #40 manage tls configuration for Docker / Docker swarm
       - change go-d.ini, new *docker* section (see go-d.ini.sample)
+    Manage image usage increment in watcher
 1.1:
     Fix case of kill failure
     Add ldap_base_dn_filter parameter in go-d.ini to filter LDAP directory search
