@@ -238,6 +238,7 @@ class Swarm(IExecutorPlugin):
                 self.logger.debug('Execute:Job:'+str(job['id'])+':'+job['container']['id'])
             except Exception as e:
                 self.logger.error('Execute:Job:'+str(job['id'])+':'+str(e))
+                job['status']['reason'] = str(e)
                 if job['container']['meta'] is None:
                     job['container']['meta'] = {}
                 if 'Node' not in job['container']['meta']:

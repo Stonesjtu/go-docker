@@ -7,6 +7,7 @@
     Manage image usage increment in watcher
     Fix #41 keep Docker image env variables when executing user script
     Kubernetes fix when job fails, reason set while not yet defined
+    Fix reason failure recording
 1.1:
     Fix case of kill failure
     Add ldap_base_dn_filter parameter in go-d.ini to filter LDAP directory search
