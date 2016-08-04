@@ -551,7 +551,8 @@ class GoDScheduler(Daemon):
         cmd += str(self.store.get_pre_command())+"\n"
 
         if not task['container']['root']:
-            cmd += "su - "+user_id+" -c \""+vol_home + array_cmd + " ; export GODOCKER_DATA=/mnt/god-data ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\"\n"
+            cmd += "env | sed 's/^/export /' | sed 's/=\(.*\)/=\"\\1\"/' | sed '/HOME=/d' > /mnt/go-docker/god.env\n"
+            cmd += "su - "+user_id+" -c \". /mnt/go-docker/god.env ; "+vol_home + array_cmd + " ; export GODOCKER_DATA=/mnt/god-data ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\"\n"
         else:
             cmd += "/mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\n"
 
@@ -592,7 +593,7 @@ class GoDScheduler(Daemon):
             cmd += "fi\n"
             cmd += "if [ -n \"$(command -v zypper)\" ]; then\n"
             cmd += "    zypper install -y  openssh\n"
-            cmd += "    ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa\n"            
+            cmd += "    ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa\n"
             cmd += "fi\n"
             cmd += "sed -ri 's/^PermitRootLogin\s+.*/PermitRootLogin yes/' /etc/ssh/sshd_config\n"
             cmd += "fi\n"
