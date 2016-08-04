@@ -32,6 +32,9 @@ constraints:
     - name: 'resource'
       value: 'gpu_10.5'
 
+# Projects ############################
+# Allow users of the same project to view/manage other users tasks
+share_project_tasks: False
 
 # Live notifications ##################
 # Use live notifications on tasks, needs Go-D-Live server
@@ -73,6 +76,9 @@ use_private_registry: null
 # mount: path in the container, if not set, use the same then path
 #
 # path and mount can specify $USERID variable that will be replaced by user identifier.
+
+# Check if volume exists (on scheduler) before mounting it
+volumes_check: True
 
 volumes:
     - name: 'home'
@@ -133,12 +139,29 @@ prometheus_exporter: '127.0.0.1:6543'
 # Mesos ##
 mesos_master: '127.0.0.1:5050'
 
+mesos:
+    reconcile: True
+
+# Kubernetes ###########################
+# API Version: 1
+kube_server: 'http://127.0.0.1:8080'
+# If token set on server for authentication
+kube_token: null
+
 # Authentication #######################
 auth_policy: 'fake'
+
+# Allow HTTP_REMOTE_USER header for authentication
+allow_proxy_remote_user: False
 
 ldap_host: null
 ldap_port: null
 ldap_dn: null
+
+ldap:
+    # LDAP field mapping
+    fields:
+        homeDirectory: 'homeDirectory'
 
 # Watchers #############################
 # List of watchers, comma separated, example 'maxlifespan'
@@ -157,6 +180,19 @@ maxlifespan: '7d'
 docker_url: 'tcp://127.0.0.1:2376'
 # API version from docker version command
 docker_api_version: '1.17'
+
+# Docker ###############################
+docker:
+    # tcp://127.0.0.1:2375 if not tls, else https://127.0.0.1:2375
+    url: 'tcp://127.0.0.1:2375'
+    api_version: 'auto'
+    tls: True
+    # Authenticate server based on given CA => '/path/to/ca.pem'
+    ca_cert: null
+    # Authenticate with client certificate => '/path/to/client-cert.pem', '/path/to/client-key.pem'
+    client_cert: null
+    client_key: null
+
 
 # CAdvisor #############################
 cadvisor_port: 8080
@@ -217,6 +253,14 @@ guest_allow_root: False
 # null => No home directory
 # 'default', use guest_bind home directory
 guest_home_root: null
+
+# Failure strategy #########################
+
+failure_policy:
+    # 0: no restart, N: retry N times
+    strategy: 0
+    # Do not reschedule on nodes where task previously failed
+    skip_failed_nodes: False
 
 # Logging ##################################
 log_config:
