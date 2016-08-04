@@ -412,7 +412,7 @@ class GoDScheduler(Daemon):
                         host = r['container']['meta']['Node']['Name']
                         for port in r['container']['ports']:
                             self.r.rpush(self.cfg['redis_prefix']+':ports:'+host, port)
-                if not r['status']['reason']:
+                if 'reason' not in r['status'] or not r['status']['reason']:
                     r['status']['reason'] = 'Not enough resources available'
                 self.db_jobs.update({'id': r['id']},
                                     {'$set': {
