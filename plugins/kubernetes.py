@@ -270,6 +270,7 @@ class Kubernetes(IExecutorPlugin):
             task['status']['date_running'] = strict_rfc3339.rfc3339_to_timestamp(kube_status['status']['startTime'])
             if kube_status['status']['phase'] in ['Succeeded', 'Failed', 'Unknown']:
                 over = True
+                reason = kube_status['status']['containerStatuses'][0]['state']['terminated']['reason']
 
                 if kube_status['status']['phase'] in ['Failed', 'Unknown']:
                     node_name = None
@@ -284,7 +285,7 @@ class Kubernetes(IExecutorPlugin):
                 if 'State' not in task['container']['meta']:
                     task['container']['meta']['State'] = {}
                 task['container']['meta']['State']['ExitCode'] = kube_status['status']['containerStatuses'][0]['state']['terminated']['exitCode']
-                task['status']['reason'] = kube_status['status']['containerStatuses'][0]['state']['terminated']['reason']
+                task['status']['reason'] = reason
 
                 task['status']['date_running'] = strict_rfc3339.rfc3339_to_timestamp(kube_status['status']['containerStatuses'][0]['state']['terminated']['startedAt'])
                 task['status']['date_over'] = strict_rfc3339.rfc3339_to_timestamp(kube_status['status']['containerStatuses'][0]['state']['terminated']['finishedAt'])
