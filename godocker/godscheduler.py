@@ -1,14 +1,13 @@
 from godocker.daemon import Daemon
 
-import time, sys
+import time
+import sys
 import redis
 import json
 import logging
 import logging.config
-import signal
 import os
 import datetime
-import time
 import socket
 import random
 import string
@@ -17,17 +16,14 @@ import traceback
 from copy import deepcopy
 import yaml
 
-import graypy
-import logstash
-
-
+# import graypy
+# import logstash
 
 from pymongo import MongoClient
 from pymongo import DESCENDING as pyDESCENDING
 from bson.json_util import dumps
 from yapsy.PluginManager import PluginManager
 from influxdb import client as influxdb
-from logging.handlers import RotatingFileHandler
 
 from godocker.iSchedulerPlugin import ISchedulerPlugin
 from godocker.iExecutorPlugin import IExecutorPlugin
@@ -35,12 +31,12 @@ from godocker.iAuthPlugin import IAuthPlugin
 from godocker.iWatcherPlugin import IWatcherPlugin
 from godocker.iStatusPlugin import IStatusPlugin
 
-
-#from godocker.pairtreeStorage import PairtreeStorage
+# from godocker.pairtreeStorage import PairtreeStorage
 from godocker.storageManager import StorageManager
 from godocker.utils import is_array_child_task, is_array_task
 import godocker.utils as godutils
 from godocker.notify import Notify
+
 
 class GoDScheduler(Daemon):
     '''
@@ -77,19 +73,18 @@ class GoDScheduler(Daemon):
         jobs_mongo = self.db_jobs.find()
         nb_jobs_mongo = jobs_mongo.count()
         nb_jobs_over_mongo = self.db_jobsover.find().count()
-        #nb_running_redis = self.r.llen(self.cfg['redis_prefix']+':jobs:running')
-        #Load default images
+        # Load default images
         for default_image in self.cfg['default_images']:
-            self.logger.debug('Initialize with default image: '+default_image['url'])
-            self.r.hincrby(self.cfg['redis_prefix']+':images', default_image['url'], 0)
+            self.logger.debug('Initialize with default image: ' + default_image['url'])
+            self.r.hincrby(self.cfg['redis_prefix'] + ':images', default_image['url'], 0)
 
         if nb_jobs_mongo == 0:
             # Nothing running, reset redis some init values just in case
-            self.r.set(self.cfg['redis_prefix']+':jobs:queued', 0)
-            self.r.delete(self.cfg['redis_prefix']+':jobs:running')
-        if nb_jobs_mongo >0 or nb_jobs_over_mongo >0:
+            self.r.set(self.cfg['redis_prefix'] + ':jobs:queued', 0)
+            self.r.delete(self.cfg['redis_prefix'] + ':jobs:running')
+        if nb_jobs_mongo > 0 or nb_jobs_over_mongo > 0:
             # Not the first run
-            jobs_counter = self.r.get(self.cfg['redis_prefix']+':jobs')
+            jobs_counter = self.r.get(self.cfg['redis_prefix'] + ':jobs')
             if jobs_counter and int(jobs_counter) > 0:
                 self.logger.info("Redis database looks ok")
                 return
@@ -104,33 +99,32 @@ class GoDScheduler(Daemon):
                 else:
                     max_task = self.db_jobsover.find().sort("id", pyDESCENDING).limit(1)
                     max_task_id = max_task[0]['id']
-                self.r.set(self.cfg['redis_prefix']+':jobs', max_task_id)
+                self.r.set(self.cfg['redis_prefix'] + ':jobs', max_task_id)
                 # Set running and kill tasks
                 for task in jobs_mongo:
                     if task['status']['secondary'] == godutils.STATUS_SECONDARY_KILL_REQUESTED:
-                        self.r.rpush(cfg['redis_prefix']+':jobs:kill', dumps(task))
+                        self.r.rpush(self.cfg['redis_prefix'] + ':jobs:kill', dumps(task))
                     if task['status']['secondary'] == godutils.STATUS_SECONDARY_SUSPEND_REQUESTED:
-                        self.r.rpush(cfg['redis_prefix']+':jobs:suspend', dumps(task))
+                        self.r.rpush(self.cfg['redis_prefix'] + ':jobs:suspend', dumps(task))
                     if task['status']['secondary'] == godutils.STATUS_SECONDARY_RESUME_REQUESTED:
-                        self.r.rpush(cfg['redis_prefix']+':jobs:resume', dumps(task))
+                        self.r.rpush(self.cfg['redis_prefix'] + ':jobs:resume', dumps(task))
 
                     if task['status']['primary'] == godutils.STATUS_PENDING:
-                        self.r.incr(self.cfg['redis_prefix']+':jobs:queued')
+                        self.r.incr(self.cfg['redis_prefix'] + ':jobs:queued')
                         continue
                     if task['status']['primary'] == godutils.STATUS_RUNNING:
-                        self.r.rpush(self.cfg['redis_prefix']+':jobs:running', task['id'])
-                        self.r.set(self.cfg['redis_prefix']+':job:'+str(task['id'])+':task', dumps(task))
+                        self.r.rpush(self.cfg['redis_prefix'] + ':jobs:running', task['id'])
+                        self.r.set(self.cfg['redis_prefix'] + ':job:' + str(task['id']) + ':task', dumps(task))
                         continue
                 self.logger.warn("Redis database has been synced, continuing.")
         else:
             self.logger.info("No task found in database, looks like a first run")
 
-
     def reload_config(self):
         '''
         Reload config if last reload command if recent
         '''
-        config_last_update = self.r.get(self.cfg['redis_prefix']+':config:last')
+        config_last_update = self.r.get(self.cfg['redis_prefix'] + ':config:last')
         if config_last_update is not None:
             config_last_update = float(config_last_update)
             if config_last_update > self.config_last_loaded:
@@ -143,7 +137,7 @@ class GoDScheduler(Daemon):
     def ask_reload_config(self):
         dt = datetime.datetime.now()
         config_last_loaded = time.mktime(dt.timetuple())
-        self.r.set(self.cfg['redis_prefix']+':config:last', config_last_loaded)
+        self.r.set(self.cfg['redis_prefix'] + ':config:last', config_last_loaded)
 
     def load_config(self, f):
         '''
@@ -153,13 +147,12 @@ class GoDScheduler(Daemon):
         dt = datetime.datetime.now()
         self.config_last_loaded = time.mktime(dt.timetuple())
 
-        self.cfg= None
+        self.cfg = None
         with open(f, 'r') as ymlfile:
             self.cfg = yaml.load(ymlfile)
 
-
         self.hostname = socket.gethostbyaddr(socket.gethostname())[0]
-        self.proc_name = 'scheduler-'+self.hostname
+        self.proc_name = 'scheduler-' + self.hostname
         if os.getenv('GOD_PROCID'):
             self.proc_name += os.getenv('GOD_PROCID')
 
@@ -180,7 +173,6 @@ class GoDScheduler(Daemon):
             database = self.cfg['influxdb_db']
             self.db_influx = influxdb.InfluxDBClient(host, port, username, password, database)
 
-
         if self.cfg['log_config'] is not None:
             for handler in list(self.cfg['log_config']['handlers'].keys()):
                 self.cfg['log_config']['handlers'][handler] = dict(self.cfg['log_config']['handlers'][handler])
@@ -191,7 +183,6 @@ class GoDScheduler(Daemon):
             dirname, filename = os.path.split(os.path.abspath(__file__))
             self.cfg['plugins_dir'] = os.path.join(dirname, '..', 'plugins')
 
-        #self.store = PairtreeStorage(self.cfg)
         self.store = StorageManager.get_storage(self.cfg)
 
         Notify.set_config(self.cfg)
@@ -214,43 +205,41 @@ class GoDScheduler(Daemon):
         # Activate plugins
         self.status_manager = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Status"):
-           if 'status_policy' not in self.cfg or not self.cfg['status_policy']:
-               print("No status manager in configuration")
-               break
-           if pluginInfo.plugin_object.get_name() == self.cfg['status_policy']:
-             self.status_manager = pluginInfo.plugin_object
-             self.status_manager.set_logger(self.logger)
-             self.status_manager.set_redis_handler(self.r)
-             self.status_manager.set_jobs_handler(self.db_jobs)
-             self.status_manager.set_users_handler(self.db_users)
-             self.status_manager.set_projects_handler(self.db_projects)
-             self.status_manager.set_config(self.cfg)
-             print("Loading status manager: "+self.status_manager.get_name())
+            if 'status_policy' not in self.cfg or not self.cfg['status_policy']:
+                print("No status manager in configuration")
+                break
+            if pluginInfo.plugin_object.get_name() == self.cfg['status_policy']:
+                self.status_manager = pluginInfo.plugin_object
+                self.status_manager.set_logger(self.logger)
+                self.status_manager.set_redis_handler(self.r)
+                self.status_manager.set_jobs_handler(self.db_jobs)
+                self.status_manager.set_users_handler(self.db_users)
+                self.status_manager.set_projects_handler(self.db_projects)
+                self.status_manager.set_config(self.cfg)
+                print("Loading status manager: " + self.status_manager.get_name())
 
         self.scheduler = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Scheduler"):
-           #simplePluginManager.activatePluginByName(pluginInfo.name)
-           if pluginInfo.plugin_object.get_name() == self.cfg['scheduler_policy']:
-             self.scheduler = pluginInfo.plugin_object
-             self.scheduler.set_logger(self.logger)
-             self.scheduler.set_redis_handler(self.r)
-             self.scheduler.set_jobs_handler(self.db_jobs)
-             self.scheduler.set_users_handler(self.db_users)
-             self.scheduler.set_projects_handler(self.db_projects)
-             self.scheduler.set_config(self.cfg)
-             print("Loading scheduler: "+self.scheduler.get_name())
+            if pluginInfo.plugin_object.get_name() == self.cfg['scheduler_policy']:
+                self.scheduler = pluginInfo.plugin_object
+                self.scheduler.set_logger(self.logger)
+                self.scheduler.set_redis_handler(self.r)
+                self.scheduler.set_jobs_handler(self.db_jobs)
+                self.scheduler.set_users_handler(self.db_users)
+                self.scheduler.set_projects_handler(self.db_projects)
+                self.scheduler.set_config(self.cfg)
+                print("Loading scheduler: " + self.scheduler.get_name())
         self.executor = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Executor"):
-           #simplePluginManager.activatePluginByName(pluginInfo.name)
-           if pluginInfo.plugin_object.get_name() == self.cfg['executor']:
-             self.executor = pluginInfo.plugin_object
-             self.executor.set_logger(self.logger)
-             self.executor.set_redis_handler(self.r)
-             self.executor.set_jobs_handler(self.db_jobs)
-             self.executor.set_users_handler(self.db_users)
-             self.executor.set_projects_handler(self.db_projects)
-             self.executor.set_config(self.cfg)
-             print("Loading executor: "+self.executor.get_name())
+            if pluginInfo.plugin_object.get_name() == self.cfg['executor']:
+                self.executor = pluginInfo.plugin_object
+                self.executor.set_logger(self.logger)
+                self.executor.set_redis_handler(self.r)
+                self.executor.set_jobs_handler(self.db_jobs)
+                self.executor.set_users_handler(self.db_users)
+                self.executor.set_projects_handler(self.db_projects)
+                self.executor.set_config(self.cfg)
+                print("Loading executor: " + self.executor.get_name())
 
         self.watchers = []
         if 'watchers' in self.cfg and self.cfg['watchers'] is not None:
@@ -258,29 +247,27 @@ class GoDScheduler(Daemon):
         else:
             watchers = []
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Watcher"):
-           #simplePluginManager.activatePluginByName(pluginInfo.name)
-           if pluginInfo.plugin_object.get_name() in watchers:
-             watcher = pluginInfo.plugin_object
-             watcher.set_logger(self.logger)
-             watcher.set_config(self.cfg)
-             watcher.set_redis_handler(self.r)
-             watcher.set_jobs_handler(self.db_jobs)
-             watcher.set_users_handler(self.db_users)
-             watcher.set_projects_handler(self.db_projects)
-             self.watchers.append(watcher)
-             print("Add watcher: "+watcher.get_name())
+            if pluginInfo.plugin_object.get_name() in watchers:
+                watcher = pluginInfo.plugin_object
+                watcher.set_logger(self.logger)
+                watcher.set_config(self.cfg)
+                watcher.set_redis_handler(self.r)
+                watcher.set_jobs_handler(self.db_jobs)
+                watcher.set_users_handler(self.db_users)
+                watcher.set_projects_handler(self.db_projects)
+                self.watchers.append(watcher)
+                print("Add watcher: " + watcher.get_name())
 
         self.auth_policy = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Auth"):
             if pluginInfo.plugin_object.get_name() == self.cfg['auth_policy']:
-                 self.auth_policy = pluginInfo.plugin_object
-                 self.auth_policy.set_logger(self.logger)
-                 self.auth_policy.set_config(self.cfg)
-                 self.auth_policy.set_users_handler(self.db_users)
-                 print("Loading auth policy: "+self.auth_policy.get_name())
+                self.auth_policy = pluginInfo.plugin_object
+                self.auth_policy.set_logger(self.logger)
+                self.auth_policy.set_config(self.cfg)
+                self.auth_policy.set_users_handler(self.db_users)
+                print("Loading auth policy: " + self.auth_policy.get_name())
 
         self.check_redis()
-
 
     def add_task(self, task):
         '''
@@ -294,7 +281,7 @@ class GoDScheduler(Daemon):
         '''
         if 'rate_limit' in self.cfg and self.cfg['rate_limit'] is not None:
             current_rate = self.r.get(self.cfg['redis_prefix'] +
-                                   ':user:' + str(task['user']['id'])+ ':rate')
+                                   ':user:' + str(task['user']['id']) + ':rate')
             if current_rate is not None and int(current_rate) >= self.cfg['rate_limit']:
                 return None
 
@@ -304,10 +291,9 @@ class GoDScheduler(Daemon):
             if current_rate is not None and int(current_rate) >= self.cfg['rate_limit_all']:
                 return None
 
-
-        task_id = self.r.incr(self.cfg['redis_prefix']+':jobs')
-        self.r.incr(self.cfg['redis_prefix']+':jobs:queued')
-        self.r.incr(self.cfg['redis_prefix'] + ':user:' + str(task['user']['id'])+ ':rate')
+        task_id = self.r.incr(self.cfg['redis_prefix'] + ':jobs')
+        self.r.incr(self.cfg['redis_prefix'] + ':jobs:queued')
+        self.r.incr(self.cfg['redis_prefix'] + ':user:' + str(task['user']['id']) + ':rate')
         task['id'] = task_id
         if not task['status']['primary']:
             task['status']['primary'] = godutils.STATUS_PENDING
@@ -317,7 +303,6 @@ class GoDScheduler(Daemon):
             task['date'] = time.mktime(dt.timetuple())
         if 'project' not in task['user']:
             task['user']['project'] = 'default'
-
 
         if is_array_task(task):
             task['requirements']['array']['nb_tasks'] = 0
@@ -355,20 +340,17 @@ class GoDScheduler(Daemon):
 
         :return: list of tasks ordered
         '''
-        #for pending_job in pending_list:
-        #  job  = json.loads(pending_job)
-        #return None
         dt = datetime.datetime.now()
         start_time = time.mktime(dt.timetuple())
         tasks = self.scheduler.schedule(pending_list)
         dt = datetime.datetime.now()
         end_time = time.mktime(dt.timetuple())
-        nb_pending = self.r.get(self.cfg['redis_prefix']+':jobs:queued')
+        nb_pending = self.r.get(self.cfg['redis_prefix'] + ':jobs:queued')
         if nb_pending is None:
             nb_pending = 0
         else:
             nb_pending = int(nb_pending)
-        nb_running = self.r.llen(self.cfg['redis_prefix']+':jobs:running')
+        nb_running = self.r.llen(self.cfg['redis_prefix'] + ':jobs:running')
         if nb_running is None:
             nb_running = 0
         else:
@@ -377,25 +359,23 @@ class GoDScheduler(Daemon):
         self._prometheus_stats('god_scheduler_sched_duration', end_time - start_time)
         return tasks
 
-
     def _update_scheduled_task_status(self, running_tasks, rejected_tasks):
         if running_tasks:
             for r in running_tasks:
                 if 'ticket_share' not in r['requirements']:
                     r['requirements']['ticket_share'] = 0
                 if is_array_child_task(r):
-                    self.r.incr(self.cfg['redis_prefix']+':job:'+str(r['parent_task_id'])+':subtaskrunning')
-                self.r.rpush(self.cfg['redis_prefix']+':jobs:running', r['id'])
-                #self.r.set('god:job:'+str(r['id'])+':container', r['container']['id'])
+                    self.r.incr(self.cfg['redis_prefix'] + ':job:' + str(r['parent_task_id']) + ':subtaskrunning')
+                self.r.rpush(self.cfg['redis_prefix'] + ':jobs:running', r['id'])
                 r['status']['primary'] = godutils.STATUS_RUNNING
                 if 'override' not in r['status'] or not r['status']['override']:
                     r['status']['secondary'] = None
                     r['status']['reason'] = ''
                 dt = datetime.datetime.now()
                 r['status']['date_running'] = time.mktime(dt.timetuple())
-                self.r.set(self.cfg['redis_prefix']+':job:'+str(r['id'])+':task', dumps(r))
-                self.r.decr(self.cfg['redis_prefix']+':jobs:queued')
-                self.r.decr(self.cfg['redis_prefix'] + ':user:' + str(r['user']['id'])+ ':rate')
+                self.r.set(self.cfg['redis_prefix'] + ':job:' + str(r['id']) + ':task', dumps(r))
+                self.r.decr(self.cfg['redis_prefix'] + ':jobs:queued')
+                self.r.decr(self.cfg['redis_prefix'] + ':user:' + str(r['user']['id']) + ':rate')
                 self.db_jobs.update({'id': r['id']},
                                     {'$set': {
                                         'requirements.ticket_share': r['requirements']['ticket_share'],
@@ -416,7 +396,7 @@ class GoDScheduler(Daemon):
                     if r['container']['meta'] and 'Node' in r['container']['meta'] and 'Name' in r['container']['meta']['Node']:
                         host = r['container']['meta']['Node']['Name']
                         for port in r['container']['ports']:
-                            self.r.rpush(self.cfg['redis_prefix']+':ports:'+host, port)
+                            self.r.rpush(self.cfg['redis_prefix'] + ':ports:' + host, port)
                 if 'reason' not in r['status'] or not r['status']['reason']:
                     r['status']['reason'] = 'Not enough resources available'
                 self.db_jobs.update({'id': r['id']},
@@ -428,16 +408,15 @@ class GoDScheduler(Daemon):
                                         }
                                     })
 
-
     def _create_command(self, task):
         '''
         Write command script on disk
         '''
         if 'guest' in task['user'] and task['user']['guest']:
-            home_requested = False
+            # home_requested = False
             for volume in task['container']['volumes']:
                 if volume['name'] == 'home':
-                    home_requested = True
+                    # home_requested = True
                     if not os.path.exists(volume['path']):
                         self.logger.debug("Create home dir for guest:" + volume['path'])
                         os.makedirs(volume['path'])
@@ -460,12 +439,12 @@ class GoDScheduler(Daemon):
                                               task_cmd,
                                               str(task['requirements']['array']['task_id']))
             os.chmod(script_file, 0o755)
-            task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
+            task['command']['script'] = os.path.join('/mnt/go-docker', os.path.basename(script_file))
         else:
             script_file = self.store.add_file(task, 'cmd.sh',
                                               task_cmd)
             os.chmod(script_file, 0o755)
-            task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(script_file))
+            task['command']['script'] = os.path.join('/mnt/go-docker', os.path.basename(script_file))
 
         # Avoid getting twice same volume and task dir in case of replay
         cleared_volumes = []
@@ -485,7 +464,7 @@ class GoDScheduler(Daemon):
         })
 
         ftp_user = {
-            'id': 'user_'+task['user']['id']
+            'id': 'user_' + task['user']['id']
         }
         ftp_dir = self.store.get_task_dir(ftp_user)
         if os.path.exists(ftp_dir):
@@ -496,26 +475,24 @@ class GoDScheduler(Daemon):
                 'mount': '/mnt/god-data'
             })
 
-
         # Write wrapper script to run script with user uidNumber/guidNumber
         # Chown files in shared dir to gives files ACLs to user at the end
         # Exit with code of executed cmd.sh
         user_id = task['user']['id']
         cmd = "#!/bin/bash\n"
-        cmd += "groupadd --gid "+str(task['user']['gid'])+" "+user_id
-        cmd += " ; useradd --uid "+str(task['user']['uid'])+" --gid "+str(task['user']['gid'])+" "+user_id+"\n"
-        cmd += "usermod -p"+task['user']['credentials']['apikey']+"  "+user_id+"\n"
+        cmd += "groupadd --gid " + str(task['user']['gid']) + " " + user_id
+        cmd += " ; useradd --uid " + str(task['user']['uid']) + " --gid " + str(task['user']['gid']) + " " + user_id + "\n"
+        cmd += "usermod -p" + task['user']['credentials']['apikey'] + "  " + user_id + "\n"
         # Create secondary groups
         if 'sgids' in task['user']:
             for sgid in task['user']['sgids']:
-                cmd += "groupadd --gid "+str(sgid)+" group"+str(sgid)+"; "
-                #cmd += "usermod -a -G group"+str(sgid)+" "+user_id+"\n"
-                cmd += "usermod -a -G "+str(sgid)+" "+user_id+"\n"
+                cmd += "groupadd --gid " + str(sgid) + " group" + str(sgid) + "; "
+                cmd += "usermod -a -G " + str(sgid) + " " + user_id + "\n"
 
         # docker-plugin-zfs
         if 'plugin_zfs' in self.cfg and self.cfg['plugin_zfs']:
             cmd += "if [ -e /tmp-data ]; then\n"
-            cmd += "    chown -R "+user_id+" /tmp-data\n"
+            cmd += "    chown -R " + user_id + " /tmp-data\n"
             cmd += "fi\n"
 
         cmd += "cd /mnt/go-docker\n"
@@ -534,16 +511,16 @@ class GoDScheduler(Daemon):
                 array_last = int(array_req[1])
                 if len(array_req) == 3:
                     array_step = int(array_req[2])
-            cmd += "export GOGOCKER_TASK_ID="+str(task['requirements']['array']['task_id'])
-            array_cmd += " ; export GOGOCKER_TASK_ID="+str(task['requirements']['array']['task_id'])
-            cmd += "export GOGOCKER_TASK_FIRST="+str(array_first)
-            array_cmd += " ; export GOGOCKER_TASK_FIRST="+str(array_first)
-            cmd += "export GOGOCKER_TASK_LAST="+str(array_last)
-            array_cmd += " ; export GOGOCKER_TASK_LAST="+str(array_last)
-            cmd += "export GOGOCKER_TASK_STEP="+str(array_step)
-            array_cmd += " ; export GOGOCKER_TASK_STEP="+str(array_step)
+            cmd += "export GOGOCKER_TASK_ID=" + str(task['requirements']['array']['task_id'])
+            array_cmd += " ; export GOGOCKER_TASK_ID=" + str(task['requirements']['array']['task_id'])
+            cmd += "export GOGOCKER_TASK_FIRST=" + str(array_first)
+            array_cmd += " ; export GOGOCKER_TASK_FIRST=" + str(array_first)
+            cmd += "export GOGOCKER_TASK_LAST=" + str(array_last)
+            array_cmd += " ; export GOGOCKER_TASK_LAST=" + str(array_last)
+            cmd += "export GOGOCKER_TASK_STEP=" + str(array_step)
+            array_cmd += " ; export GOGOCKER_TASK_STEP=" + str(array_step)
 
-        cmd += "export GODOCKER_JID="+str(task['id'])+"\n"
+        cmd += "export GODOCKER_JID=" + str(task['id']) + "\n"
         cmd += "export GODOCKER_PWD=/mnt/go-docker\n"
         cmd += "export GODOCKER_DATA=/mnt/god-data\n"
         vol_home = "export GODOCKER_HOME=/mnt/go-docker"
@@ -551,14 +528,14 @@ class GoDScheduler(Daemon):
             if v['name'] == 'home':
                 vol_home = "export GODOCKER_HOME=" + v['mount']
                 break
-        cmd += vol_home+"\n"
+        cmd += vol_home + "\n"
         cmd += "startprocess=`date +%s`\n"
 
-        cmd += str(self.store.get_pre_command())+"\n"
+        cmd += str(self.store.get_pre_command()) + "\n"
 
         if not task['container']['root']:
             cmd += "env | sed 's/^/export /' | sed 's/=\(.*\)/=\"\\1\"/' | sed '/HOME=/d' > /mnt/go-docker/god.env\n"
-            cmd += "su - "+user_id+" -c \". /mnt/go-docker/god.env ; "+vol_home + array_cmd + " ; export GODOCKER_DATA=/mnt/god-data ; export GODOCKER_JID="+str(task['id'])+" ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\"\n"
+            cmd += "su - " + user_id + " -c \". /mnt/go-docker/god.env ; " + vol_home + array_cmd + " ; export GODOCKER_DATA=/mnt/god-data ; export GODOCKER_JID=" + str(task['id']) + " ; export GODOCKER_PWD=/mnt/go-docker ; cd /mnt/go-docker ; /mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\"\n"
         else:
             cmd += "/mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\n"
 
@@ -569,16 +546,16 @@ class GoDScheduler(Daemon):
             ssh_dir = ""
             if task['container']['root']:
                 ssh_dir = "/root/.ssh"
-                cmd += "echo 'root:"+task['user']['credentials']['apikey']+"' | chpasswd\n"
+                cmd += "echo 'root:" + task['user']['credentials']['apikey'] + "' | chpasswd\n"
             else:
-                ssh_dir = "/home/"+user_id+"/.ssh"
-                cmd += "echo '"+user_id+":"+task['user']['credentials']['apikey']+"' | chpasswd\n"
-            cmd +="mkdir -p "+ssh_dir+"\n"
-            cmd +="echo \"" + task['user']['credentials']['public'] + "\" > "+ssh_dir+"/authorized_keys\n"
-            cmd +="chmod 600 " + ssh_dir +"/authorized_keys\n"
+                ssh_dir = "/home/" + user_id + "/.ssh"
+                cmd += "echo '" + user_id + ":" + task['user']['credentials']['apikey'] + "' | chpasswd\n"
+            cmd += "mkdir -p " + ssh_dir + "\n"
+            cmd += "echo \"" + task['user']['credentials']['public'] + "\" > " + ssh_dir + "/authorized_keys\n"
+            cmd += "chmod 600 " + ssh_dir + "/authorized_keys\n"
             if not task['container']['root']:
-                cmd +="chown -R "+user_id+":"+str(task['user']['gid'])+" /home/"+user_id+"\n"
-                cmd +="chmod 644 /home/"+user_id+"/.ssh/authorized_keys\n"
+                cmd += "chown -R " + user_id + ":" + str(task['user']['gid']) + " /home/" + user_id + "\n"
+                cmd += "chmod 644 /home/" + user_id + "/.ssh/authorized_keys\n"
 
             cmd += "\nif hash sshd 2>/dev/null; then\n"
             cmd += "    echo \"ssh server installed\"\n"
@@ -604,13 +581,13 @@ class GoDScheduler(Daemon):
             cmd += "sed -ri 's/^PermitRootLogin\s+.*/PermitRootLogin yes/' /etc/ssh/sshd_config\n"
             cmd += "fi\n"
 
-            cmd +="/usr/sbin/sshd -f /etc/ssh/sshd_config -D\n"
+            cmd += "/usr/sbin/sshd -f /etc/ssh/sshd_config -D\n"
 
         cmd += "ret_code=$?\n"
         cmd += "echo $startprocess > /mnt/go-docker/god.info\n"
         cmd += "date +%s >> /mnt/go-docker/god.info\n"
-        cmd += "chown -R "+user_id+":"+str(task['user']['gid'])+" /mnt/go-docker/*\n"
-        cmd += str(self.store.get_post_command())+"\n"
+        cmd += "chown -R " + user_id + ":" + str(task['user']['gid']) + " /mnt/go-docker/*\n"
+        cmd += str(self.store.get_post_command()) + "\n"
         cmd += "exit $ret_code\n"
 
         wrapper = "#!/bin/sh\n"
@@ -634,19 +611,19 @@ class GoDScheduler(Daemon):
         if is_array_child_task(task):
             script_file = self.store.add_file(parent_task, 'godocker.sh', cmd, str(task['requirements']['array']['task_id']))
             os.chmod(script_file, 0o755)
-            wrapper += os.path.join('/mnt/go-docker',os.path.basename(script_file))
+            wrapper += os.path.join('/mnt/go-docker', os.path.basename(script_file))
             wrapper_file = self.store.add_file(parent_task, 'wrapper.sh', wrapper, str(task['requirements']['array']['task_id']))
             os.chmod(wrapper_file, 0o755)
-            task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(wrapper_file))
+            task['command']['script'] = os.path.join('/mnt/go-docker', os.path.basename(wrapper_file))
             if uris:
                 self.store.add_file(parent_task, 'godocker-uris.txt', uris, str(task['requirements']['array']['task_id']))
         else:
             script_file = self.store.add_file(task, 'godocker.sh', cmd)
             os.chmod(script_file, 0o755)
-            wrapper += os.path.join('/mnt/go-docker',os.path.basename(script_file))
+            wrapper += os.path.join('/mnt/go-docker', os.path.basename(script_file))
             wrapper_file = self.store.add_file(task, 'wrapper.sh', wrapper)
             os.chmod(wrapper_file, 0o755)
-            task['command']['script'] = os.path.join('/mnt/go-docker',os.path.basename(wrapper_file))
+            task['command']['script'] = os.path.join('/mnt/go-docker', os.path.basename(wrapper_file))
             if uris:
                 self.store.add_file(task, 'godocker-uris.txt', uris)
 
@@ -660,7 +637,7 @@ class GoDScheduler(Daemon):
         for task in queued_list:
             can_run = True
             for watcher in self.watchers:
-                if not watcher.can_start(task) :
+                if not watcher.can_start(task):
                     can_run = False
                     break
             if 'tasks' in task['requirements'] and task['requirements']['tasks']:
@@ -673,7 +650,7 @@ class GoDScheduler(Daemon):
             if not can_run:
                 continue
 
-            reject =  False
+            reject = False
             quota = True
             if 'disk_default_quota' not in self.cfg or self.cfg['disk_default_quota'] is None:
                 quota = False
@@ -691,9 +668,9 @@ class GoDScheduler(Daemon):
                     user_usage = users_usage[task['user']['id']]
                 if (not reject) and (task['requirements']['user_quota_time'] > 0 and task['requirements']['user_quota_time'] < user_usage['total_time']):
                     reject = True
-                if (not reject) and (task['requirements']['user_quota_cpu'] > 0 and task['requirements']['user_quota_cpu'] < user_usage['total_cpu']+task['requirements']['cpu']):
+                if (not reject) and (task['requirements']['user_quota_cpu'] > 0 and task['requirements']['user_quota_cpu'] < user_usage['total_cpu'] + task['requirements']['cpu']):
                     reject = True
-                if (not reject) and (task['requirements']['user_quota_ram'] > 0 and task['requirements']['user_quota_ram'] < user_usage['total_ram']+task['requirements']['ram']):
+                if (not reject) and (task['requirements']['user_quota_ram'] > 0 and task['requirements']['user_quota_ram'] < user_usage['total_ram'] + task['requirements']['ram']):
                     reject = True
             if (not reject) and task['user']['project'] != 'default' and (task['requirements']['project_quota_time'] > 0 or task['requirements']['project_quota_cpu'] > 0 or task['requirements']['project_quota_ram'] > 0):
                 project_usage = None
@@ -745,7 +722,7 @@ class GoDScheduler(Daemon):
         task['status']['date_over'] = time.mktime(dt.timetuple())
         del task['_id']
         self.db_jobsover.insert(task)
-        self.r.delete(self.cfg['redis_prefix']+':job:'+str(task['id'])+':task')
+        self.r.delete(self.cfg['redis_prefix'] + ':job:' + str(task['id']) + ':task')
 
     def reschedule_tasks(self, resched_list):
         '''
@@ -757,22 +734,21 @@ class GoDScheduler(Daemon):
                         'status.secondary': godutils.STATUS_SECONDARY_RESCHEDULE_REQUESTED
                         }
             })
-            self.r.rpush(self.cfg['redis_prefix']+':jobs:kill',dumps(task))
-
+            self.r.rpush(self.cfg['redis_prefix'] + ':jobs:kill', dumps(task))
 
     def _prometheus_stats(self, stat, duration):
         if 'prometheus_key' in self.cfg and self.cfg['prometheus_exporter'] is not None and self.cfg['prometheus_key'] is not None:
             try:
                 http = urllib3.PoolManager()
                 r = http.request('POST',
-                    self.cfg['prometheus_exporter']+'/api/1.0/prometheus',
-                    headers={'Content-Type':'application/json'},
-                    body=json.dumps({ 'key': self.cfg['prometheus_key'],
+                    self.cfg['prometheus_exporter'] + '/api/1.0/prometheus',
+                    headers={'Content-Type': 'application/json'},
+                    body=json.dumps({'key': self.cfg['prometheus_key'],
                                       'stat': [{'name': stat, 'value': duration}]}))
                 if r.status != 200:
                     logging.warn('Prometheus:Failed to send stats')
             except Exception as e:
-                logging.warn("Prometheus:Failed to send stats: "+str(e))
+                logging.warn("Prometheus:Failed to send stats: " + str(e))
 
     def _add_to_stats(self, nb_pending, nb_running, duration_scheduler):
         '''
@@ -782,8 +758,6 @@ class GoDScheduler(Daemon):
         if self.db_influx is None:
             return
 
-        #dt = datetime.datetime.now()
-        #current_timestamp = time.mktime(dt.timetuple())
         data = [{
             'points': [[
                 nb_pending,
@@ -797,8 +771,7 @@ class GoDScheduler(Daemon):
             self.db_influx.write_points(data)
         except Exception as e:
             # Do not fail on stat writing
-            self.logger.error('Stat:Error:'+str(e))
-
+            self.logger.error('Stat:Error:' + str(e))
 
     def manage_tasks(self):
         '''
@@ -807,10 +780,6 @@ class GoDScheduler(Daemon):
         '''
 
         self.logger.debug("Get pending task")
-        #pending_tasks = []
-        #pending_tasks_length = self.r.llen('jobs:pending')
-        #for i in range(min(pending_tasks_length, self.cfg['max_job_pop'])):
-        #    pending_tasks.append(self.r.lpop('jobs:pending'))
 
         pending_tasks = self.db_jobs.find({'status.primary': godutils.STATUS_PENDING})
         task_list = []
@@ -820,7 +789,7 @@ class GoDScheduler(Daemon):
                 return
             if not self.auth_policy.can_run(p):
                 self.db_jobs.update({'id': p['id']}, {'status.primary': godutils.STATUS_OVER,
-                                                     'status.secondary': STATUS_SECONDARY_SCHEDULER_REJECTED,
+                                                     'status.secondary': godutils.STATUS_SECONDARY_SCHEDULER_REJECTED,
                                                      'status.reason': 'Not authorized'})
                 continue
             task_list.append(p)
@@ -832,9 +801,9 @@ class GoDScheduler(Daemon):
         if self.stop_daemon:
             return
         reschedule_task_list = []
-        reschedule_task_length = self.r.llen(self.cfg['redis_prefix']+':jobs:reschedule')
+        reschedule_task_length = self.r.llen(self.cfg['redis_prefix'] + ':jobs:reschedule')
         for i in range(min(reschedule_task_length, self.cfg['max_job_pop'])):
-            task = self.r.lpop(self.cfg['redis_prefix']+':jobs:reschedule')
+            task = self.r.lpop(self.cfg['redis_prefix'] + ':jobs:reschedule')
             if task:
                 reschedule_task_list.append(json.loads(task))
         self.reschedule_tasks(reschedule_task_list)
@@ -857,11 +826,10 @@ class GoDScheduler(Daemon):
         '''
         checks if system is in maintenance
         '''
-        maintenance = self.r.get(self.cfg['redis_prefix']+':maintenance')
+        maintenance = self.r.get(self.cfg['redis_prefix'] + ':maintenance')
         if maintenance is not None and maintenance == 'on':
             return True
         return False
-
 
     def is_master(self, random_key):
         timeout = 600
@@ -869,11 +837,11 @@ class GoDScheduler(Daemon):
             if 'master_timeout' in self.cfg and int(self.cfg['master_timeout']) > 0:
                 timeout = int(self.cfg['master_timeout'])
         except Exception as e:
-            self.logger.error('invalid master_timeout config parameter')
-        self.r.setnx(self.cfg['redis_prefix']+':master', random_key)
-        master_key = self.r.get(self.cfg['redis_prefix']+':master')
+            self.logger.error('invalid master_timeout config parameter: ' + str(e))
+        self.r.setnx(self.cfg['redis_prefix'] + ':master', random_key)
+        master_key = self.r.get(self.cfg['redis_prefix'] + ':master')
         if master_key == random_key:
-            self.r.expire(self.cfg['redis_prefix']+':master', 600)
+            self.r.expire(self.cfg['redis_prefix'] + ':master', timeout)
             return True
         else:
             return False
@@ -891,7 +859,7 @@ class GoDScheduler(Daemon):
         is_master = self.is_master(random_key)
         while not is_master:
             if is_master != was_master:
-                self.logger.debug('Switching status: master='+str(is_master))
+                self.logger.debug('Switching status: master=' + str(is_master))
             self.logger.debug('Not master, waiting...')
             time.sleep(2)
             is_master = self.is_master(random_key)
@@ -912,9 +880,9 @@ class GoDScheduler(Daemon):
                 if not loop:
                     infinite = False
         except Exception as e:
-            self.logger.error('Scheduler:'+str(self.hostname)+':'+str(e))
+            self.logger.error('Scheduler:' + str(self.hostname) + ':' + str(e))
             traceback_msg = traceback.format_exc()
             self.logger.error(traceback_msg)
         self.executor.close()
         if is_master:
-            self.r.delete(self.cfg['redis_prefix']+':master')
+            self.r.delete(self.cfg['redis_prefix'] + ':master')
