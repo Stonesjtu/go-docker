@@ -773,6 +773,7 @@ class Mesos(IExecutorPlugin):
                 task['container']['meta']['State']['ExitCode'] = 137
             else:
                 task['container']['meta']['State']['ExitCode'] = 1
+            task['status']['reason'] = None
             if int(mesos_task) in [3,5,7]:
                 reason = self.redis_handler.get(self.cfg['redis_prefix']+':mesos:over:'+str(task['id'])+':reason')
                 if not reason:

@@ -190,6 +190,7 @@ class Kubernetes(IExecutorPlugin):
                 status = kube_request['status']['phase']
                 job['status']['override'] = True
                 job['status']['secondary'] = status
+                job['status']['reason'] = None
                 if status == 'Failed' or status == 'Unknown':
                     kube_ok = False
                     if 'message' in kube_request['status']:

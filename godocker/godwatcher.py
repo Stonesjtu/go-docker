@@ -507,8 +507,9 @@ class GoDWatcher(Daemon):
                     self.db_users.update({'id': task['user']['id']}, {'$set': {'usage.guest_home': folder_size}})
                     break
         # Increment image usage
-        self.r.hincrby(self.cfg['redis_prefix']+':images', task['container']['image'], 1)
-                    
+        if task['status']['reason'] is None:
+            self.r.hincrby(self.cfg['redis_prefix']+':images', task['container']['image'], 1)
+
         for watcher in self.watchers:
             watcher.done(task)
         return task

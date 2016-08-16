@@ -233,6 +233,7 @@ class Swarm(IExecutorPlugin):
                 '''
                 response = self.docker_client.start(container=container.get('Id'))
                 job['container']['id'] = container['Id']
+                job['status']['reason'] = None
                 #job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
                 running_tasks.append(job)
                 self.logger.debug('Execute:Job:'+str(job['id'])+':'+job['container']['id'])
