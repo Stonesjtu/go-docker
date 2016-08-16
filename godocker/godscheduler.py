@@ -78,6 +78,11 @@ class GoDScheduler(Daemon):
         nb_jobs_mongo = jobs_mongo.count()
         nb_jobs_over_mongo = self.db_jobsover.find().count()
         #nb_running_redis = self.r.llen(self.cfg['redis_prefix']+':jobs:running')
+        #Load default images
+        for default_image in self.cfg['default_images']:
+            self.logger.debug('Initialize with default image: '+default_image['url'])
+            self.r.hincrby(self.cfg['redis_prefix']+':images', default_image['url'], 0)
+
         if nb_jobs_mongo == 0:
             # Nothing running, reset redis some init values just in case
             self.r.set(self.cfg['redis_prefix']+':jobs:queued', 0)
