@@ -1,3 +1,4 @@
+# noqa: F821
 '''
 ***
 Modified generic daemon class
