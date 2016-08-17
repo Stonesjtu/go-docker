@@ -1,9 +1,9 @@
 from godocker.iAuthPlugin import IAuthPlugin
-import logging
 import grp
 import os
 
-from ldap3 import Server, Connection, ALL, SUBTREE
+from ldap3 import Server, Connection, SUBTREE
+
 
 class GoAuth(IAuthPlugin):
     def get_name(self):
@@ -15,7 +15,6 @@ class GoAuth(IAuthPlugin):
     def get_groups(self, user_id):
         gids = [g.gr_gid for g in grp.getgrall() if user_id in g.gr_mem]
         return [grp.getgrgid(gid).gr_gid for gid in gids]
-
 
     def get_user(self, login):
         '''
@@ -62,8 +61,8 @@ class GoAuth(IAuthPlugin):
                 homeDirectoryField = self.cfg['ldap']['fields']['homeDirectory']
 
             attrs = ['mail', 'uid', 'uidNumber', 'gidNumber', homeDirectoryField]
-            con.search(search_base=base_dn, search_scope = SUBTREE,
-                        search_filter=filter,attributes=attrs)
+            con.search(search_base=base_dn, search_scope=SUBTREE,
+                        search_filter=filter, attributes=attrs)
             results = con.response
             if results:
                 ldapMail = None
@@ -73,20 +72,20 @@ class GoAuth(IAuthPlugin):
                 homeDirectory = None
                 # user_dn = None
                 for res in results:
-                  # dn = res['dn']
-                  entry = res['raw_attributes']
-                  # user_dn = str(dn)
-                  if 'uid' not in entry:
-                    self.logger.error('Uid not set for user '+user)
-                  userId = entry['uid'][0]
-                  uidNumber = entry['uidNumber'][0]
-                  gidNumber = entry['gidNumber'][0]
-                  homeDirectory = entry[homeDirectoryField][0]
-                  if 'mail' in entry:
-                    ldapMail = entry['mail'][0]
+                    # dn = res['dn']
+                    entry = res['raw_attributes']
+                    # user_dn = str(dn)
+                    if 'uid' not in entry:
+                        self.logger.error('Uid not set for user ' + user)
+                    userId = entry['uid'][0]
+                    uidNumber = entry['uidNumber'][0]
+                    gidNumber = entry['gidNumber'][0]
+                    homeDirectory = entry[homeDirectoryField][0]
+                    if 'mail' in entry:
+                        ldapMail = entry['mail'][0]
 
                 user = {
-                      'id' : userId,
+                      'id': userId,
                       'uidNumber': uidNumber,
                       'gidNumber': gidNumber,
                       'sgids': self.get_groups(userId),
@@ -141,8 +140,8 @@ class GoAuth(IAuthPlugin):
                 homeDirectoryField = self.cfg['ldap']['fields']['homeDirectory']
 
             attrs = ['mail', 'uid', 'uidNumber', 'gidNumber', homeDirectoryField]
-            con.search(search_base=base_dn, search_scope = SUBTREE,
-                        search_filter=filter,attributes=attrs)
+            con.search(search_base=base_dn, search_scope=SUBTREE,
+                        search_filter=filter, attributes=attrs)
             results = con.response
 
             if results:
@@ -153,18 +152,18 @@ class GoAuth(IAuthPlugin):
                 homeDirectory = None
                 user_dn = None
                 for res in results:
-                  dn = res['dn']
-                  entry = res['raw_attributes']
+                    dn = res['dn']
+                    entry = res['raw_attributes']
 
-                  user_dn = str(dn)
-                  if 'uid' not in entry:
-                    self.logger.error('Uid not set for user '+user)
-                  userId = entry['uid'][0]
-                  uidNumber = entry['uidNumber'][0]
-                  gidNumber = entry['gidNumber'][0]
-                  homeDirectory = entry[homeDirectoryField][0]
-                  if 'mail' in entry:
-                    ldapMail = entry['mail'][0]
+                    user_dn = str(dn)
+                    if 'uid' not in entry:
+                        self.logger.error('Uid not set for user ' + user)
+                    userId = entry['uid'][0]
+                    uidNumber = entry['uidNumber'][0]
+                    gidNumber = entry['gidNumber'][0]
+                    homeDirectory = entry[homeDirectoryField][0]
+                    if 'mail' in entry:
+                        ldapMail = entry['mail'][0]
 
                 # Check credentials
                 con = Connection(s, user=user_dn, password=password)
@@ -174,7 +173,7 @@ class GoAuth(IAuthPlugin):
                 con.unbind()
 
                 user = {
-                      'id' : userId,
+                      'id': userId,
                       'uidNumber': uidNumber,
                       'gidNumber': gidNumber,
                       'sgids': self.get_groups(userId),
@@ -184,8 +183,6 @@ class GoAuth(IAuthPlugin):
         except Exception as err:
             self.logger.error(str(err))
         return user
-
-
 
     def bind_api(self, login, apikey):
         '''
@@ -198,7 +195,7 @@ class GoAuth(IAuthPlugin):
             return None
         try:
             user = {
-                 'id' :login,
+                 'id': login,
                  'uidNumber': user_in_db['uid'],
                  'gidNumber': user_in_db['gid'],
                  'sgids': user_in_db['sgids'],
@@ -296,7 +293,7 @@ class GoAuth(IAuthPlugin):
             if root_access:
                 req['acl'] = 'ro'
             if 'volumes_check' in self.cfg and self.cfg['volumes_check'] and not os.path.exists(req['path']):
-                self.logger.error('Volume path '+str(req['path'])+' does not exists')
+                self.logger.error('Volume path ' + str(req['path']) + ' does not exists')
                 continue
             volumes.append(req)
 

@@ -1,5 +1,6 @@
 from godocker.IGoDockerPlugin import IGoDockerPlugin
 
+
 class IExecutorPlugin(IGoDockerPlugin):
     '''
     Executor plugins interface
@@ -79,7 +80,7 @@ class IExecutorPlugin(IGoDockerPlugin):
         :type callback: func(running list,rejected list)
         :return: tuple of submitted and rejected/errored tasks
         '''
-        return (None,None)
+        return (None, None)
 
     def run_all_tasks(self, tasks, callback=None):
         '''
@@ -91,7 +92,7 @@ class IExecutorPlugin(IGoDockerPlugin):
         :type callback: func(running list,rejected list)
         :return: tuple of submitted and rejected/errored tasks
         '''
-        return (None,None)
+        return (None, None)
 
     def kill_task(self, task):
         '''
@@ -102,8 +103,6 @@ class IExecutorPlugin(IGoDockerPlugin):
         :return: (Task, over) over is True if task could be killed
         '''
         return (task, True)
-
-
 
     def watch_tasks(self, task):
         '''
@@ -122,15 +121,14 @@ class IExecutorPlugin(IGoDockerPlugin):
         '''
         return (task, True)
 
-
     def release_port(self, task):
         '''
         Release a port mapping
         '''
         for port in task['container']['ports']:
             host = task['container']['meta']['Node']['Name']
-            self.logger.debug('Port:Back:'+host+':'+str(port))
-            self.redis_handler.rpush(self.cfg['redis_prefix']+':ports:'+host, port)
+            self.logger.debug('Port:Back:' + host + ':' + str(port))
+            self.redis_handler.rpush(self.cfg['redis_prefix'] + ':ports:' + host, port)
 
     def get_mapping_port(self, host, task):
         '''
@@ -144,14 +142,14 @@ class IExecutorPlugin(IGoDockerPlugin):
         :type task: int
         :return: available port, None if no port is available
         '''
-        if not self.redis_handler.exists(self.cfg['redis_prefix']+':ports:'+host):
+        if not self.redis_handler.exists(self.cfg['redis_prefix'] + ':ports:' + host):
             for i in range(self.cfg['port_range']):
-                self.redis_handler.rpush(self.cfg['redis_prefix']+':ports:'+host, self.cfg['port_start'] + i)
-        port = self.redis_handler.lpop(self.cfg['redis_prefix']+':ports:'+host)
+                self.redis_handler.rpush(self.cfg['redis_prefix'] + ':ports:' + host, self.cfg['port_start'] + i)
+        port = self.redis_handler.lpop(self.cfg['redis_prefix'] + ':ports:' + host)
         if port is None:
             return None
-        self.logger.debug('Port:Give:'+task['container']['meta']['Node']['Name']+':'+str(port))
-        if not 'ports' in task['container']:
+        self.logger.debug('Port:Give:' + task['container']['meta']['Node']['Name'] + ':' + str(port))
+        if 'ports' not in task['container']:
             task['container']['ports'] = []
         task['container']['ports'].append(port)
         return int(port)

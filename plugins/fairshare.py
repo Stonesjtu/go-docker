@@ -3,6 +3,7 @@ from godocker.iSchedulerPlugin import ISchedulerPlugin
 import datetime
 import time
 
+
 class FairShare(ISchedulerPlugin):
     '''
     Fair share policy scheduler
@@ -68,8 +69,8 @@ class FairShare(ISchedulerPlugin):
         if max - min < 1:
             result = 0.5
         else:
-            result = (value - min)/float( max - min);
-        return result;
+            result = (value - min) / float(max - min)
+        return result
 
     def get_ticket_share(self, user, group, task):
         '''
@@ -86,15 +87,15 @@ class FairShare(ISchedulerPlugin):
         group_time = self.normalize(group_time, self.min_group_time, self.max_group_time)
         group_cpu = self.normalize(group_cpu, self.min_group_cpu, self.max_group_cpu)
         group_ram = self.normalize(group_ram, self.min_group_ram, self.max_group_ram)
-        ticket_share =  (1-task_waiting_time)*self.waiting_time_weight + \
-                        user_time*self.user_time_weight + \
-                        user_cpu*self.user_cpu_weight + \
-                        user_ram*self.user_ram_weight + \
-                        group_time*self.group_time_weight + \
-                        group_cpu*self.group_cpu_weight + \
-                        group_ram*self.group_ram_weight + \
-                        (1-user_prio)*(self.user_weight) + \
-                        (1-group_prio)*(self.group_weight)
+        ticket_share = (1 - task_waiting_time) * self.waiting_time_weight + \
+                        user_time * self.user_time_weight + \
+                        user_cpu * self.user_cpu_weight + \
+                        user_ram * self.user_ram_weight + \
+                        group_time * self.group_time_weight + \
+                        group_cpu * self.group_cpu_weight + \
+                        group_ram * self.group_ram_weight + \
+                        (1 - user_prio) * (self.user_weight) + \
+                        (1 - group_prio) * (self.group_weight)
         return ticket_share
 
     def get_name(self):
@@ -109,8 +110,6 @@ class FairShare(ISchedulerPlugin):
 
         :return: list of sorted tasks
         '''
-        #TODO
-        #(self.max_waiting_time, self.min_waiting_time) = self.get_bounds_waiting_time(tasks)
 
         self.max_waiting_time = 0
         self.min_waiting_time = -1
@@ -118,7 +117,6 @@ class FairShare(ISchedulerPlugin):
         timestamp = time.mktime(dt.timetuple())
 
         self.load()
-
 
         # Init default to avoid caculations
         self.projects_usage['default'] = {
@@ -185,7 +183,6 @@ class FairShare(ISchedulerPlugin):
             project_usage = (self.projects_usage[project_id]['total_cpu'], self.projects_usage[project_id]['total_ram'], self.projects_usage[project_id]['total_time'], project_prio)
             task['requirements']['ticket_share'] = self.get_ticket_share(user_usage, project_usage, task)
 
-        #tasks.sort(key=lambda x: x['requirements']['ticket_share'], reverse=True)
         tasks.sort(key=lambda x: (x['requirements']['ticket_share'], int(x['id'])))
 
         return tasks

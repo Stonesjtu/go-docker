@@ -1,5 +1,6 @@
 from godocker.iSchedulerPlugin import ISchedulerPlugin
 
+
 class FiFo(ISchedulerPlugin):
     def get_name(self):
         return "FiFo"

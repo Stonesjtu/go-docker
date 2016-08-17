@@ -680,9 +680,9 @@ class GoDScheduler(Daemon):
                     project_usage = users_usage[task['user']['project']]
                 if (not reject) and (task['requirements']['project_quota_time'] > 0 and task['requirements']['project_quota_time'] < project_usage['total_time']):
                     reject = True
-                if (not reject) and (task['requirements']['project_quota_cpu'] > 0 and task['requirements']['project_quota_cpu'] < project_usage['total_cpu']+task['requirements']['cpu']):
+                if (not reject) and (task['requirements']['project_quota_cpu'] > 0 and task['requirements']['project_quota_cpu'] < project_usage['total_cpu'] + task['requirements']['cpu']):
                     reject = True
-                if (not reject) and (task['requirements']['project_quota_ram'] > 0 and task['requirements']['project_quota_ram'] < project_usage['total_ram']+task['requirements']['ram']):
+                if (not reject) and (task['requirements']['project_quota_ram'] > 0 and task['requirements']['project_quota_ram'] < project_usage['total_ram'] + task['requirements']['ram']):
                     reject = True
             if reject:
                 self.reject_quota(task)
@@ -695,7 +695,7 @@ class GoDScheduler(Daemon):
                 try:
                     self._create_command(task)
                 except Exception as e:
-                    logging.error("Failed to create cmd: "+str(e))
+                    logging.error("Failed to create cmd: " + str(e))
                     continue
                 filtered_list.append(task)
 

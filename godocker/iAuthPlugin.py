@@ -1,10 +1,10 @@
 from godocker.IGoDockerPlugin import IGoDockerPlugin
 
+
 class IAuthPlugin(IGoDockerPlugin):
     '''
     ACL plugins interface
     '''
-
 
     def get_quotas(self, id, is_group=False, guest=None):
         '''

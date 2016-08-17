@@ -1,5 +1,4 @@
 from godocker.iAuthPlugin import IAuthPlugin
-import logging
 import pwd
 import grp
 import bcrypt
@@ -7,6 +6,7 @@ import datetime
 import random
 import string
 import sys
+
 
 class LocalAuth(IAuthPlugin):
     '''
@@ -26,7 +26,6 @@ class LocalAuth(IAuthPlugin):
     def get_groups(self, user_id):
         gids = [g.gr_gid for g in grp.getgrall() if user_id in g.gr_mem]
         return [grp.getgrgid(gid).gr_gid for gid in gids]
-
 
     def bind_credentials(self, login, password):
         '''
@@ -55,7 +54,7 @@ class LocalAuth(IAuthPlugin):
             return None
         try:
             user = {
-                 'id' :login,
+                 'id': login,
                  'uidNumber': user_in_db['uid'],
                  'gidNumber': user_in_db['gid'],
                  'sgids': user_in_db['sgids'],
@@ -63,11 +62,10 @@ class LocalAuth(IAuthPlugin):
                  'homeDirectory': user_in_db['homeDirectory']
                }
         except Exception as e:
-            self.logger.error('Error getting user info: '+str(e))
+            self.logger.error('Error getting user info: ' + str(e))
             return None
 
         return user
-
 
     def delete_user(self, login):
         user_exists = self.users_handler.find_one({'id': login})
@@ -92,13 +90,13 @@ class LocalAuth(IAuthPlugin):
 
         try:
             if uid is None:
-                uid = pwd.getpwnam( login ).pw_uid
+                uid = pwd.getpwnam(login).pw_uid
             if gid is None:
-                gid = pwd.getpwnam( login ).pw_gid
+                gid = pwd.getpwnam(login).pw_gid
             if sgids is None:
                 sgids = self.get_groups(login)
         except Exception as e:
-            self.logger.error("User creation error: "+str(e))
+            self.logger.error("User creation error: " + str(e))
             return None
 
         user = {
@@ -144,7 +142,7 @@ class LocalAuth(IAuthPlugin):
         user = None
         try:
             user = {
-                     'id' :login,
+                     'id': login,
                      'uidNumber': user_in_db['uid'],
                      'gidNumber': user_in_db['gid'],
                      'sgids': user_in_db['sgids'],
@@ -167,7 +165,7 @@ class LocalAuth(IAuthPlugin):
             return None
         try:
             user = {
-                 'id' :login,
+                 'id': login,
                  'uidNumber': user_in_db['uid'],
                  'gidNumber': user_in_db['gid'],
                  'sgids': user_in_db['sgids'],

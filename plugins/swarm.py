@@ -1,8 +1,8 @@
 from godocker.iExecutorPlugin import IExecutorPlugin
-import json
 import datetime
 import iso8601
-from godocker.utils import is_array_child_task, is_array_task
+from godocker.utils import is_array_task
+
 
 class Swarm(IExecutorPlugin):
     def get_name(self):
@@ -25,8 +25,8 @@ class Swarm(IExecutorPlugin):
         '''
         for port in task['container']['ports']:
             host = 'godocker-swarm'
-            self.logger.debug('Port:Back:'+host+':'+str(port))
-            self.redis_handler.rpush(self.cfg['redis_prefix']+':ports:'+host, port)
+            self.logger.debug('Port:Back:' + host + ':' + str(port))
+            self.redis_handler.rpush(self.cfg['redis_prefix'] + ':ports:' + host, port)
 
     def get_mapping_port(self, host, task):
         '''
@@ -41,25 +41,24 @@ class Swarm(IExecutorPlugin):
         :return: available port, None if no port is available
         '''
         host = 'godocker-swarm'
-        if not self.redis_handler.exists(self.cfg['redis_prefix']+':ports:'+host):
+        if not self.redis_handler.exists(self.cfg['redis_prefix'] + ':ports:' + host):
             for i in range(self.cfg['port_range']):
-                self.redis_handler.rpush(self.cfg['redis_prefix']+':ports:'+host, self.cfg['port_start'] + i)
-        port = self.redis_handler.lpop(self.cfg['redis_prefix']+':ports:'+host)
+                self.redis_handler.rpush(self.cfg['redis_prefix'] + ':ports:' + host, self.cfg['port_start'] + i)
+        port = self.redis_handler.lpop(self.cfg['redis_prefix'] + ':ports:' + host)
         if port is None:
             return None
-        self.logger.debug('Port:Give:'+host+':'+str(port))
-        if not 'ports' in task['container']:
+        self.logger.debug('Port:Give:' + host + ':' + str(port))
+        if 'ports' not in task['container']:
             task['container']['ports'] = []
         task['container']['ports'].append(port)
         return int(port)
-
 
     def set_config(self, cfg):
         self.cfg = cfg
 
         from docker import Client, tls
 
-        base_url = None
+        # base_url = None
         if 'docker' in self.cfg:
             tls_config = False
             if self.cfg['docker']['tls']:
@@ -87,9 +86,7 @@ class Swarm(IExecutorPlugin):
             self.docker_client = Client(base_url=self.cfg['docker']['url'], version=self.cfg['docker']['api_version'], tls=tls_config)
 
         else:
-            base_url = self.cfg['docker_url']
             self.docker_client = Client(base_url=self.cfg['docker_url'], version=self.cfg['docker_api_version'])
-
 
     def run_all_tasks(self, tasks, callback=None):
         '''
@@ -104,7 +101,7 @@ class Swarm(IExecutorPlugin):
         :return: tuple of submitted and rejected/errored tasks
         '''
         self.logger.error('run_all_tasks not implemented')
-        return ([],tasks)
+        return ([], tasks)
 
     def run_tasks(self, tasks, callback=None):
         '''
@@ -122,11 +119,10 @@ class Swarm(IExecutorPlugin):
             if is_array_task(task):
                 # Virtual task for a task array, do not really execute
                 running_tasks.append(task)
-                self.logger.debug('Execute:Job:'+str(task['id'])+':Skip:Array')
+                self.logger.debug('Execute:Job:' + str(task['id']) + ':Skip:Array')
                 continue
             container = None
             try:
-                #job  = json.loads(task)
                 job = task
                 port_list = []
                 if 'ports' in job['requirements']:
@@ -134,7 +130,7 @@ class Swarm(IExecutorPlugin):
                 if job['command']['interactive']:
                     port_list.append(22)
 
-                #self.logger.warn('Reservation: '+str(job['requirements']['cpu'])+','+str(job['requirements']['ram'])+'g')
+                # self.logger.warn('Reservation: '+str(job['requirements']['cpu'])+','+str(job['requirements']['ram'])+'g')
                 vol_list = []
                 for v in job['container']['volumes']:
                     if v['mount'] is None:
@@ -144,7 +140,7 @@ class Swarm(IExecutorPlugin):
                 constraints = []
                 if 'label' in job['requirements'] and job['requirements']['label']:
                     for label in job['requirements']['label']:
-                        constraints.append('constraint:'+label)
+                        constraints.append('constraint:' + label)
 
                 vol_binds = {}
                 for v in job['container']['volumes']:
@@ -170,19 +166,16 @@ class Swarm(IExecutorPlugin):
                     job['container']['port_mapping'].append({'host': mapped_port, 'container': port})
                     port_mapping[port] = mapped_port
 
-
                 host_config = self.docker_client.create_host_config(
-                                        mem_limit=str(job['requirements']['ram'])+'g',
+                                        mem_limit=str(job['requirements']['ram']) + 'g',
                                         network_mode='bridge',
                                         binds=vol_binds,
                                         port_bindings=port_mapping
                                         )
 
-
                 container = self.docker_client.create_container(image=job['container']['image'],
                                                                 entrypoint=[job['command']['script']],
                                                                 cpu_shares=job['requirements']['cpu'],
-                                                                #mem_limit=str(job['requirements']['ram'])+'g',
                                                                 ports=port_list,
                                                                 network_disabled=self.cfg['network_disabled'],
                                                                 environment=constraints,
@@ -231,14 +224,14 @@ class Swarm(IExecutorPlugin):
                                         binds=vol_binds
                                         )
                 '''
-                response = self.docker_client.start(container=container.get('Id'))
+                self.docker_client.start(container=container.get('Id'))
                 job['container']['id'] = container['Id']
                 job['status']['reason'] = None
-                #job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
+                # job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
                 running_tasks.append(job)
-                self.logger.debug('Execute:Job:'+str(job['id'])+':'+job['container']['id'])
+                self.logger.debug('Execute:Job:' + str(job['id']) + ':' + job['container']['id'])
             except Exception as e:
-                self.logger.error('Execute:Job:'+str(job['id'])+':'+str(e))
+                self.logger.error('Execute:Job:' + str(job['id']) + ':' + str(e))
                 job['status']['reason'] = str(e)
                 if job['container']['meta'] is None:
                     job['container']['meta'] = {}
@@ -247,7 +240,7 @@ class Swarm(IExecutorPlugin):
                 error_tasks.append(job)
                 if container:
                     self.docker_client.remove_container(container.get('Id'))
-        return (running_tasks,error_tasks)
+        return (running_tasks, error_tasks)
 
     def watch_tasks(self, task):
         '''
@@ -260,7 +253,7 @@ class Swarm(IExecutorPlugin):
         '''
         over = False
         finished_date = None
-        #task['container']['stats'] = self.docker_client.stats(task['container']['id'])
+        # task['container']['stats'] = self.docker_client.stats(task['container']['id'])
         try:
             task['container']['meta'] = self.docker_client.inspect_container(task['container']['id'])
             if 'Config' in task['container']['meta'] and 'Labels' in task['container']['meta']['Config']:
@@ -268,26 +261,25 @@ class Swarm(IExecutorPlugin):
                 # issue to store the information in db
                 del task['container']['meta']['Config']['Labels']
 
-            finished_date =  task['container']['meta']['State']['FinishedAt']
+            finished_date = task['container']['meta']['State']['FinishedAt']
             finished_date = iso8601.parse_date(finished_date)
         except Exception:
-            self.logger.debug("Could not get container, may be already killed: "+str(task['container']['id']))
+            self.logger.debug("Could not get container, may be already killed: " + str(task['container']['id']))
             finished_date = datetime.datetime.now()
 
         if finished_date.year > 1:
             over = True
 
         if over:
-            self.logger.warn('Container:'+str(task['container']['id'])+':Over')
+            self.logger.warn('Container:' + str(task['container']['id']) + ':Over')
             try:
                 self.docker_client.remove_container(task['container']['id'])
             except Exception:
-                self.logger.debug('Could not remove container '+str(task['container']['id']))
+                self.logger.debug('Could not remove container ' + str(task['container']['id']))
             over = True
         else:
-            self.logger.debug('Container:'+task['container']['id']+':Running')
+            self.logger.debug('Container:' + task['container']['id'] + ':Running')
         return (task, over)
-
 
     def kill_task(self, task):
         '''
@@ -301,18 +293,17 @@ class Swarm(IExecutorPlugin):
         try:
             self.docker_client.kill(task['container']['id'])
         except Exception as e:
-            self.logger.debug("Could not kill container: "+str(task['container']['id']))
+            self.logger.debug("Could not kill container: " + str(task['container']['id']))
         try:
             self.docker_client.remove_container(task['container']['id'])
         except Exception as e:
-            self.logger.debug("Could not kill/remove container: "+str(task['container']['id']))
+            self.logger.debug("Could not kill/remove container: " + str(task['container']['id']))
             if e.response.status_code == 404:
                 self.logger.debug('container not found, already deleted?')
                 over = True
             else:
                 over = False
         return (task, over)
-
 
     def suspend_task(self, task):
         '''
@@ -327,7 +318,7 @@ class Swarm(IExecutorPlugin):
             self.docker_client.pause(task['container']['id'])
         except Exception as e:
             self.logger.debug(str(e))
-            self.logger.debug("Could not pause container: "+task['container']['id'])
+            self.logger.debug("Could not pause container: " + task['container']['id'])
             if e.response.status_code == 404:
                 over = True
             else:
@@ -345,11 +336,11 @@ class Swarm(IExecutorPlugin):
         '''
         over = True
         try:
-            self.logger.debug("Unpause:"+str(task['id']))
+            self.logger.debug("Unpause:" + str(task['id']))
             self.docker_client.unpause(task['container']['id'])
         except Exception as e:
             self.logger.debug(str(e))
-            self.logger.debug("Could not pause container: "+task['container']['id'])
+            self.logger.debug("Could not pause container: " + task['container']['id'])
             if e.response.status_code == 404:
                 over = True
             else:

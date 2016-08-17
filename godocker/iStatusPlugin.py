@@ -1,5 +1,6 @@
 from godocker.IGoDockerPlugin import IGoDockerPlugin
 
+
 class IStatusPlugin(IGoDockerPlugin):
     '''
     Status plugins interface

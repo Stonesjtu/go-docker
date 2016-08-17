@@ -1,8 +1,8 @@
 from godocker.iAuthPlugin import IAuthPlugin
-import logging
 import pwd
 import grp
 import os
+
 
 class FakeAuth(IAuthPlugin):
     def get_name(self):
@@ -14,7 +14,6 @@ class FakeAuth(IAuthPlugin):
     def get_groups(self, user_id):
         gids = [g.gr_gid for g in grp.getgrall() if user_id in g.gr_mem]
         return [grp.getgrgid(gid).gr_gid for gid in gids]
-
 
     def bind_credentials(self, login, password):
         '''
@@ -34,21 +33,21 @@ class FakeAuth(IAuthPlugin):
             return None
         try:
             user = {
-                 'id' :login,
-                 'uidNumber': pwd.getpwnam( login ).pw_uid,
-                 'gidNumber': pwd.getpwnam( login ).pw_gid,
+                 'id': login,
+                 'uidNumber': pwd.getpwnam(login).pw_uid,
+                 'gidNumber': pwd.getpwnam(login).pw_gid,
                  'sgids': self.get_groups(login),
-                 'email': login+'@fake.org',
-                 'homeDirectory': '/home/'+login
+                 'email': login + '@fake.org',
+                 'homeDirectory': '/home/' + login
                }
         except Exception:
             user = {
-                     'id' :login,
+                     'id': login,
                      'uidNumber': 1001,
                      'gidNumber': 1001,
                      'sgids': [],
-                     'email': login+'@fake.org',
-                     'homeDirectory': '/home/'+login
+                     'email': login + '@fake.org',
+                     'homeDirectory': '/home/' + login
                    }
         return user
 
@@ -69,12 +68,12 @@ class FakeAuth(IAuthPlugin):
         if login == 'fake':
             return None
         user = {
-                 'id' :login,
-                 'uidNumber': pwd.getpwnam( login ).pw_uid,
-                 'gidNumber': pwd.getpwnam( login ).pw_gid,
+                 'id': login,
+                 'uidNumber': pwd.getpwnam(login).pw_uid,
+                 'gidNumber': pwd.getpwnam(login).pw_gid,
                  'sgids': self.get_groups(login),
-                 'email': login+'@fake.org',
-                 'homeDirectory': '/home/'+login
+                 'email': login + '@fake.org',
+                 'homeDirectory': '/home/' + login
                }
         return user
 
@@ -167,9 +166,8 @@ class FakeAuth(IAuthPlugin):
 
             if root_access:
                 req['acl'] = 'ro'
-            #self.logger.debug("####"+str(self.cfg['volumes_check']))
             if 'volumes_check' in self.cfg and self.cfg['volumes_check'] and not os.path.exists(req['path']):
-                self.logger.error('Volume path '+str(req['path'])+' does not exists')
+                self.logger.error('Volume path ' + str(req['path']) + ' does not exists')
                 continue
 
             volumes.append(req)

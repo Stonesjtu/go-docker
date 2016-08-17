@@ -29,6 +29,7 @@ QUEUE_KILL = 'kill'
 QUEUE_SUSPEND = 'suspend'
 QUEUE_RESUME = 'resume'
 
+
 def get_folder_size(folder):
     '''
     Get directory path full size in bytes
@@ -63,7 +64,7 @@ def convert_size_to_int(string_size):
     if not match:
         match = re.search("(\d+)", string_size)
         if not match:
-            raise ValueError('size pattern not correct: '+str(string_size))
+            raise ValueError('size pattern not correct: ' + str(string_size))
         string_value = int(match.group(1))
     else:
         string_value = int(match.group(1))
@@ -77,8 +78,9 @@ def convert_size_to_int(string_size):
         elif unit == 't':
             unit_multiplier = 1000 * 1000 * 1000 * 1000
         else:
-            raise ValueError('wrong unit: '+str(unit))
+            raise ValueError('wrong unit: ' + str(unit))
     return string_value * unit_multiplier
+
 
 def is_array_task(task):
     '''
@@ -94,6 +96,7 @@ def is_array_task(task):
 
     else:
         return False
+
 
 def is_array_child_task(task):
     '''

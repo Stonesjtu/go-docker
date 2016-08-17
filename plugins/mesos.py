@@ -1,8 +1,6 @@
 from godocker.iExecutorPlugin import IExecutorPlugin
 import json
-import datetime
 import time
-import iso8601
 import os
 import sys
 import threading
@@ -11,11 +9,10 @@ import urllib3
 
 from bson.json_util import dumps
 
-from godocker.utils import is_array_child_task, is_array_task
-
 import mesos.interface
 from mesos.interface import mesos_pb2
 import mesos.native
+
 
 class MesosThread(threading.Thread):
 
@@ -27,6 +24,7 @@ class MesosThread(threading.Thread):
 
     def stop(self):
         self.driver.stop()
+
 
 class MesosScheduler(mesos.interface.Scheduler):
 
@@ -70,16 +68,16 @@ class MesosScheduler(mesos.interface.Scheduler):
                 self.logger.warn("Could not get master address info")
 
         if master_ip is not None and master_address is None:
-            master_address  = master_ip
+            master_address = master_ip
 
         if master_address is not None:
-            self.logger.info("Master hostname: "+str(master_address))
-            self.logger.info("Master port: "+str(master_port))
-            self.redis_handler.set(self.config['redis_prefix']+':mesos:master',
-                                   master_address+':'+str(master_port))
+            self.logger.info("Master hostname: " + str(master_address))
+            self.logger.info("Master port: " + str(master_port))
+            self.redis_handler.set(self.config['redis_prefix'] + ':mesos:master',
+                                   master_address + ':' + str(master_port))
 
         self.frameworkId = frameworkId.value
-        self.redis_handler.set(self.config['redis_prefix']+':mesos:frameworkId',
+        self.redis_handler.set(self.config['redis_prefix'] + ':mesos:frameworkId',
                                self.frameworkId)
 
         # Reconcile at startup
@@ -93,11 +91,9 @@ class MesosScheduler(mesos.interface.Scheduler):
                 task_id.value = str(task['id'])
                 task_status.task_id.MergeFrom(task_id)
                 task_status.state = 1
-                self.logger.debug('Mesos:Reconcile:Task:'+str(task['id']))
+                self.logger.debug('Mesos:Reconcile:Task:' + str(task['id']))
                 running_tasks.append(task_status)
             driver.reconcileTasks(running_tasks)
-        #self.redis_handler.expire(self.config['redis_prefix']+':mesos:frameworkId',
-        #                               3600*24*7)
 
     def has_enough_resource(self, offer, requested_resource, quantity):
         '''
@@ -130,16 +126,6 @@ class MesosScheduler(mesos.interface.Scheduler):
         :type task: int
         :return: available port
         '''
-        #port_min = self.config['port_start']
-        #port_max = self.config['port_start'] + self.config['port_range']
-
-        #if not self.redis_handler.exists(self.config['redis_prefix']+':ports:'+host):
-        #    for resource in offer.resources:
-        #        if resource.name == "ports":
-        #            for mesos_range in resource.ranges.range:
-        #                for port in range(mesos_range.end - mesos_range.begin):
-        #                    self.redis_handler.rpush(self.config['redis_prefix']+':ports:'+host, mesos_range.begin + port)
-        #port = self.redis_handler.lpop(self.config['redis_prefix']+':ports:'+host)
 
         # Get first free port
         port = None
@@ -152,8 +138,8 @@ class MesosScheduler(mesos.interface.Scheduler):
                         break
         if port is None:
             return None
-        self.logger.debug('Port:Give:'+task['container']['meta']['Node']['Name']+':'+str(port))
-        if not 'ports' in task['container']:
+        self.logger.debug('Port:Give:' + task['container']['meta']['Node']['Name'] + ':' + str(port))
+        if 'ports' not in task['container']:
             task['container']['ports'] = []
         task['container']['ports'].append(port)
         return int(port)
@@ -173,15 +159,14 @@ class MesosScheduler(mesos.interface.Scheduler):
 
         try:
             http = urllib3.PoolManager()
-            r = http.urlopen('POST', 'http://'+ hostname + ':5000/VolumeDriver.Unmount', body=json.dumps({'Name': str(task['id'])}))
+            r = http.urlopen('POST', 'http://' + hostname + ':5000/VolumeDriver.Unmount', body=json.dumps({'Name': str(task['id'])}))
             res = json.loads(r.data)
             if res['Err'] is not None or res['Err'] != '':
-                r = http.urlopen('POST', 'http://'+ hostname + ':5000/VolumeDriver.Remove', body=json.dumps({'Name': str(task['id'])}))
+                r = http.urlopen('POST', 'http://' + hostname + ':5000/VolumeDriver.Remove', body=json.dumps({'Name': str(task['id'])}))
             else:
-                self.logger.error('Failed to remove zfs volume: '+str(task['id']))
-        except Exception as e:
-            self.logger.error('Failed to remove zfs volume: '+str(task['id']))
-
+                self.logger.error('Failed to remove zfs volume: ' + str(task['id']))
+        except Exception:
+            self.logger.error('Failed to remove zfs volume: ' + str(task['id']))
 
     def plugin_zfs_mount(self, hostname, task):
         '''
@@ -201,24 +186,24 @@ class MesosScheduler(mesos.interface.Scheduler):
         try:
             http = urllib3.PoolManager()
             r = None
-            activated = self.redis_handler.get(self.config['redis_prefix']+':plugins:zfs:'+hostname)
+            activated = self.redis_handler.get(self.config['redis_prefix'] + ':plugins:zfs:' + hostname)
             if activated is None:
                 http.urlopen('GET', 'http://' + hostname + ':5000/Plugin.Activate')
-                self.redis_handler.set(self.config['redis_prefix']+':plugins:zfs:'+ hostname,"plugin-zfs")
-            r = http.urlopen('POST', 'http://'+ hostname + ':5000/VolumeDriver.Create', body=json.dumps({'Name': str(task['id']), 'Opts': {'size': str(task['requirements']['tmpstorage']['size'])}}))
+                self.redis_handler.set(self.config['redis_prefix'] + ':plugins:zfs:' + hostname, "plugin-zfs")
+            r = http.urlopen('POST', 'http://' + hostname + ':5000/VolumeDriver.Create', body=json.dumps({'Name': str(task['id']), 'Opts': {'size': str(task['requirements']['tmpstorage']['size'])}}))
             if r.status == 200:
-                r = http.urlopen('POST', 'http://'+ hostname + ':5000/VolumeDriver.Mount', body=json.dumps({'Name': str(task['id'])}))
+                r = http.urlopen('POST', 'http://' + hostname + ':5000/VolumeDriver.Mount', body=json.dumps({'Name': str(task['id'])}))
                 res = json.loads(r.data)
                 if res['Err'] is not None:
                     return (False, None)
-                r = http.urlopen('POST', 'http://'+ hostname + ':5000/VolumeDriver.Path', body=json.dumps({'Name': str(task['id'])}))
+                r = http.urlopen('POST', 'http://' + hostname + ':5000/VolumeDriver.Path', body=json.dumps({'Name': str(task['id'])}))
                 res = json.loads(r.data)
                 zfs_path = res['Name']
             else:
                 self.logger.error("Failed to resource plugin-zfs")
                 return (False, None)
         except Exception as e:
-            self.logger.error("Failed to resource plugin-zfs:"+str(e))
+            self.logger.error("Failed to resource plugin-zfs:" + str(e))
             return (False, None)
         return (True, zfs_path)
 
@@ -232,26 +217,26 @@ class MesosScheduler(mesos.interface.Scheduler):
             return
 
         self.logger.debug('Mesos:Offers:Kill:Begin')
-        redis_task_id = self.redis_handler.lpop(self.config['redis_prefix']+':mesos:kill')
+        redis_task_id = self.redis_handler.lpop(self.config['redis_prefix'] + ':mesos:kill')
         while redis_task_id is not None:
-            is_over = self.redis_handler.get(self.config['redis_prefix']+':mesos:over:'+redis_task_id)
+            is_over = self.redis_handler.get(self.config['redis_prefix'] + ':mesos:over:' + redis_task_id)
             if is_over is not None:
                 task_id = mesos_pb2.TaskID()
                 task_id.value = redis_task_id
-                self.logger.debug('Mesos:Offers:Kill:Task:'+redis_task_id)
+                self.logger.debug('Mesos:Offers:Kill:Task:' + redis_task_id)
                 driver.killTask(task_id)
-            redis_task_id = self.redis_handler.lpop(self.config['redis_prefix']+':mesos:kill')
+            redis_task_id = self.redis_handler.lpop(self.config['redis_prefix'] + ':mesos:kill')
         self.logger.debug('Mesos:Offers:Kill:End')
 
         self.logger.debug('Mesos:Offers:Begin')
         # Get tasks
         tasks = []
-        redis_task = self.redis_handler.lpop(self.config['redis_prefix']+':mesos:pending')
+        redis_task = self.redis_handler.lpop(self.config['redis_prefix'] + ':mesos:pending')
         while redis_task is not None:
             task = json.loads(redis_task)
             task['mesos_offer'] = False
             tasks.append(task)
-            redis_task = self.redis_handler.lpop(self.config['redis_prefix']+':mesos:pending')
+            redis_task = self.redis_handler.lpop(self.config['redis_prefix'] + ':mesos:pending')
 
         for offer in offers:
             if not tasks:
@@ -271,23 +256,22 @@ class MesosScheduler(mesos.interface.Scheduler):
             for attr in offer.attributes:
                 if attr.type == 3:
                     labels[attr.name] = attr.text.value
-            self.logger.debug("Mesos:Labels:"+str(labels))
+            self.logger.debug("Mesos:Labels:" + str(labels))
             if 'hostname' not in labels:
                 self.logger.error('Mesos:Error:Configuration: missing label hostname')
 
             self.logger.debug("Mesos:Received offer %s with cpus: %s and mem: %s" \
                   % (offer.id.value, offerCpus, offerMem))
             for task in tasks:
-                if not task['mesos_offer'] and task['requirements']['cpu'] <= offerCpus and task['requirements']['ram']*1000 <= offerMem:
+                if not task['mesos_offer'] and task['requirements']['cpu'] <= offerCpus and task['requirements']['ram'] * 1000 <= offerMem:
                     # check for reservation constraints, if any
                     try:
-                        self.logger.debug("Try to place task "+str(task['id']))
+                        self.logger.debug("Try to place task " + str(task['id']))
                         if 'hostname' in labels and 'skip_failed_nodes' in self.config['failure_policy'] and self.config['failure_policy']['skip_failed_nodes']:
-                            #task['status']['failure'] = { 'reason': reason, 'nodes': []}
                             if 'failure' in task['status'] and task['status']['failure']['nodes']:
                                 if labels['hostname'] in task['status']['failure']['nodes']:
                                     # Task previsouly failed on this node, skip this node
-                                    self.logger.debug("Task:"+str(task['id'])+":Failure:Skip:"+labels['hostname'])
+                                    self.logger.debug("Task:" + str(task['id']) + ":Failure:Skip:" + labels['hostname'])
                                     continue
                         if 'reservation' in labels:
                             self.logger.debug("Node has reservation")
@@ -295,9 +279,9 @@ class MesosScheduler(mesos.interface.Scheduler):
                             offer_hostname = "undefined"
                             if 'hostname' in labels:
                                 offer_hostname = labels['hostname']
-                            self.logger.debug("Check reservation for "+ offer_hostname)
+                            self.logger.debug("Check reservation for " + offer_hostname)
                             if task['user']['id'] not in reservations and task['user']['project'] not in reservations:
-                                self.logger.debug("User "+task['user']['id']+" not allowed to execute on "+ offer_hostname)
+                                self.logger.debug("User " + task['user']['id'] + " not allowed to execute on " + offer_hostname)
                                 continue
 
                         # check for resources
@@ -317,11 +301,11 @@ class MesosScheduler(mesos.interface.Scheduler):
                             for requested_resource in task['requirements']['resources']:
                                 quantity = task['requirements']['resources'][requested_resource]
                                 if not self.has_enough_resource(offer, requested_resource, quantity):
-                                    self.logger.debug('Not enough '+requested_resource+' on this node')
+                                    self.logger.debug('Not enough ' + requested_resource + ' on this node')
                                     has_enough_resources = False
                                     break
                             if not has_enough_resources:
-                                self.logger.debug("Not enough specific resources for task "+str(task['id']))
+                                self.logger.debug("Not enough specific resources for task " + str(task['id']))
                                 del task['requirements']['resources']
                                 continue
 
@@ -339,12 +323,12 @@ class MesosScheduler(mesos.interface.Scheduler):
                                     is_ok = False
                                     break
                             if not is_ok:
-                                self.logger.debug("Label requirements do not match for task "+str(task['id']))
+                                self.logger.debug("Label requirements do not match for task " + str(task['id']))
                                 continue
 
                         (res, zfs_path) = self.plugin_zfs_mount(labels['hostname'], task)
                         if not res:
-                            self.logger.debug("Zfs mount not possible for task "+str(task['id']))
+                            self.logger.debug("Zfs mount not possible for task " + str(task['id']))
                             continue
                         else:
                             if zfs_path is not None:
@@ -353,35 +337,34 @@ class MesosScheduler(mesos.interface.Scheduler):
                                 if task['requirements']['tmpstorage'] is not None:
                                     task['requirements']['tmpstorage']['path'] = None
                                 else:
-                                    task['requirements']['tmpstorage'] = { 'path': None, 'size': ''}
+                                    task['requirements']['tmpstorage'] = {'path': None, 'size': ''}
 
                         new_task = self.new_task(offer, task, labels)
 
                     except Exception as e:
-                        self.logger.error("Error with task "+str(task['id'])+": "+e)
+                        self.logger.error("Error with task " + str(task['id']) + ": " + e)
                         task['status']['reason'] = 'Invalid task'
                         # An error occur, switch to next task
                         continue
                     if new_task is None:
-                        self.logger.debug('Mesos:Task:Error:Failed to create new task '+str(task['id']))
+                        self.logger.debug('Mesos:Task:Error:Failed to create new task ' + str(task['id']))
                         continue
                     offer_tasks.append(new_task)
                     offerCpus -= task['requirements']['cpu']
-                    offerMem -= task['requirements']['ram']*1000
+                    offerMem -= task['requirements']['ram'] * 1000
                     task['mesos_offer'] = True
-                    self.logger.debug('Mesos:Task:Running:'+str(task['id']))
-                    self.redis_handler.rpush(self.config['redis_prefix']+':mesos:running', dumps(task))
-                    self.redis_handler.set(self.config['redis_prefix']+':mesos:over:'+str(task['id']),0)
+                    self.logger.debug('Mesos:Task:Running:' + str(task['id']))
+                    self.redis_handler.rpush(self.config['redis_prefix'] + ':mesos:running', dumps(task))
+                    self.redis_handler.set(self.config['redis_prefix'] + ':mesos:over:' + str(task['id']), 0)
             driver.launchTasks(offer.id, offer_tasks)
-            #tasks = [self.new_task(offer)]
+
         for task in tasks:
             if not task['mesos_offer']:
-                self.logger.debug('Mesos:Task:Rejected:'+str(task['id']))
-                self.redis_handler.rpush(self.config['redis_prefix']+':mesos:rejected', dumps(task))
-            #driver.launchTasks(offer.id, tasks)
-            #driver.declineOffer(offer.id)
+                self.logger.debug('Mesos:Task:Rejected:' + str(task['id']))
+                self.redis_handler.rpush(self.config['redis_prefix'] + ':mesos:rejected', dumps(task))
+
         if tasks:
-            self.redis_handler.set(self.config['redis_prefix']+':mesos:offer', 1)
+            self.redis_handler.set(self.config['redis_prefix'] + ':mesos:offer', 1)
         self.logger.debug('Mesos:Offers:End')
 
     def new_task(self, offer, job, labels=None):
@@ -390,7 +373,7 @@ class MesosScheduler(mesos.interface.Scheduler):
         '''
         task = mesos_pb2.TaskInfo()
         container = mesos_pb2.ContainerInfo()
-        container.type = 1 # mesos_pb2.ContainerInfo.Type.DOCKER
+        container.type = 1  # mesos_pb2.ContainerInfo.Type.DOCKER
 
         # Reserve requested resource and mount related volumes
         if 'resources' in job['requirements'] and job['requirements']['resources']:
@@ -408,7 +391,7 @@ class MesosScheduler(mesos.interface.Scheduler):
                                     mesos_resource = mesos_resources.ranges.range.add()
                                     mesos_resource.begin = mesos_range.begin
                                     mesos_resource.end = mesos_range.begin + quantity - 1
-                                    mesos_range.begin  = quantity
+                                    mesos_range.begin = quantity
                                     quantity = 0
                                 else:
                                     # take what is available
@@ -417,11 +400,11 @@ class MesosScheduler(mesos.interface.Scheduler):
                                     mesos_resource.end = mesos_range.begin + (mesos_range.end - mesos_range.begin)
                                     mesos_range.begin += 1 + mesos_range.end - mesos_range.begin
                                     quantity -= 1 + mesos_range.end - mesos_range.begin
-                                self.logger.debug("Take resources: "+str(mesos_resource.begin)+"-"+str(mesos_resource.end))
+                                self.logger.debug("Take resources: " + str(mesos_resource.begin) + "-" + str(mesos_resource.end))
             for mesos_range in mesos_resources.ranges.range:
-                for res_range in range(mesos_range.begin,mesos_range.end + 1):
-                    resource_volume_id = mesos_resources.name+"_"+str(res_range)
-                    self.logger.debug("Add volumes for resource "+resource_volume_id)
+                for res_range in range(mesos_range.begin, mesos_range.end + 1):
+                    resource_volume_id = mesos_resources.name + "_" + str(res_range)
+                    self.logger.debug("Add volumes for resource " + resource_volume_id)
                     if resource_volume_id in labels:
                         resource_volumes = labels[resource_volume_id].split(',')
                         for resource_volume in resource_volumes:
@@ -441,13 +424,13 @@ class MesosScheduler(mesos.interface.Scheduler):
             volume.container_path = v['mount']
             volume.host_path = v['path']
             if 'acl' in v and v['acl'] == 'rw':
-                volume.mode = 1 # mesos_pb2.Volume.Mode.RW
+                volume.mode = 1  # mesos_pb2.Volume.Mode.RW
             else:
-                volume.mode = 2 # mesos_pb2.Volume.Mode.RO
+                volume.mode = 2  # mesos_pb2.Volume.Mode.RO
             if v['name'] == 'home':
-                if os.path.exists(os.path.join(v['path'],'docker.tar.gz')):
-                    self.logger.debug('Add .dockercfg ' + os.path.join(v['path'],'docker.tar.gz'))
-                    dockercfg = os.path.join(v['path'],'docker.tar.gz')
+                if os.path.exists(os.path.join(v['path'], 'docker.tar.gz')):
+                    self.logger.debug('Add .dockercfg ' + os.path.join(v['path'], 'docker.tar.gz'))
+                    dockercfg = os.path.join(v['path'], 'docker.tar.gz')
 
         if job['requirements']['tmpstorage']['path'] is not None:
             volume = container.volumes.add()
@@ -462,7 +445,6 @@ class MesosScheduler(mesos.interface.Scheduler):
         if dockercfg:
             dockerconfig = command.uris.add()
             dockerconfig.value = dockercfg
-            #dockerconfig.output_file = ".dockercfg"
 
         task.command.MergeFrom(command)
         task.task_id.value = tid
@@ -477,7 +459,7 @@ class MesosScheduler(mesos.interface.Scheduler):
         mem = task.resources.add()
         mem.name = "mem"
         mem.type = mesos_pb2.Value.SCALAR
-        mem.scalar.value = job['requirements']['ram']*1000
+        mem.scalar.value = job['requirements']['ram'] * 1000
 
         if 'meta' not in job['container'] or job['container']['meta'] is None:
             job['container']['meta'] = {}
@@ -488,11 +470,11 @@ class MesosScheduler(mesos.interface.Scheduler):
             job['container']['meta']['Node']['Name'] = labels['hostname']
         else:
             job['container']['meta']['Node']['Name'] = offer.slave_id.value
-        self.logger.debug("Task placed on host "+str(job['container']['meta']['Node']['Name']))
+        self.logger.debug("Task placed on host " + str(job['container']['meta']['Node']['Name']))
 
         docker = mesos_pb2.ContainerInfo.DockerInfo()
         docker.image = job['container']['image']
-        docker.network = 2 # mesos_pb2.ContainerInfo.DockerInfo.Network.BRIDGE
+        docker.network = 2  # mesos_pb2.ContainerInfo.DockerInfo.Network.BRIDGE
         docker.force_pull_image = True
 
         port_list = []
@@ -524,27 +506,24 @@ class MesosScheduler(mesos.interface.Scheduler):
         task.container.MergeFrom(container)
         return task
 
-
     def statusUpdate(self, driver, update):
         self.logger.debug("Task %s is in state %s" % \
             (update.task_id.value, mesos_pb2.TaskState.Name(update.state)))
 
         if update.state == 1:
-            #Switched to RUNNING, get container id
+            # Switched to RUNNING, get container id
             job = self.jobs_handler.find_one({'id': int(update.task_id.value)})
 
-            #Switched to RUNNING, get container id
+            # Switched to RUNNING, get container id
             containerId = None
             try:
                 if str(update.data) != "":
                     containers = json.loads(update.data)
                     containerId = containers[0]["Id"]
-                    #containerId = str(containers[0]["Name"]).split(".")
-                    #containerId = "mesos-"+containerId[1]
-                    self.jobs_handler.update({'id': int(update.task_id.value)},{'$set': {'container.id': containerId}})
+                    self.jobs_handler.update({'id': int(update.task_id.value)}, {'$set': {'container.id': containerId}})
 
             except Exception as e:
-                self.logger.debug("Could not extract container id from TaskStatus: "+str(e))
+                self.logger.debug("Could not extract container id from TaskStatus: " + str(e))
                 containerId = None
 
             # Mesos <= 0.22, container id is not in TaskStatus, let's query mesos
@@ -552,7 +531,7 @@ class MesosScheduler(mesos.interface.Scheduler):
                 http = urllib3.PoolManager()
                 r = None
                 try:
-                    r = http.urlopen('GET', 'http://'+job['container']['meta']['Node']['Name']+':5051/slave(1)/state.json')
+                    r = http.urlopen('GET', 'http://' + job['container']['meta']['Node']['Name'] + ':5051/slave(1)/state.json')
 
                     if r.status == 200:
                         slave = json.loads(r.data)
@@ -560,28 +539,29 @@ class MesosScheduler(mesos.interface.Scheduler):
                             if f['name'] == "Go-Docker Mesos":
                                 for executor in f['executors']:
                                     if str(executor['id']) == str(update.task_id.value):
-                                        container = 'mesos-'+executor['container']
-                                        self.jobs_handler.update({'id': int(update.task_id.value)},{'$set': {'container.id': container}})
+                                        container = 'mesos-' + executor['container']
+                                        self.jobs_handler.update({'id': int(update.task_id.value)}, {'$set': {'container.id': container}})
                                         break
                                 break
                 except Exception as e:
-                    self.logger.error('Failed to contact mesos slave: '+str(e))
+                    self.logger.error('Failed to contact mesos slave: ' + str(e))
 
-        self.logger.debug('Mesos:Task:Over:'+str(update.task_id.value))
-        if int(update.state) in [2,3,4,5,7]:
+        self.logger.debug('Mesos:Task:Over:' + str(update.task_id.value))
+        if int(update.state) in [2, 3, 4, 5, 7]:
             job = self.jobs_handler.find_one({'id': int(update.task_id.value)})
             if job is not None and 'meta' in job['container'] and job['container']['meta'] is not None and 'Node' in job['container']['meta']:
                 self.plugin_zfs_unmount(job['container']['meta']['Node']['Name'], job)
 
-
         if update.reason:
-            self.redis_handler.set(self.config['redis_prefix']+':mesos:over:'+str(update.task_id.value)+':reason',update.reason)
-        self.redis_handler.set(self.config['redis_prefix']+':mesos:over:'+str(update.task_id.value),update.state)
+            self.redis_handler.set(self.config['redis_prefix'] + ':mesos:over:' + str(update.task_id.value) + ':reason', update.reason)
+        self.redis_handler.set(self.config['redis_prefix'] + ':mesos:over:' + str(update.task_id.value), update.state)
 
     def frameworkMessage(self, driver, executorId, slaveId, message):
         self.logger.debug("Received framework message")
 
+
 class Mesos(IExecutorPlugin):
+
     def get_name(self):
         return "mesos"
 
@@ -602,31 +582,26 @@ class Mesos(IExecutorPlugin):
         self.driver = None
         self.redis_handler = redis.StrictRedis(host=self.cfg['redis_host'], port=self.cfg['redis_port'], db=self.cfg['redis_db'], decode_responses=True)
 
-
     def open(self, proc_type):
         '''
         Request start of executor if needed
         '''
-        #self.mesosthread = MesosThread()
-        #self.mesosthread.set_driver(self.driver)
-        #self.mesosthread.start()
-        if proc_type is not None and proc_type ==1:
+        if proc_type is not None and proc_type == 1:
             # do not start framework on watchers
             return
 
         executor = mesos_pb2.ExecutorInfo()
         executor.executor_id.value = "go-docker"
-        #executor.command.value = "/bin/echo hello # $MESOS_SANDBOX #"
         executor.name = "Go-Docker executor"
 
         framework = mesos_pb2.FrameworkInfo()
-        framework.user = "" # Have Mesos fill in the current user.
+        framework.user = ""  # Have Mesos fill in the current user.
         framework.name = "Go-Docker Mesos"
-        framework.failover_timeout = 3600 * 24*7 # 1 week
-        frameworkId = self.redis_handler.get(self.cfg['redis_prefix']+':mesos:frameworkId')
+        framework.failover_timeout = 3600 * 24 * 7  # 1 week
+        frameworkId = self.redis_handler.get(self.cfg['redis_prefix'] + ':mesos:frameworkId')
         if frameworkId:
             # Reuse previous framework identifier
-            self.logger.info("Mesos:FrameworkId:"+str(frameworkId))
+            self.logger.info("Mesos:FrameworkId:" + str(frameworkId))
             mesos_framework_id = mesos_pb2.FrameworkID()
             mesos_framework_id.value = frameworkId
             framework.id.MergeFrom(mesos_framework_id)
@@ -645,11 +620,11 @@ class Mesos(IExecutorPlugin):
             self.logger.info("Enabling authentication for the framework")
             if not os.getenv("DEFAULT_PRINCIPAL"):
                 self.logger.error("Expecting authentication principal in the environment")
-                sys.exit(1);
+                sys.exit(1)
 
             if not os.getenv("DEFAULT_SECRET"):
                 self.logger.error("Expecting authentication secret in the environment")
-                sys.exit(1);
+                sys.exit(1)
 
             credential = mesos_pb2.Credential()
             credential.principal = os.getenv("DEFAULT_PRINCIPAL")
@@ -685,8 +660,6 @@ class Mesos(IExecutorPlugin):
         '''
         Request end of executor if needed
         '''
-        #if self.mesosthread.isAlive():
-        #    self.mesosthread.stop()
         if self.driver is not None:
             self.driver.stop(True)
         self.Terminated = True
@@ -704,7 +677,7 @@ class Mesos(IExecutorPlugin):
         :return: tuple of submitted and rejected/errored tasks
         '''
         self.logger.error('run_all_tasks not implemented')
-        return ([],tasks)
+        return ([], tasks)
 
     def run_tasks(self, tasks, callback=None):
         '''
@@ -717,32 +690,32 @@ class Mesos(IExecutorPlugin):
         :return: tuple of submitted and rejected/errored tasks
         '''
         # Add tasks in redis to be managed by mesos
-        self.redis_handler.set(self.cfg['redis_prefix']+':mesos:offer', 0)
+        self.redis_handler.set(self.cfg['redis_prefix'] + ':mesos:offer', 0)
         for task in tasks:
-            self.redis_handler.rpush(self.cfg['redis_prefix']+':mesos:pending', dumps(task))
+            self.redis_handler.rpush(self.cfg['redis_prefix'] + ':mesos:pending', dumps(task))
         # Wait for offer receival and treatment
         self.logger.debug('Mesos:WaitForOffer:Begin')
-        mesos_offer = int(self.redis_handler.get(self.cfg['redis_prefix']+':mesos:offer'))
+        mesos_offer = int(self.redis_handler.get(self.cfg['redis_prefix'] + ':mesos:offer'))
         while mesos_offer != 1 and not self.Terminated:
             self.logger.debug('Mesos:WaitForOffer:Wait')
             time.sleep(1)
-            mesos_offer = int(self.redis_handler.get(self.cfg['redis_prefix']+':mesos:offer'))
+            mesos_offer = int(self.redis_handler.get(self.cfg['redis_prefix'] + ':mesos:offer'))
         self.logger.debug('Mesos:WaitForOffer:End')
         # Get result
         rejected_tasks = []
         running_tasks = []
-        redis_task = self.redis_handler.lpop(self.cfg['redis_prefix']+':mesos:running')
+        redis_task = self.redis_handler.lpop(self.cfg['redis_prefix'] + ':mesos:running')
         while redis_task is not None:
             task = json.loads(redis_task)
             running_tasks.append(task)
-            redis_task = self.redis_handler.lpop(self.cfg['redis_prefix']+':mesos:running')
-        redis_task = self.redis_handler.lpop(self.cfg['redis_prefix']+':mesos:rejected')
+            redis_task = self.redis_handler.lpop(self.cfg['redis_prefix'] + ':mesos:running')
+        redis_task = self.redis_handler.lpop(self.cfg['redis_prefix'] + ':mesos:rejected')
         while redis_task is not None:
             task = json.loads(redis_task)
             rejected_tasks.append(task)
-            redis_task = self.redis_handler.lpop(self.cfg['redis_prefix']+':mesos:rejected')
+            redis_task = self.redis_handler.lpop(self.cfg['redis_prefix'] + ':mesos:rejected')
 
-        return (running_tasks,rejected_tasks)
+        return (running_tasks, rejected_tasks)
 
     def watch_tasks(self, task):
         '''
@@ -760,10 +733,10 @@ class Mesos(IExecutorPlugin):
         :param over: is task over
         :type over: bool
         '''
-        self.logger.debug('Mesos:Task:Check:Running:'+str(task['id']))
-        mesos_task = self.redis_handler.get(self.cfg['redis_prefix']+':mesos:over:'+str(task['id']))
-        if mesos_task is not None and int(mesos_task) in [2,3,4,5,7]:
-            self.logger.debug('Mesos:Task:Check:IsOver:'+str(task['id']))
+        self.logger.debug('Mesos:Task:Check:Running:' + str(task['id']))
+        mesos_task = self.redis_handler.get(self.cfg['redis_prefix'] + ':mesos:over:' + str(task['id']))
+        if mesos_task is not None and int(mesos_task) in [2, 3, 4, 5, 7]:
+            self.logger.debug('Mesos:Task:Check:IsOver:' + str(task['id']))
             exit_code = int(mesos_task)
             if 'State' not in task['container']['meta']:
                 task['container']['meta']['State'] = {}
@@ -774,8 +747,8 @@ class Mesos(IExecutorPlugin):
             else:
                 task['container']['meta']['State']['ExitCode'] = 1
             task['status']['reason'] = None
-            if int(mesos_task) in [3,5,7]:
-                reason = self.redis_handler.get(self.cfg['redis_prefix']+':mesos:over:'+str(task['id'])+':reason')
+            if int(mesos_task) in [3, 5, 7]:
+                reason = self.redis_handler.get(self.cfg['redis_prefix'] + ':mesos:over:' + str(task['id']) + ':reason')
                 if not reason:
                     reason = None
                 task['status']['reason'] = 'System crashed or failed to start the task: ' + str(reason)
@@ -783,16 +756,15 @@ class Mesos(IExecutorPlugin):
                 if 'Node' in task['container']['meta'] and 'Name' in task['container']['meta']['Node']:
                     node_name = task['container']['meta']['Node']['Name']
                 if 'failure' not in task['status']:
-                    task['status']['failure'] = { 'reason': reason, 'nodes': []}
+                    task['status']['failure'] = {'reason': reason, 'nodes': []}
                 if node_name:
                     task['status']['failure']['nodes'].append(node_name)
-            self.redis_handler.delete(self.cfg['redis_prefix']+':mesos:over:'+str(task['id']))
-            self.redis_handler.delete(self.cfg['redis_prefix']+':mesos:over:'+str(task['id'])+':reason')
+            self.redis_handler.delete(self.cfg['redis_prefix'] + ':mesos:over:' + str(task['id']))
+            self.redis_handler.delete(self.cfg['redis_prefix'] + ':mesos:over:' + str(task['id']) + ':reason')
             return (task, True)
         else:
-            self.logger.debug('Mesos:Task:Check:IsRunning:'+str(task['id']))
-            return (task,False)
-
+            self.logger.debug('Mesos:Task:Check:IsRunning:' + str(task['id']))
+            return (task, False)
 
     def kill_task(self, task):
         '''
@@ -802,10 +774,10 @@ class Mesos(IExecutorPlugin):
         :type tasks: Task
         :return: (Task, over) over is True if task could be killed
         '''
-        self.logger.debug('Mesos:Task:Kill:Check:'+str(task['id']))
-        mesos_task = self.redis_handler.get(self.cfg['redis_prefix']+':mesos:over:'+str(task['id']))
-        if mesos_task is not None and int(mesos_task) in [2,3,4,5,7]:
-            self.logger.debug('Mesos:Task:Kill:IsOver:'+str(task['id']))
+        self.logger.debug('Mesos:Task:Kill:Check:' + str(task['id']))
+        mesos_task = self.redis_handler.get(self.cfg['redis_prefix'] + ':mesos:over:' + str(task['id']))
+        if mesos_task is not None and int(mesos_task) in [2, 3, 4, 5, 7]:
+            self.logger.debug('Mesos:Task:Kill:IsOver:' + str(task['id']))
             exit_code = int(mesos_task)
             if 'State' not in task['container']['meta']:
                 task['container']['meta']['State'] = {}
@@ -815,21 +787,15 @@ class Mesos(IExecutorPlugin):
                 task['container']['meta']['State']['ExitCode'] = 137
             else:
                 task['container']['meta']['State']['ExitCode'] = 1
-            self.redis_handler.delete(self.cfg['redis_prefix']+':mesos:over:'+str(task['id']))
-            #self.redis_handler.set(self.cfg['redis_prefix']+':mesos:kill_pending:'+str(task['id']), 1)
+            self.redis_handler.delete(self.cfg['redis_prefix'] + ':mesos:over:' + str(task['id']))
             return (task, True)
         else:
-            self.logger.debug('Mesos:Task:Kill:IsRunning:'+str(task['id']))
-            self.redis_handler.rpush(self.cfg['redis_prefix']+':mesos:kill', str(task['id']))
+            self.logger.debug('Mesos:Task:Kill:IsRunning:' + str(task['id']))
+            self.redis_handler.rpush(self.cfg['redis_prefix'] + ':mesos:kill', str(task['id']))
 
-            #if self.redis_handler.get(self.cfg['redis_prefix']+':mesos:kill_pending:'+str(task['id'])) is None:
-            #    self.redis_handler.rpush(self.cfg['redis_prefix']+':mesos:kill', str(task['id']))
-            #    self.redis_handler.set(self.cfg['redis_prefix']+':mesos:kill_pending:'+str(task['id']), 1)
             return (task, None)
 
-
         return (task, True)
-
 
     def suspend_task(self, task):
         '''
@@ -853,7 +819,6 @@ class Mesos(IExecutorPlugin):
         self.logger.error('Not supported')
         return (task, False)
 
-
     def usage(self):
         '''
         Get resource usage
@@ -867,7 +832,7 @@ class Mesos(IExecutorPlugin):
             }
 
         '''
-        mesos_master = self.redis_handler.get(self.cfg['redis_prefix']+':mesos:master')
+        mesos_master = self.redis_handler.get(self.cfg['redis_prefix'] + ':mesos:master')
         if not mesos_master:
             return []
 
@@ -878,7 +843,7 @@ class Mesos(IExecutorPlugin):
         slaves = []
         for slave in master['slaves']:
             if slave['active']:
-                r = http.urlopen('GET', 'http://'+slave['hostname']+':5051/metrics/snapshot')
+                r = http.urlopen('GET', 'http://' + slave['hostname'] + ':5051/metrics/snapshot')
                 state = json.loads(r.data)
                 slaves.append({
                     'name': slave['hostname'],

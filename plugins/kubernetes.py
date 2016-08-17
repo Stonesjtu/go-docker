@@ -1,11 +1,10 @@
 from godocker.iExecutorPlugin import IExecutorPlugin
 import json
-import datetime
-import iso8601
 import strict_rfc3339
 import humanfriendly
 import requests
-from godocker.utils import is_array_child_task, is_array_task, STATUS_PENDING, STATUS_SECONDARY_SCHEDULER_REJECTED
+from godocker.utils import is_array_task, STATUS_PENDING, STATUS_SECONDARY_SCHEDULER_REJECTED
+
 
 class Kubernetes(IExecutorPlugin):
     def get_name(self):
@@ -25,8 +24,6 @@ class Kubernetes(IExecutorPlugin):
     def set_config(self, cfg):
         self.cfg = cfg
 
-
-
     def run_all_tasks(self, tasks, callback=None):
         '''
         Execute all task list on executor system, all tasks must be executed together
@@ -40,7 +37,7 @@ class Kubernetes(IExecutorPlugin):
         :return: tuple of submitted and rejected/errored tasks
         '''
         self.logger.error('run_all_tasks not implemented')
-        return ([],tasks)
+        return ([], tasks)
 
     def run_tasks(self, tasks, callback=None):
         '''
@@ -60,11 +57,10 @@ class Kubernetes(IExecutorPlugin):
             if is_array_task(task):
                 # Virtual task for a task array, do not really execute
                 running_tasks.append(task)
-                self.logger.debug('Execute:Job:'+str(task['id'])+':Skip:Array')
+                self.logger.debug('Execute:Job:' + str(task['id']) + ':Skip:Array')
                 continue
             container = None
             try:
-                #job  = json.loads(task)
                 job = task
                 port_list = []
                 job['container']['port_mapping'] = []
@@ -74,7 +70,7 @@ class Kubernetes(IExecutorPlugin):
                     port_list.append(22)
                 for port in port_list:
                     job['container']['port_mapping'].append({'host': port, 'container': port})
-                #self.logger.warn('Reservation: '+str(job['requirements']['cpu'])+','+str(job['requirements']['ram'])+'g')
+
                 vol_list = []
                 for v in job['container']['volumes']:
                     if v['mount'] is None:
@@ -83,7 +79,7 @@ class Kubernetes(IExecutorPlugin):
                 constraints = []
                 if 'label' in job['requirements'] and job['requirements']['label']:
                     for label in job['requirements']['label']:
-                        constraints.append('constraint:'+label)
+                        constraints.append('constraint:' + label)
 
                 if not job['container']['meta']:
                     job['container']['meta'] = {}
@@ -132,8 +128,8 @@ class Kubernetes(IExecutorPlugin):
                         "volumeMounts": [],
                         "resources": {
                           "limits": {
-                              "memory": str(job['requirements']['ram'])+'Gi',
-                              "cpu": str(job['requirements']['cpu']*1000)+"m"
+                              "memory": str(job['requirements']['ram']) + 'Gi',
+                              "cpu": str(job['requirements']['cpu'] * 1000) + "m"
                           }
                         }
                       }
@@ -165,7 +161,7 @@ class Kubernetes(IExecutorPlugin):
                 # Tmp dir, size is not controlled
                 if job['requirements']['tmpstorage'] and job['requirements']['tmpstorage']['path'] is not None:
                     pod['spec']['containers'][0]['volumeMounts'].append({
-                                            "name":'tmp-data',
+                                            "name": 'tmp-data',
                                             "mountPath": '/tmp-data',
                                             "readOnly": False
                     })
@@ -179,9 +175,9 @@ class Kubernetes(IExecutorPlugin):
                     pod['spec']['nodeSelector'] = {}
                     for label in job['requirements']['label']:
                         constraint = label.split('==')
-                        pod['spec']['nodeSelector'][label[0]] = label[1]
+                        pod['spec']['nodeSelector'][constraint[0]] = constraint[1]
 
-                self.logger.debug('Kube pod: '+str(pod))
+                self.logger.debug('Kube pod: ' + str(pod))
                 r = requests.post('http://localhost:8080/api/v1/namespaces/default/pods', data=json.dumps(pod))
                 kube_request = r.json()
                 kube_ok = True
@@ -195,15 +191,15 @@ class Kubernetes(IExecutorPlugin):
                     kube_ok = False
                     if 'message' in kube_request['status']:
                         job['status']['reason'] = kube_request['status']['message']
-                        self.logger.error('Execute:Job:'+str(job['id'])+':'+str(kube_request['status']['message']))
+                        self.logger.error('Execute:Job:' + str(job['id']) + ':' + str(kube_request['status']['message']))
                     else:
-                        self.logger.error('Execute:Job:'+str(job['id'])+':'+str(status))
+                        self.logger.error('Execute:Job:' + str(job['id']) + ':' + str(status))
                 if kube_ok:
                     job['container']['id'] = container_id
                     running_tasks.append(job)
-                    self.logger.debug('Execute:Job:'+str(job['id'])+':'+job['container']['id'])
+                    self.logger.debug('Execute:Job:' + str(job['id']) + ':' + job['container']['id'])
             except Exception as e:
-                self.logger.error('Execute:Job:'+str(job['id'])+':'+str(e))
+                self.logger.error('Execute:Job:' + str(job['id']) + ':' + str(e))
                 if job['container']['meta'] is None:
                     job['container']['meta'] = {}
                 if 'Node' not in job['container']['meta']:
@@ -213,8 +209,8 @@ class Kubernetes(IExecutorPlugin):
                     headers = self._headers()
                     pod_id = self._get_pod_id(task['id'])
                     namespace = self._get_namespace()
-                    r = requests.delete(self.cfg['kube_server']+'/api/v1/namespaces/'+namespace+'/pods/'+pod_id, headers=headers)
-        return (running_tasks,error_tasks)
+                    r = requests.delete(self.cfg['kube_server'] + '/api/v1/namespaces/' + namespace + '/pods/' + pod_id, headers=headers)
+        return (running_tasks, error_tasks)
 
     def watch_tasks(self, task):
         '''
@@ -226,17 +222,16 @@ class Kubernetes(IExecutorPlugin):
         :type over: bool
         '''
         over = False
-        finished_date = None
+        # finished_date = None
         headers = self._headers()
         pod_id = self._get_pod_id(task['id'])
         namespace = self._get_namespace()
 
         try:
-
-            r = requests.get(self.cfg['kube_server']+'/api/v1/namespaces/'+namespace+'/pods/'+pod_id, headers=headers)
+            r = requests.get(self.cfg['kube_server'] + '/api/v1/namespaces/' + namespace + '/pods/' + pod_id, headers=headers)
 
             if r.status_code != requests.codes.ok:
-                self.logger.debug("Could not get container, may be already killed: "+str(task['container']['id']))
+                self.logger.debug("Could not get container, may be already killed: " + str(task['container']['id']))
                 return (task, over)
 
             kube_status = r.json()
@@ -244,18 +239,18 @@ class Kubernetes(IExecutorPlugin):
             if kube_status['status']['phase'] == 'Pending':
                 # ? still pending ? check if scheduling issue
                 container_id = self._get_pod_id(task['id'])
-                data={'fieldSelector': 'involvedObject.name='+container_id}
-                r = requests.get(self.cfg['kube_server']+'/api/v1/namespaces/default/events', params=data, headers=headers)
+                data = {'fieldSelector': 'involvedObject.name=' + container_id}
+                r = requests.get(self.cfg['kube_server'] + '/api/v1/namespaces/default/events', params=data, headers=headers)
                 if r.status_code != requests.codes.ok:
-                    self.logger.debug('Failed to get events for '+container_id+', scheduler may not have yet processed task')
+                    self.logger.debug('Failed to get events for ' + container_id + ', scheduler may not have yet processed task')
                 events = r.json()
                 for event in events['items']:
                     if event['reason'] == 'FailedScheduling':
                         # Not enough resources, set as rescheduled
-                        requests.delete(self.cfg['kube_server']+'/api/v1/namespaces/'+namespace+'/pods/'+pod_id, headers=headers)
+                        requests.delete(self.cfg['kube_server'] + '/api/v1/namespaces/' + namespace + '/pods/' + pod_id, headers=headers)
                         self.jobs_handler.update({
                                                 'id': task['id']
-                                                },{
+                                                }, {
                                                 '$set': {
                                                     'requirements.ticket_share': task['requirements']['ticket_share'],
                                                     'status.primary': STATUS_PENDING,
@@ -267,7 +262,6 @@ class Kubernetes(IExecutorPlugin):
                         # Drop from running, set back to pending
                         return (None, False)
 
-
             task['status']['date_running'] = strict_rfc3339.rfc3339_to_timestamp(kube_status['status']['startTime'])
             if kube_status['status']['phase'] in ['Succeeded', 'Failed', 'Unknown']:
                 over = True
@@ -278,10 +272,9 @@ class Kubernetes(IExecutorPlugin):
                     if 'Node' in task['container']['meta'] and 'Name' in task['container']['meta']['Node']:
                         node_name = task['container']['meta']['Node']['Name']
                     if 'failure' not in task['status']:
-                        task['status']['failure'] = { 'reason': reason, 'nodes': []}
+                        task['status']['failure'] = {'reason': reason, 'nodes': []}
                     if node_name:
                         task['status']['failure']['nodes'].append(node_name)
-
 
                 if 'State' not in task['container']['meta']:
                     task['container']['meta']['State'] = {}
@@ -290,7 +283,6 @@ class Kubernetes(IExecutorPlugin):
 
                 task['status']['date_running'] = strict_rfc3339.rfc3339_to_timestamp(kube_status['status']['containerStatuses'][0]['state']['terminated']['startedAt'])
                 task['status']['date_over'] = strict_rfc3339.rfc3339_to_timestamp(kube_status['status']['containerStatuses'][0]['state']['terminated']['finishedAt'])
-
 
             update = None
             new_status = False
@@ -313,25 +305,24 @@ class Kubernetes(IExecutorPlugin):
                     update['container.meta.Node'] = task['container']['meta']['Node']
 
             if update is not None:
-                self.jobs_handler.update({'id': task['id']},{'$set': update})
+                self.jobs_handler.update({'id': task['id']}, {'$set': update})
 
         except Exception as e:
-            self.logger.debug("Could not get container, may be already killed: "+str(task['container']['id'])+", "+str(e))
+            self.logger.debug("Could not get container, may be already killed: " + str(task['container']['id']) + ", " + str(e))
 
         if over:
-            self.logger.warn('Container:'+str(task['container']['id'])+':Over')
+            self.logger.warn('Container:' + str(task['container']['id']) + ':Over')
             try:
-                r = requests.delete(self.cfg['kube_server']+'/api/v1/namespaces/'+namespace+'/pods/'+pod_id, headers=headers)
+                r = requests.delete(self.cfg['kube_server'] + '/api/v1/namespaces/' + namespace + '/pods/' + pod_id, headers=headers)
             except Exception:
-                self.logger.debug('Could not remove container '+str(task['container']['id']))
+                self.logger.debug('Could not remove container ' + str(task['container']['id']))
             over = True
         else:
-            self.logger.debug('Container:'+task['container']['id']+':Running')
+            self.logger.debug('Container:' + task['container']['id'] + ':Running')
         return (task, over)
 
-
     def _get_pod_id(self, id):
-        return 'god-'+str(id)
+        return 'god-' + str(id)
 
     def _get_namespace(self):
         namespace = 'default'
@@ -342,7 +333,7 @@ class Kubernetes(IExecutorPlugin):
     def _headers(self):
         headers = {}
         if self.cfg['kube_token']:
-            headers['Authorization'] = 'Bearer '+str(self.cfg['kube_token'])
+            headers['Authorization'] = 'Bearer ' + str(self.cfg['kube_token'])
         return headers
 
     def kill_task(self, task):
@@ -361,17 +352,16 @@ class Kubernetes(IExecutorPlugin):
             headers = self._headers()
             pod_id = self._get_pod_id(task['id'])
             namespace = self._get_namespace()
-            r = requests.delete(self.cfg['kube_server']+'/api/v1/namespaces/'+namespace+'/pods/'+pod_id, headers=headers)
+            r = requests.delete(self.cfg['kube_server'] + '/api/v1/namespaces/' + namespace + '/pods/' + pod_id, headers=headers)
             if r.status_code == 404:
                 over = True
             elif r.status_code != requests.codes.ok:
-                self.logger.debug('Error from Kubernetes, return code: '+r.status_code)
+                self.logger.debug('Error from Kubernetes, return code: ' + r.status_code)
                 over = False
         except Exception as e:
-            self.logger.debug("Could not kill container: "+str(task['container']['id']))
+            self.logger.debug("Could not kill container: " + str(task['container']['id']) + " - " + str(e))
             over = False
         return (task, over)
-
 
     def suspend_task(self, task):
         '''
@@ -409,7 +399,7 @@ class Kubernetes(IExecutorPlugin):
 
         '''
         headers = self._headers()
-        r = requests.get(self.cfg['kube_server']+'/api/v1/nodes', headers=headers)
+        r = requests.get(self.cfg['kube_server'] + '/api/v1/nodes', headers=headers)
         if r.status_code != requests.codes.ok:
             self.logger.error('Failed to get status from Kubernetes')
             return []
@@ -420,8 +410,8 @@ class Kubernetes(IExecutorPlugin):
             total_memory = humanfriendly.parse_size(slave['status']['capacity']['memory'])
             slaves.append({
                     'name': slave['status']['nodeInfo']['machineID'],
-                    'cpu': (int(slave['status']['capacity']['cpu'])-int(slave['status']['allocatable']['cpu']), int(slave['status']['capacity']['cpu'])),
-                    'mem': (total_memory-available_memory, total_memory),
+                    'cpu': (int(slave['status']['capacity']['cpu']) - int(slave['status']['allocatable']['cpu']), int(slave['status']['capacity']['cpu'])),
+                    'mem': (total_memory - available_memory, total_memory),
                     'disk': (0, 0)
             })
 

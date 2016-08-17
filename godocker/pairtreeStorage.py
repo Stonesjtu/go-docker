@@ -35,31 +35,30 @@ class PairtreeStorageFactory(object):
     '''
     _encode_regex = re.compile(r"[\"*+,<=>?\\^|]|[^\x21-\x7e]", re.U)
     _decode_regex = re.compile(r"\^(..)", re.U)
-    _encode_map = { '/' : '=',  ':' : '+',  '.' : ','  } # not easy on the eyes
-    _decode_map = dict([(v, k) for k, v in list(_encode_map.items())]) # reversed
+    _encode_map = {'/': '=', ':': '+', '.': ','}  # not easy on the eyes
+    _decode_map = dict([(v, k) for k, v in list(_encode_map.items())])  # reversed
 
     def get_store(self, store_dir, uri_base='file://'):
         '''
         Get a pairtree manager
         :return: self
         '''
-        self.store_dir  = os.path.join(store_dir, 'pairtree_root')
-        logging.warn("Create storage directory: "+self.store_dir)
+        self.store_dir = os.path.join(store_dir, 'pairtree_root')
+        logging.warn("Create storage directory: " + self.store_dir)
         if not os.path.exists(self.store_dir):
-            logging.info("Create storage directory: "+self.store_dir)
+            logging.info("Create storage directory: " + self.store_dir)
             os.makedirs(self.store_dir)
         self.uri_base = uri_base
         return self
-
 
     def id2ptree(self, id, sep="/", relpath=False):
         """Pass in a identifier and get back a PairTree path. Optionally
         you can pass in the path separator (default is /). Set relpath=True to
         omit the leading separator.
         """
-        if sep == "": sep = "/"
+        if sep == "":
+            sep = "/"
         return (not relpath and sep or "") + sep.join(self._split_id(id)) + (not relpath and sep or "")
-
 
     def ptree2id(self, path, sep="/"):
         """Pass in a PairTree path and get back the identifier that it maps to.
@@ -78,7 +77,6 @@ class PairtreeStorageFactory(object):
                     break
         return self._decode("".join(id_parts))
 
-
     def _split_id(self, id):
         encoded_id = self._encode(id)
         parts = []
@@ -87,16 +85,12 @@ class PairtreeStorageFactory(object):
             encoded_id = encoded_id[2:]
         return parts
 
-
     def _encode(self, s):
-        #s = s.encode('utf-8')
-
         s = self._encode_regex.sub(self._char2hex, s)
         parts = []
         for char in s:
             parts.append(PairtreeStorageFactory._encode_map.get(char, char))
         return "".join(parts)
-
 
     def _decode(self, id):
         parts = []
@@ -105,17 +99,13 @@ class PairtreeStorageFactory(object):
         dec_id = "".join(parts)
         return PairtreeStorageFactory._decode_regex.sub(self._hex2char, dec_id).decode("utf-8")
 
-
     def _char2hex(self, m):
-        return "^%02x"%ord(m.group(0))
-
+        return "^%02x" % ord(m.group(0))
 
     def _hex2char(self, m):
         return chr(int(m.group(1), 16))
 
-
     def id2path(self, path):
-        #return os.path.join(self.id2ptree(path, relpath=True), 'obj')
         return self.id2ptree(path, relpath=True)
 
     def create_object(self, id):
@@ -143,15 +133,14 @@ class PairtreeStorage(IStorage):
             if not os.path.exists(self.cfg['shared_dir']):
                 os.makedirs(self.cfg['shared_dir'])
 
-        #f = pairtree.PairtreeStorageFactory()
         f = PairtreeStorageFactory()
-        self.store = f.get_store(store_dir=os.path.join(self.cfg['shared_dir'],'tasks'), uri_base="http://")
+        self.store = f.get_store(store_dir=os.path.join(self.cfg['shared_dir'], 'tasks'), uri_base="http://")
 
     def get_task_dir(self, task):
         '''
         Get directory where task files are written
         '''
-        task_dir = os.path.join(self.cfg['shared_dir'],'tasks','pairtree_root',self.store.id2path(str(task['id'])),'task')
+        task_dir = os.path.join(self.cfg['shared_dir'], 'tasks', 'pairtree_root', self.store.id2path(str(task['id'])), 'task')
         return task_dir
 
     def add_file(self, task, name, content, path=''):
@@ -180,7 +169,6 @@ class PairtreeStorage(IStorage):
         task_obj.add_bytestream(name, content, path=subpath)
         os.chmod(task_dir, 0o777)
         return os.path.join(task_dir, path, name)
-
 
     def clean(self, task):
         '''

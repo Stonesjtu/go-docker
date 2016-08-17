@@ -1,8 +1,7 @@
 from godocker.iWatcherPlugin import IWatcherPlugin
-import logging
-from godocker.utils import is_array_child_task, is_array_task
 import datetime
 import time
+
 
 class MaxLifespanWatcher(IWatcherPlugin):
     def get_name(self):
@@ -15,16 +14,16 @@ class MaxLifespanWatcher(IWatcherPlugin):
         duration_in_seconds = -1
         try:
             if duration.endswith('d'):
-                duration_in_seconds = int(duration.replace('d','')) * 3600 * 24
+                duration_in_seconds = int(duration.replace('d', '')) * 3600 * 24
             elif duration.endswith('h'):
-                duration_in_seconds = int(duration.replace('h','')) * 3600
+                duration_in_seconds = int(duration.replace('h', '')) * 3600
             elif duration.endswith('s'):
-                duration_in_seconds = int(duration.replace('s',''))
+                duration_in_seconds = int(duration.replace('s', ''))
             else:
-                duration_in_seconds = int(duration.replace('d',''))
+                duration_in_seconds = int(duration.replace('d', ''))
         except Exception as e:
             duration_in_seconds = -1
-            self.logger.error('maxlifespan conversion error: '+str(e))
+            self.logger.error('maxlifespan conversion error: ' + str(e))
         return duration_in_seconds
 
     def can_run(self, task):
@@ -41,7 +40,7 @@ class MaxLifespanWatcher(IWatcherPlugin):
         :type task: Task
         :return: Task or None if running checks should continue
         '''
-        self.logger.debug('MaxLifespanWatcher:MaxReached:Test:'+str(task['id']))
+        self.logger.debug('MaxLifespanWatcher:MaxReached:Test:' + str(task['id']))
         if 'maxlifespan' not in self.cfg:
             self.logger.error('maxlifespan not defined in config')
             return task
@@ -53,7 +52,7 @@ class MaxLifespanWatcher(IWatcherPlugin):
         running_date = task['status']['date_running']
         duration = self._get_duration(maxlifespan)
         if duration > -1 and timestamp - running_date > duration:
-            self.logger.debug('MaxLifespanWatcher:MaxReached:Kill:'+str(task['id']))
+            self.logger.debug('MaxLifespanWatcher:MaxReached:Kill:' + str(task['id']))
             task['status']['reason'] = 'Max duration reached'
             self.kill_tasks([task])
             return None

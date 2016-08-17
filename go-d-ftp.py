@@ -1,29 +1,22 @@
-import time, sys
-import json
+import sys
 import logging
 import logging.config
-import datetime
-import time
 import os
-import traceback
 import yaml
 import socket
 
 import redis
 from pymongo import MongoClient
-from bson.json_util import dumps
-from bson.objectid import ObjectId
+
 
 from yapsy.PluginManager import PluginManager
 from godocker.storageManager import StorageManager
 from godocker.iAuthPlugin import IAuthPlugin
-from godocker.iWatcherPlugin import IWatcherPlugin
 from godocker.iStatusPlugin import IStatusPlugin
-from godocker.utils import is_array_task, is_array_child_task
 import godocker.utils as godutils
 
 
-from pyftpdlib.authorizers import DummyAuthorizer
+from pyftpdlib.authorizers import DummyAuthorizer, AuthenticationFailed
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
 
@@ -50,14 +43,16 @@ class GodFtpHandler(FTPHandler, object):
         :type add: bool
         :return: True if quota ok, else return False
         '''
-        self.logger.debug('FTP:Quota: '+str(path))
+        self.logger.debug('FTP:Quota: ' + str(path))
         file_size = os.stat(path).st_size
-        filename = path.replace('/','_').replace('.','_')
+        filename = path.replace('/', '_').replace('.', '_')
         if self.god_cfg['ftp']['quota'] and add:
-            current_quota = self.god_mongo.users.find_one({'id': self.username})
-            self.god_mongo.users.update({'id': self.username}, { '$set': {'ftp.quota.'+filename: file_size}})
+            # current_quota = self.god_mongo.users.find_one({'id': self.username})
+            self.god_mongo.users.update({'id': self.username},
+                                {'$set': {'ftp.quota.' + filename: file_size}})
         if self.god_cfg['ftp']['quota'] and not add:
-            self.god_mongo.users.update({'id': self.username}, { '$unset': {'ftp.quota.'+filename: ''}})
+            self.god_mongo.users.update({'id': self.username},
+                                {'$unset': {'ftp.quota.' + filename: ''}})
         return True
 
     def check_quota(self):
@@ -70,9 +65,9 @@ class GodFtpHandler(FTPHandler, object):
             user_quota = 0
             for filename in list(current_quota['ftp']['quota'].keys()):
                 user_quota += current_quota['ftp']['quota'][filename]
-            self.logger.debug('FTP:User:'+self.username+':Quota:'+str(current_quota['ftp']['quota']))
-            if user_quota >  max_size:
-                self.logger.debug('FTP:User:'+self.username+':Quota:Reached')
+            self.logger.debug('FTP:User:' + self.username + ':Quota:' + str(current_quota['ftp']['quota']))
+            if user_quota > max_size:
+                self.logger.debug('FTP:User:' + self.username + ':Quota:Reached')
                 return False
         return True
 
@@ -82,12 +77,11 @@ class GodFtpHandler(FTPHandler, object):
         """
         self.quota(path)
 
-
     def ftp_STOR(self, path, mode='w'):
         """Store a file (transfer from the client to the server).
         On success return the file path, else None.
         """
-        self.logger.debug('FTP:ftp_STOR: '+str(path))
+        self.logger.debug('FTP:ftp_STOR: ' + str(path))
         quota = self.check_quota()
         if not quota:
             self.respond('550 %s.' % 'max quota reached')
@@ -99,7 +93,7 @@ class GodFtpHandler(FTPHandler, object):
         """Append data to an existing file on the server.
         On success return the file path, else None.
         """
-        self.logger.debug('FTP:ftp_APPE: '+str(path))
+        self.logger.debug('FTP:ftp_APPE: ' + str(path))
         quota = self.check_quota()
         if not quota:
             self.respond('550 %s.' % 'max quota reached')
@@ -108,10 +102,11 @@ class GodFtpHandler(FTPHandler, object):
         return operation
 
     def ftp_DELE(self, path):
-        self.logger.debug('FTP:DELETE: '+str(path))
-        quota = self.quota(path, add=False)
+        self.logger.debug('FTP:DELETE: ' + str(path))
+        # quota = self.quota(path, add=False)
         operation = super(GodFtpHandler, self).ftp_DELE(path)
         return operation
+
 
 class GodAuthorizer(DummyAuthorizer):
 
@@ -146,11 +141,11 @@ class GodAuthorizer(DummyAuthorizer):
         the provided username no longer exists.
         """
         user_info = {
-            'id': 'user_'+username
+            'id': 'user_' + username
             }
         home_dir = self.store.get_task_dir(user_info)
         if not os.path.exists(home_dir):
-            self.store.add_file(user_info, 'README.txt', 'This is your personal storage for GoDocker, you have a quota of '+self.cfg['ftp']['quota'])
+            self.store.add_file(user_info, 'README.txt', 'This is your personal storage for GoDocker, you have a quota of ' + self.cfg['ftp']['quota'])
         if sys.version_info.major == 2:
             home_dir = home_dir.encode('utf-8')
         return home_dir
@@ -201,7 +196,6 @@ class GodAuthorizer(DummyAuthorizer):
         """Return current user permissions."""
         return 'elradfmwM'
 
-
     def override_perm(self, username, directory, perm, recursive=False):
         """Override permissions for a given directory."""
         '''
@@ -222,13 +216,14 @@ class GodAuthorizer(DummyAuthorizer):
         '''
         return
 
+
 class GodFTP(object):
 
     def __init__(self):
         config_file = 'go-d.ini'
         if 'GOD_CONFIG' in os.environ:
             config_file = os.environ['GOD_CONFIG']
-        self.cfg= None
+        self.cfg = None
         with open(config_file, 'r') as ymlfile:
             self.cfg = yaml.load(ymlfile)
 
@@ -253,8 +248,8 @@ class GodFTP(object):
         # Tell it the default place(s) where to find plugins
         simplePluginManager.setPluginPlaces([self.cfg['plugins_dir']])
         simplePluginManager.setCategoriesFilter({
-           "Auth": IAuthPlugin,
-           "Status": IStatusPlugin
+                                                "Auth": IAuthPlugin,
+                                                "Status": IStatusPlugin
          })
         # Load all plugins
         simplePluginManager.collectPlugins()
@@ -262,30 +257,30 @@ class GodFTP(object):
         # Activate plugins
         self.status_manager = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Status"):
-           if 'status_policy' not in self.cfg or not self.cfg['status_policy']:
-               print("No status manager in configuration")
-               break
-           if pluginInfo.plugin_object.get_name() == self.cfg['status_policy']:
-             self.status_manager = pluginInfo.plugin_object
-             self.status_manager.set_logger(self.logger)
-             self.status_manager.set_redis_handler(self.r)
-             self.status_manager.set_config(self.cfg)
-             print("Loading status manager: "+self.status_manager.get_name())
+            if 'status_policy' not in self.cfg or not self.cfg['status_policy']:
+                print("No status manager in configuration")
+                break
+            if pluginInfo.plugin_object.get_name() == self.cfg['status_policy']:
+                self.status_manager = pluginInfo.plugin_object
+                self.status_manager.set_logger(self.logger)
+                self.status_manager.set_redis_handler(self.r)
+                self.status_manager.set_config(self.cfg)
+                print("Loading status manager: " + self.status_manager.get_name())
 
         self.auth_policy = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Auth"):
             if pluginInfo.plugin_object.get_name() == self.cfg['auth_policy']:
-                 self.auth_policy = pluginInfo.plugin_object
-                 self.auth_policy.set_logger(self.logger)
-                 self.auth_policy.set_config(self.cfg)
-                 print("Loading auth policy: "+self.auth_policy.get_name())
+                self.auth_policy = pluginInfo.plugin_object
+                self.auth_policy.set_logger(self.logger)
+                self.auth_policy.set_config(self.cfg)
+                print("Loading auth policy: " + self.auth_policy.get_name())
 
         authorizer = GodAuthorizer()
         authorizer.set_policy(self.auth_policy)
         authorizer.set_store(self.store)
         authorizer.set_config(self.cfg)
-        #authorizer.add_user("user", "12345", "/tmp/osallou", perm="elradfmw")
-        #authorizer.add_anonymous("/tmp/nobody")
+        # authorizer.add_user("user", "12345", "/tmp/osallou", perm="elradfmw")
+        # authorizer.add_anonymous("/tmp/nobody")
 
         self.handler = GodFtpHandler
         self.handler.authorizer = authorizer
@@ -295,7 +290,7 @@ class GodFTP(object):
 
     def start(self):
         self.hostname = socket.gethostbyaddr(socket.gethostname())[0]
-        self.proc_name = 'scheduler-'+self.hostname
+        self.proc_name = 'scheduler-' + self.hostname
         if self.status_manager is not None:
             self.status_manager.keep_alive(self.proc_name, 'ftp')
         server = FTPServer((self.cfg['ftp']['listen'], self.cfg['ftp']['port']), self.handler)

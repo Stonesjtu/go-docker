@@ -1,20 +1,11 @@
-import time, sys
-import redis
-import json
+import time
+import sys
 import logging
-import signal
 import os
 import datetime
-import time
-import random
-import string
-import shutil
-from copy import deepcopy
-from datetime import date, timedelta
+from datetime import timedelta
 
 from pymongo import MongoClient
-from pymongo import DESCENDING as pyDESCENDING
-from bson.json_util import dumps
 import yaml
 from godocker.pairtreeStorage import PairtreeStorage
 import godocker.utils as godutils
@@ -26,13 +17,14 @@ if __name__ == "__main__":
         if len(sys.argv) == 2:
                 config_file == sys.argv[1]
 
-        cfg= None
+        cfg = None
         with open(config_file, 'r') as ymlfile:
             cfg = yaml.load(ymlfile)
         mongo = MongoClient(cfg['mongo_url'])
         db = mongo[cfg['mongo_db']]
         db_jobsover = db.jobsover
         db_cleanup = db.cleanup
+        db_users = db.users
 
         dt = datetime.datetime.now()
         new_run = time.mktime(dt.timetuple())
@@ -62,11 +54,12 @@ if __name__ == "__main__":
             job_dir = store.get_task_dir(job)
             store.clean(job)
             db_jobsover.update({'_id': job['_id']}, {'$set': {'status.primary': godutils.STATUS_ARCHIVED}})
-            logging.warn("Archive:Job:"+str(job['id']))
+            logging.warn("Archive:Job:" + str(job['id']))
             if quota and 'disk_size' in job['container']['meta']:
-                self.db_users.update({'id': task['user']['id']},
-                                     {'$inc': {'usage.disk': job['container']['meta']['disk_size'] * -1}})
-
+                db_users.update({'id': job['user']['id']},
+                                {'$inc': {
+                                    'usage.disk':
+                                        job['container']['meta']['disk_size'] * -1}})
 
         # Update last_run
-        db.cleanup.update({'id': 'pairtree'},{'$set': {'last': new_run}})
+        db.cleanup.update({'id': 'pairtree'}, {'$set': {'last': new_run}})

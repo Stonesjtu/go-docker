@@ -33,10 +33,10 @@ config = {
                             'pyopenssl',
                             'pysendfile',
                             'pyftpdlib',
-                            'bcrypt' ],
+                            'bcrypt'],
     'packages': find_packages(),
     'include_package_data': True,
-    'scripts': ['go-d-scheduler.py','go-d-watcher.py', 'go-d-clean.py'],
+    'scripts': ['go-d-scheduler.py', 'go-d-watcher.py', 'go-d-clean.py'],
     'name': 'godsched'
 }
 

@@ -1,6 +1,6 @@
 from godocker.iExecutorPlugin import IExecutorPlugin
-import logging
-from godocker.utils import is_array_child_task, is_array_task
+from godocker.utils import is_array_task
+
 
 class FakeExecutor(IExecutorPlugin):
 
@@ -51,17 +51,18 @@ class FakeExecutor(IExecutorPlugin):
             if is_array_task(task):
                 # Virtual task for a task array, do not really execute
                 running_tasks.append(task)
-                self.logger.debug('Execute:Job:'+str(task['id'])+':Skip:Array')
+                self.logger.debug('Execute:Job:' + str(task['id']) + ':Skip:Array')
                 continue
             if i < self.fail_on:
-                self.logger.debug("Run:Fake:task:run:"+str(task['id']))
+                self.logger.debug("Run:Fake:task:run:" + str(task['id']))
                 running_tasks.append(task)
                 if task['command']['interactive']:
                     # port mapping
-                    task['container']['meta'] = { 'Node': { 'Name': 'fake-laptop'} }
+                    task['container']['meta'] = {'Node': {'Name': 'fake-laptop'}}
                     mapped_port = self.get_mapping_port('fake-laptop', task)
+                    self.logger.debug('Run:Fake:MappedPort:' + str(mapped_port))
             else:
-                self.logger.debug("Run:Fake:task:reject:"+str(task['id']))
+                self.logger.debug("Run:Fake:task:reject:" + str(task['id']))
                 rejected_tasks.append(task)
             i += 1
         return (running_tasks, rejected_tasks)

@@ -1,33 +1,15 @@
-import time, sys
+import sys
 import redis
-import json
 import logging
 import logging.config
-import signal
 import os
-import datetime
-import time
 import socket
-import random
-import string
-import urllib3
-import traceback
-from copy import deepcopy
 import yaml
 
-
-
 from pymongo import MongoClient
-from pymongo import DESCENDING as pyDESCENDING
-from bson.json_util import dumps
 from yapsy.PluginManager import PluginManager
 
-from godocker.iSchedulerPlugin import ISchedulerPlugin
-from godocker.iExecutorPlugin import IExecutorPlugin
-from godocker.iAuthPlugin import IAuthPlugin
-from godocker.iWatcherPlugin import IWatcherPlugin
 from godocker.iStatusPlugin import IStatusPlugin
-
 
 
 class GoDStatus():
@@ -36,13 +18,11 @@ class GoDStatus():
         '''
         Load configuration from file path
         '''
-        self.cfg= None
+        self.cfg = None
         with open(f, 'r') as ymlfile:
             self.cfg = yaml.load(ymlfile)
 
-
         self.hostname = socket.gethostbyaddr(socket.gethostname())[0]
-
 
         self.r = redis.StrictRedis(host=self.cfg['redis_host'], port=self.cfg['redis_port'], db=self.cfg['redis_db'], decode_responses=True)
         self.mongo = MongoClient(self.cfg['mongo_url'])
@@ -62,32 +42,31 @@ class GoDStatus():
             dirname, filename = os.path.split(os.path.abspath(__file__))
             self.cfg['plugins_dir'] = os.path.join(dirname, '..', 'plugins')
 
-
         # Build the manager
         simplePluginManager = PluginManager()
         # Tell it the default place(s) where to find plugins
         simplePluginManager.setPluginPlaces([self.cfg['plugins_dir']])
         simplePluginManager.setCategoriesFilter({
-           "Status": IStatusPlugin
-         })
+                        "Status": IStatusPlugin
+        })
         # Load all plugins
         simplePluginManager.collectPlugins()
 
         # Activate plugins
         self.status_manager = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Status"):
-           if 'status_policy' not in self.cfg or not self.cfg['status_policy']:
-               print("No status manager in configuration")
-               break
-           if pluginInfo.plugin_object.get_name() == self.cfg['status_policy']:
-             self.status_manager = pluginInfo.plugin_object
-             self.status_manager.set_logger(self.logger)
-             self.status_manager.set_redis_handler(self.r)
-             self.status_manager.set_jobs_handler(self.db_jobs)
-             self.status_manager.set_users_handler(self.db_users)
-             self.status_manager.set_projects_handler(self.db_projects)
-             self.status_manager.set_config(self.cfg)
-             print("Loading status manager: "+self.status_manager.get_name())
+            if 'status_policy' not in self.cfg or not self.cfg['status_policy']:
+                print("No status manager in configuration")
+                break
+            if pluginInfo.plugin_object.get_name() == self.cfg['status_policy']:
+                self.status_manager = pluginInfo.plugin_object
+                self.status_manager.set_logger(self.logger)
+                self.status_manager.set_redis_handler(self.r)
+                self.status_manager.set_jobs_handler(self.db_jobs)
+                self.status_manager.set_users_handler(self.db_users)
+                self.status_manager.set_projects_handler(self.db_projects)
+                self.status_manager.set_config(self.cfg)
+                print("Loading status manager: " + self.status_manager.get_name())
 
 
 if __name__ == "__main__":
@@ -105,7 +84,7 @@ if __name__ == "__main__":
                         web_status = 0
                         for proc_state in status:
                             print("Status:\n")
-                            print("\t - "+proc_state['name']+'[' + str(proc_state['type']) + ']: '+str(proc_state['status'])+"\n")
+                            print("\t - " + proc_state['name'] + '[' + str(proc_state['type']) + ']: ' + str(proc_state['status']) + "\n")
                             if not proc_state['status']:
                                 global_status = False
                             if proc_state['type'] == 'scheduler' and proc_state['status']:

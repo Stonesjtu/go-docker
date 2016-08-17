@@ -1,6 +1,5 @@
 import smtplib
 from email.mime.text import MIMEText
-import logging
 
 
 class Notify:
@@ -37,10 +36,10 @@ class Notify:
             return
 
         to = task['user']['email']
-        subject = 'Task '+str(task['id'])+': '+str(task['status']['primary'])
+        subject = 'Task ' + str(task['id']) + ': ' + str(task['status']['primary'])
         message = opt_msg
         if opt_msg is None:
-            message = 'Task '+str(task['id'])+ '('+str(task['meta']['name'])+') switched to status '+str(task['status']['primary'])+'/'+str(task['status']['secondary'])
+            message = 'Task ' + str(task['id']) + '(' + str(task['meta']['name']) + ') switched to status ' + str(task['status']['primary']) + '/' + str(task['status']['secondary'])
         # Create a text/plain message
         msg = MIMEText(message)
 
@@ -59,4 +58,4 @@ class Notify:
             s.sendmail(msg['From'], [msg['To']], msg.as_string())
             s.quit()
         except Exception as e:
-            Notify.logger.error('Email error: '+str(e))
+            Notify.logger.error('Email error: ' + str(e))

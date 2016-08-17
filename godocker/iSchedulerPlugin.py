@@ -1,8 +1,9 @@
 from godocker.IGoDockerPlugin import IGoDockerPlugin
 
 import datetime
-from datetime import date, timedelta
+from datetime import timedelta
 import time
+
 
 class ISchedulerPlugin(IGoDockerPlugin):
     '''
@@ -17,19 +18,18 @@ class ISchedulerPlugin(IGoDockerPlugin):
         '''
         return []
 
-
     def get_user_prio(self, user_id):
         '''
         Get user priority (between 0 and 1)
         '''
-        prio = self.redis_handler.get(self.cfg['redis_prefix']+':user:'+user_id+':prio')
+        prio = self.redis_handler.get(self.cfg['redis_prefix'] + ':user:' + user_id + ':prio')
         if prio is None:
             user = self.users_handler.find_one({'id': user_id})
             if not user or 'prio' not in user['usage']:
                 prio = 0.5
             else:
-                prio = float(user['usage']['prio']/float(100))
-                self.redis_handler.set(self.cfg['redis_prefix']+':user:'+user_id+':prio',str(prio))
+                prio = float(user['usage']['prio'] / float(100))
+                self.redis_handler.set(self.cfg['redis_prefix'] + ':user:' + user_id + ':prio', str(prio))
         else:
             prio = float(prio)
         return prio
@@ -40,14 +40,14 @@ class ISchedulerPlugin(IGoDockerPlugin):
         '''
         if project_id == 'default':
             return 0.5
-        prio = self.redis_handler.get(self.cfg['redis_prefix']+':project:'+project_id+':prio')
+        prio = self.redis_handler.get(self.cfg['redis_prefix'] + ':project:' + project_id + ':prio')
         if prio is None:
             project = self.projects_handler.find_one({'id': project_id})
             if not project or 'prio' not in project:
                 prio = 0.5
             else:
-                prio = float(project['prio']/float(100))
-                self.redis_handler.set(self.cfg['redis_prefix']+':project:'+project_id+':prio',str(prio))
+                prio = float(project['prio'] / float(100))
+                self.redis_handler.set(self.cfg['redis_prefix'] + ':project:' + project_id + ':prio', str(prio))
         else:
             prio = float(prio)
         return prio
@@ -73,17 +73,16 @@ class ISchedulerPlugin(IGoDockerPlugin):
 
         for i in range(0, self.cfg['user_reset_usage_duration']):
             previous = dt - timedelta(days=i)
-            date_key = str(previous.year)+'_'+str(previous.month)+'_'+str(previous.day)
-            if self.redis_handler.exists(self.cfg['redis_prefix']+':'+key+':'+identifier+':cpu:'+date_key):
-                cpu = self.redis_handler.get(self.cfg['redis_prefix']+':'+key+':'+identifier+':cpu:'+date_key)
-                ram = self.redis_handler.get(self.cfg['redis_prefix']+':'+key+':'+identifier+':ram:'+date_key)
-                duration = self.redis_handler.get(self.cfg['redis_prefix']+':'+key+':'+identifier+':time:'+date_key)
+            date_key = str(previous.year) + '_' + str(previous.month) + '_' + str(previous.day)
+            if self.redis_handler.exists(self.cfg['redis_prefix'] + ':' + key + ':' + identifier + ':cpu:' + date_key):
+                cpu = self.redis_handler.get(self.cfg['redis_prefix'] + ':' + key + ':' + identifier + ':cpu:' + date_key)
+                ram = self.redis_handler.get(self.cfg['redis_prefix'] + ':' + key + ':' + identifier + ':ram:' + date_key)
+                duration = self.redis_handler.get(self.cfg['redis_prefix'] + ':' + key + ':' + identifier + ':time:' + date_key)
                 total_cpu += int(cpu)
                 total_ram += int(ram)
                 total_time += float(duration)
             else:
                 break
-
 
         usage = {
                 'total_time': total_time,
