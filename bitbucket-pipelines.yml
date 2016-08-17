@@ -11,6 +11,7 @@ pipelines:
           - apt-get install -y mongodb-server
           - service mongodb start
           - service redis-server start
+          - pip install flake8
           - pip install -r requirements.txt
           - cat /var/log/mongodb/mongodb.log
           - nosetests --with-coverage --cover-package=godocker
