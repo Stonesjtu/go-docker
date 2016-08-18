@@ -255,7 +255,10 @@ class GoDScheduler(Daemon):
                 self.executor.set_users_handler(self.db_users)
                 self.executor.set_projects_handler(self.db_projects)
                 self.executor.set_config(self.cfg)
-                self.executor.set_network_plugin(self.network_plugin)
+                if 'cni' in self.executor.features():
+                    self.executor.set_network_plugin(self.network_plugin)
+                else:
+                    print("Skipping network plugin, not supported by executor")
                 print("Loading executor: " + self.executor.get_name())
 
         self.watchers = []
