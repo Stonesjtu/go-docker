@@ -30,6 +30,7 @@ from godocker.iExecutorPlugin import IExecutorPlugin
 from godocker.iAuthPlugin import IAuthPlugin
 from godocker.iWatcherPlugin import IWatcherPlugin
 from godocker.iStatusPlugin import IStatusPlugin
+from godocker.iNetworkPlugin import INetworkPlugin
 
 # from godocker.pairtreeStorage import PairtreeStorage
 from godocker.storageManager import StorageManager
@@ -197,7 +198,8 @@ class GoDScheduler(Daemon):
            "Executor": IExecutorPlugin,
            "Auth": IAuthPlugin,
            "Watcher": IWatcherPlugin,
-           "Status": IStatusPlugin
+           "Status": IStatusPlugin,
+           "Network": INetworkPlugin
          })
         # Load all plugins
         simplePluginManager.collectPlugins()
@@ -229,6 +231,20 @@ class GoDScheduler(Daemon):
                 self.scheduler.set_projects_handler(self.db_projects)
                 self.scheduler.set_config(self.cfg)
                 print("Loading scheduler: " + self.scheduler.get_name())
+
+        self.network_plugin = None
+        if 'network' in self.cfg and self.cfg['network']['use_cni']:
+            for pluginInfo in simplePluginManager.getPluginsOfCategory("Network"):
+                if pluginInfo.plugin_object.get_name() == self.cfg['network']['cni_plugin']:
+                    self.network_plugin = pluginInfo.plugin_object
+                    self.network_plugin.set_logger(self.logger)
+                    self.network_plugin.set_redis_handler(self.r)
+                    self.network_plugin.set_jobs_handler(self.db_jobs)
+                    self.network_plugin.set_users_handler(self.db_users)
+                    self.network_plugin.set_projects_handler(self.db_projects)
+                    self.network_plugin.set_config(self.cfg)
+                    print("Loading network_plugin: " + self.network_plugin.get_name())
+
         self.executor = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Executor"):
             if pluginInfo.plugin_object.get_name() == self.cfg['executor']:
@@ -239,6 +255,7 @@ class GoDScheduler(Daemon):
                 self.executor.set_users_handler(self.db_users)
                 self.executor.set_projects_handler(self.db_projects)
                 self.executor.set_config(self.cfg)
+                self.executor.set_network_plugin(self.network_plugin)
                 print("Loading executor: " + self.executor.get_name())
 
         self.watchers = []

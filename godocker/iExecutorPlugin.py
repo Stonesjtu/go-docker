@@ -153,3 +153,12 @@ class IExecutorPlugin(IGoDockerPlugin):
             task['container']['ports'] = []
         task['container']['ports'].append(port)
         return int(port)
+
+    def set_network_plugin(self, plugin):
+        '''
+        Sets the network plugin to use
+
+        :param plugin: plugin instance
+        :type plugin: iNetworkPlugin instance
+        '''
+        self.network = plugin

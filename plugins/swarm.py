@@ -5,6 +5,7 @@ from godocker.utils import is_array_task
 
 
 class Swarm(IExecutorPlugin):
+
     def get_name(self):
         return "swarm"
 
@@ -155,25 +156,57 @@ class Swarm(IExecutorPlugin):
                     }
 
                 job['container']['port_mapping'] = []
-                port_mapping = {}
-                for port in port_list:
-                    if self.cfg['port_allocate']:
-                        mapped_port = self.get_mapping_port('godocker-swarm', job)
-                        if mapped_port is None:
-                            raise Exception('no port available')
-                    else:
-                        mapped_port = port
-                    job['container']['port_mapping'].append({'host': mapped_port, 'container': port})
-                    port_mapping[port] = mapped_port
 
-                host_config = self.docker_client.create_host_config(
+                networking_config = None
+                container_network_name = None
+
+                if self.network is None:
+                    port_mapping = {}
+                    for port in port_list:
+                        if self.cfg['port_allocate']:
+                            mapped_port = self.get_mapping_port('godocker-swarm', job)
+                            if mapped_port is None:
+                                raise Exception('no port available')
+                        else:
+                            mapped_port = port
+                        job['container']['port_mapping'].append({'host': mapped_port, 'container': port})
+                        port_mapping[port] = mapped_port
+                else:
+                    # Create network if necessary and set config
+                    endpoint_config = self.docker_client.create_endpoint_config()
+                    container_network = {}
+                    container_network_name = self.network.network(job['requirements']['network'])
+                    network_status = self.network.create_network(container_network_name)
+                    if not network_status:
+                        raise Exception('Failed to create network %s for %s' % (job['requirements']['network'], container_network_name))
+                    container_network[container_network_name] = endpoint_config
+                    networking_config = self.docker_client.create_networking_config(container_network)
+
+
+                if networking_config:
+                    host_config = self.docker_client.create_host_config(
+                                        mem_limit=str(job['requirements']['ram']) + 'g',
+                                        network_mode=container_network_name,
+                                        binds=vol_binds
+                                        )
+                    container = self.docker_client.create_container(image=job['container']['image'],
+                                                                entrypoint=[job['command']['script']],
+                                                                cpu_shares=job['requirements']['cpu'],
+                                                                ports=port_list,
+                                                                network_disabled=self.cfg['network_disabled'],
+                                                                environment=constraints,
+                                                                host_config=host_config,
+                                                                volumes=vol_list,
+                                                                networking_config=networking_config
+                                                                )
+                else:
+                    host_config = self.docker_client.create_host_config(
                                         mem_limit=str(job['requirements']['ram']) + 'g',
                                         network_mode='bridge',
                                         binds=vol_binds,
                                         port_bindings=port_mapping
                                         )
-
-                container = self.docker_client.create_container(image=job['container']['image'],
+                    container = self.docker_client.create_container(image=job['container']['image'],
                                                                 entrypoint=[job['command']['script']],
                                                                 cpu_shares=job['requirements']['cpu'],
                                                                 ports=port_list,
@@ -182,51 +215,27 @@ class Swarm(IExecutorPlugin):
                                                                 host_config=host_config,
                                                                 volumes=vol_list
                                                                 )
+
+                self.docker_client.start(container=container.get('Id'))
+                job['container']['id'] = container['Id']
+                job['status']['reason'] = None
+
                 job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
                 if 'Node' not in job['container']['meta']:
                     # If using 1 Docker instance, for tests, intead of swarm,
                     # some fields are not present, or not at the same place
                     # Use required fields and place them like in swarm
                     job['container']['meta']['Node'] = {'Name': 'localhost'}
+
+                if networking_config:
+                    job['container']['meta']['Node']['Name'] = job['container']['meta']['NetworkSettings']['Networks'][container_network_name]['IPAddress']
+
                 if 'Config' in job['container']['meta'] and 'Labels' in job['container']['meta']['Config']:
                     # We don't need labels and some labels with dots create
                     # issue to store the information in db
                     del job['container']['meta']['Config']['Labels']
 
-                '''
-                job['container']['port_mapping'] = []
-                port_mapping = {}
-                for port in port_list:
-                    if self.cfg['port_allocate']:
-                        mapped_port = self.get_mapping_port(job['container']['meta']['Node']['Name'], job)
-                        if mapped_port is None:
-                            raise Exception('no port available')
-                    else:
-                        mapped_port = port
-                    job['container']['port_mapping'].append({'host': mapped_port, 'container': port})
-                    port_mapping[port] = mapped_port
-                vol_binds = {}
-                for v in job['container']['volumes']:
-                    if v['mount'] is None:
-                        v['mount'] = v['path']
-                    ro = True
-                    if 'acl' in v and v['acl'] == 'rw':
-                        ro = False
-                    vol_binds[v['path']] = {
-                        'bind': v['mount'],
-                        'ro': ro
-                    }
 
-                response = self.docker_client.start(container=container.get('Id'),
-                                        network_mode='bridge',
-                                        #publish_all_ports=True
-                                        port_bindings=port_mapping,
-                                        binds=vol_binds
-                                        )
-                '''
-                self.docker_client.start(container=container.get('Id'))
-                job['container']['id'] = container['Id']
-                job['status']['reason'] = None
                 # job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
                 running_tasks.append(job)
                 self.logger.debug('Execute:Job:' + str(job['id']) + ':' + job['container']['id'])
