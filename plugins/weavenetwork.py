@@ -1,5 +1,6 @@
 from godocker.iNetworkPlugin import INetworkPlugin
 
+
 class WeaveNetwork(INetworkPlugin):
 
     available_networks = {

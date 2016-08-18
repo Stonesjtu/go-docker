@@ -182,7 +182,6 @@ class Swarm(IExecutorPlugin):
                     container_network[container_network_name] = endpoint_config
                     networking_config = self.docker_client.create_networking_config(container_network)
 
-
                 if networking_config:
                     host_config = self.docker_client.create_host_config(
                                         mem_limit=str(job['requirements']['ram']) + 'g',
@@ -234,7 +233,6 @@ class Swarm(IExecutorPlugin):
                     # We don't need labels and some labels with dots create
                     # issue to store the information in db
                     del job['container']['meta']['Config']['Labels']
-
 
                 # job['container']['meta'] = self.docker_client.inspect_container(container.get('Id'))
                 running_tasks.append(job)
