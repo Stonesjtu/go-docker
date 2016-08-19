@@ -12,6 +12,7 @@
     Fix in etcdstatus status checks
     PEP8 cleanup and fix some wrong variable use
     Move mesos_master to mesos/master config section
+    Move network_disabled to network/disabled config section
     GOD-51 Support CNI networks
 1.1:
     Fix case of kill failure
