@@ -192,7 +192,7 @@ class Swarm(IExecutorPlugin):
                                                                 entrypoint=[job['command']['script']],
                                                                 cpu_shares=job['requirements']['cpu'],
                                                                 ports=port_list,
-                                                                network_disabled=self.cfg['network_disabled'],
+                                                                network_disabled=self.cfg['network']['disabled'],
                                                                 environment=constraints,
                                                                 host_config=host_config,
                                                                 volumes=vol_list,
@@ -209,7 +209,7 @@ class Swarm(IExecutorPlugin):
                                                                 entrypoint=[job['command']['script']],
                                                                 cpu_shares=job['requirements']['cpu'],
                                                                 ports=port_list,
-                                                                network_disabled=self.cfg['network_disabled'],
+                                                                network_disabled=self.cfg['network']['disabled'],
                                                                 environment=constraints,
                                                                 host_config=host_config,
                                                                 volumes=vol_list

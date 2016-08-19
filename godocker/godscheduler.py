@@ -132,6 +132,9 @@ class GoDScheduler(Daemon):
                 self.logger.warn('Reloading configuration')
                 with open(self.config_file, 'r') as ymlfile:
                     self.cfg = yaml.load(ymlfile)
+                    config_warnings = godutils.config_backward_compatibility(self.cfg)
+                    if config_warnings:
+                        self.logger.warn(config_warnings)
                     dt = datetime.datetime.now()
                     self.config_last_loaded = time.mktime(dt.timetuple())
 
@@ -151,6 +154,8 @@ class GoDScheduler(Daemon):
         self.cfg = None
         with open(f, 'r') as ymlfile:
             self.cfg = yaml.load(ymlfile)
+
+        config_warnings = godutils.config_backward_compatibility(self.cfg)
 
         self.hostname = socket.gethostbyaddr(socket.gethostname())[0]
         self.proc_name = 'scheduler-' + self.hostname
@@ -179,6 +184,9 @@ class GoDScheduler(Daemon):
                 self.cfg['log_config']['handlers'][handler] = dict(self.cfg['log_config']['handlers'][handler])
             logging.config.dictConfig(self.cfg['log_config'])
         self.logger = logging.getLogger('godocker-scheduler')
+
+        if config_warnings:
+            self.logger.warn(config_warnings)
 
         if not self.cfg['plugins_dir']:
             dirname, filename = os.path.split(os.path.abspath(__file__))

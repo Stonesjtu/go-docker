@@ -1,7 +1,6 @@
 import re
 import os
 
-
 STATUS_CREATED = 'created'
 STATUS_PENDING = 'pending'
 STATUS_RUNNING = 'running'
@@ -29,6 +28,31 @@ QUEUE_KILL = 'kill'
 QUEUE_SUSPEND = 'suspend'
 QUEUE_RESUME = 'resume'
 
+def config_backward_compatibility(config):
+    '''
+    Manage config backward compatibility
+
+    :param config: configuration object
+    :type config: dict
+    :return: list of warnings
+    '''
+    warnings = []
+    if 'mesos_master' in config:
+        if 'mesos' not in config:
+            config['mesos'] = {}
+        if 'master' not in config['mesos']:
+            config['mesos']['master'] = config['mesos_master']
+            warnings.append('mesos_master is deprecated, master should be defined in mesos section')
+    if 'network_disabled' in config:
+        if 'network' not in config:
+            config['network'] = {
+                                'use_cni': False,
+                                'cni_plugin': None
+                                }
+        if 'disabled' not in config['network']:
+            config['network']['disabled'] = config['network_disabled']
+            warnings.append('network_disabled is deprecated, disabled should be defined in network section')
+    return warnings
 
 def get_folder_size(folder):
     '''
