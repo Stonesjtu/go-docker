@@ -18,6 +18,11 @@ defaults_ram: 2
 # In this case, you should make sure container contains required packages.
 network_disabled: False
 
+network:
+    use_cni: False
+    # weave, calico, etc.: a plugin extending INetworkPlugin
+    cni_plugin: null
+
 # Allow root access to containers
 allow_root: True
 
@@ -154,6 +159,7 @@ web_endpoint: 'http://127.0.0.1:6543'
 mesos_master: '127.0.0.1:5050'
 
 mesos:
+    master: 'zk://localhost:2181/mesos'
     reconcile: True
 
 # Kubernetes ###########################
