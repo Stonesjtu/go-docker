@@ -478,7 +478,6 @@ class MesosScheduler(mesos.interface.Scheduler):
         docker.network = 2  # mesos_pb2.ContainerInfo.DockerInfo.Network.BRIDGE
         docker.force_pull_image = True
 
-
         port_list = []
         job['container']['port_mapping'] = []
         job['container']['ports'] = []
@@ -491,7 +490,7 @@ class MesosScheduler(mesos.interface.Scheduler):
             # Define the specific network to use
             docker.network = 4
             container_network_name = self.network.network(job['requirements']['network'])
-            network_status = self.network.create_network(container_network_name)
+            self.network.create_network(container_network_name)
             network_info = container.network_infos.add()
             network_info.name = container_network_name
         else:

@@ -28,6 +28,7 @@ QUEUE_KILL = 'kill'
 QUEUE_SUSPEND = 'suspend'
 QUEUE_RESUME = 'resume'
 
+
 def config_backward_compatibility(config):
     '''
     Manage config backward compatibility
@@ -53,6 +54,7 @@ def config_backward_compatibility(config):
             config['network']['disabled'] = config['network_disabled']
             warnings.append('network_disabled is deprecated, disabled should be defined in network section')
     return warnings
+
 
 def get_folder_size(folder):
     '''
