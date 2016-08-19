@@ -46,6 +46,7 @@ For interactive jobs, GoDocker expects openssh server to be installed. If not in
 * experimental resource reservation (GPU, etc.)
 * open some ports in container
 * FTP server for user data upload (with quota)
+* CNI Docker network plugins support
 
 ## LICENSE
 
@@ -201,6 +202,7 @@ To create a new plugin, create a xx.yapsy-plugin file and a xx.py file following
 * iAuth is used by the web interface, to authenticate a user (ldap bind for example), get some user information (uidnumber, home directory...) and ACLs (which volumes can be mounted for this user request for example).
 * iWatcher checks, once a job is running if it should continue or be killed, ...
 * iStatus register processes and get status of processes to an external system (etcd, consul, ...), if none is set, no monitoring will be done
+* iNetwork plugins are used by executors to use Docker CNI plugins to assign an IP to containers avoiding port mapping
 
 Base classes are documented here: http://go-docker.readthedocs.org/en/latest/
 
@@ -226,6 +228,8 @@ Available plugins are:
 * Status:
     * etcd: register processes to etcd
     * consul: register processes to Consul
+* Network:
+    * weave: Weave network Docker plugin support, only 1 public network is supported for the moment.
 
 ### Swarm
 
@@ -415,6 +419,16 @@ To access a Docker registry/image with authentication, user needs to:
 
 * Create an archive in his home directory named docker.tar.gz containing the .docker directory (.docker/, /.docker/config.json ) after a successful login
 * Add *home* volume in his task (to access docker.tar.gz archive)
+
+## CNI integration
+
+Network plugins allows to assign a job to a network (public/user/project) and assign an IP per container, avoiding port mapping.
+The choice of networks supported depends on the plugin. The weave plugin only support the public network at this time.
+
+In public network, all containers are in the same sub network and can dialog with each other.
+In user or project network, containers are placed in a network where only containers from the same user or project can talk to each other.
+
+CNI is activated in the network section of the configuration file. If not activated, basic Docker bridge and port mapping is used.
 
 ## Tips
 
