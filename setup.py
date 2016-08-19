@@ -33,6 +33,7 @@ config = {
                             'pyopenssl',
                             'pysendfile',
                             'pyftpdlib',
+                            'protobuf',
                             'bcrypt'],
     'packages': find_packages(),
     'include_package_data': True,

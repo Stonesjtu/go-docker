@@ -16,12 +16,14 @@ class INetworkPlugin(IGoDockerPlugin):
         '''
         return 'public'
 
-    def network(self, name):
+    def network(self, name, user_info=None):
         '''
         Get network name to use with executor
 
         :param name: label of the network
         :type name: str
+        :param user_info: user information from job
+        :type user_info: dict
         :return: str
         '''
         return None

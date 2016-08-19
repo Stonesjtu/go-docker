@@ -301,8 +301,10 @@ class Kubernetes(IExecutorPlugin):
                     update = {}
                 update['container.id'] = task['container']['id']
                 if kube_status['status']['hostIP']:
-                    task['container']['meta']['Node'] = {'Name': kube_status['status']['podIP']}
+                    task['container']['meta']['Node'] = {'Name': kube_status['status']['hostIP']}
+                    task['container']['ip_address'] = kube_status['status']['podIP']
                     update['container.meta.Node'] = task['container']['meta']['Node']
+                    update['container.ip_address'] = task['container']['ip_address']
 
             if update is not None:
                 self.jobs_handler.update({'id': task['id']}, {'$set': update})

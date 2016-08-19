@@ -18,7 +18,7 @@ network:
     # If set , application won't be able to install sudo package if not present.
     # In this case, you should make sure container contains required packages.
     disabled: False
-    # Use ip per container CNI plugins
+    # Use ip per container CNI plugins, Kubernetes provides by default ip per container, cni is not needed
     use_cni: False
     # weave, calico, etc.: a plugin extending INetworkPlugin
     cni_plugin: null

@@ -34,3 +34,4 @@ humanfriendly
 pyopenssl
 pysendfile
 pyftpdlib
+protobuf

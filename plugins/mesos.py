@@ -33,6 +33,7 @@ class MesosScheduler(mesos.interface.Scheduler):
         self.executor = executor
         self.Terminated = False
         self.jobs_handler = None
+        self.network = None
 
     def features(self):
         '''
@@ -342,7 +343,7 @@ class MesosScheduler(mesos.interface.Scheduler):
                         new_task = self.new_task(offer, task, labels)
 
                     except Exception as e:
-                        self.logger.error("Error with task " + str(task['id']) + ": " + e)
+                        self.logger.error("Error with task " + str(task['id']) + ": " + str(e))
                         task['status']['reason'] = 'Invalid task'
                         # An error occur, switch to next task
                         continue
@@ -477,6 +478,7 @@ class MesosScheduler(mesos.interface.Scheduler):
         docker.network = 2  # mesos_pb2.ContainerInfo.DockerInfo.Network.BRIDGE
         docker.force_pull_image = True
 
+
         port_list = []
         job['container']['port_mapping'] = []
         job['container']['ports'] = []
@@ -484,24 +486,33 @@ class MesosScheduler(mesos.interface.Scheduler):
             port_list = job['requirements']['ports']
         if job['command']['interactive']:
             port_list.append(22)
-        if port_list:
-            mesos_ports = task.resources.add()
-            mesos_ports.name = "ports"
-            mesos_ports.type = mesos_pb2.Value.RANGES
-            for port in port_list:
-                if self.config['port_allocate']:
-                    mapped_port = self.get_mapping_port(offer, job)
-                    if mapped_port is None:
-                        return None
-                else:
-                    mapped_port = port
-                job['container']['port_mapping'].append({'host': mapped_port, 'container': port})
-                docker_port = docker.port_mappings.add()
-                docker_port.host_port = mapped_port
-                docker_port.container_port = port
-                port_range = mesos_ports.ranges.range.add()
-                port_range.begin = mapped_port
-                port_range.end = mapped_port
+
+        if self.network:
+            # Define the specific network to use
+            docker.network = 4
+            container_network_name = self.network.network(job['requirements']['network'])
+            network_status = self.network.create_network(container_network_name)
+            network_info = container.network_infos.add()
+            network_info.name = container_network_name
+        else:
+            if port_list:
+                mesos_ports = task.resources.add()
+                mesos_ports.name = "ports"
+                mesos_ports.type = mesos_pb2.Value.RANGES
+                for port in port_list:
+                    if self.config['port_allocate']:
+                        mapped_port = self.get_mapping_port(offer, job)
+                        if mapped_port is None:
+                            return None
+                    else:
+                        mapped_port = port
+                    job['container']['port_mapping'].append({'host': mapped_port, 'container': port})
+                    docker_port = docker.port_mappings.add()
+                    docker_port.host_port = mapped_port
+                    docker_port.container_port = port
+                    port_range = mesos_ports.ranges.range.add()
+                    port_range.begin = mapped_port
+                    port_range.end = mapped_port
         container.docker.MergeFrom(docker)
         task.container.MergeFrom(container)
         return task
@@ -520,10 +531,20 @@ class MesosScheduler(mesos.interface.Scheduler):
                 if str(update.data) != "":
                     containers = json.loads(update.data)
                     containerId = containers[0]["Id"]
-                    self.jobs_handler.update({'id': int(update.task_id.value)}, {'$set': {'container.id': containerId}})
+                    if self.network:
+                        container_network_name = self.network.network(job['requirements']['network'], job['user'])
+                        ip_address = containers[0]['NetworkSettings']['Networks'][container_network_name]['IPAddress']
+                    else:
+                        ip_address = job['container']['meta']['Node']['Name']
+                    self.jobs_handler.update({'id': int(update.task_id.value)},
+                                            {'$set': {
+                                                'container.id': containerId,
+                                                'container.ip_address': ip_address
+                                                }
+                                            })
 
             except Exception as e:
-                self.logger.debug("Could not extract container id from TaskStatus: " + str(e))
+                self.logger.debug("Could not extract info from TaskStatus: " + str(e))
                 containerId = None
 
             # Mesos <= 0.22, container id is not in TaskStatus, let's query mesos
@@ -572,9 +593,9 @@ class Mesos(IExecutorPlugin):
         '''
         Get supported features
 
-        :return: list of features within ['kill', 'pause','resources.port']
+        :return: list of features within ['kill', 'pause','resources.port', 'cni']
         '''
-        return ['kill', 'resources.port']
+        return ['kill', 'resources.port', 'cni']
 
     def set_config(self, cfg):
         self.cfg = cfg
@@ -636,11 +657,12 @@ class Mesos(IExecutorPlugin):
             mesosScheduler.set_logger(self.logger)
             mesosScheduler.set_config(self.cfg)
             mesosScheduler.jobs_handler = self.jobs_handler
+            mesosScheduler.network = self.network
 
             driver = mesos.native.MesosSchedulerDriver(
                 mesosScheduler,
                 framework,
-                self.cfg['mesos_master'],
+                self.cfg['mesos']['master'],
                 credential)
         else:
             framework.principal = "godocker-mesos-framework"
@@ -648,10 +670,11 @@ class Mesos(IExecutorPlugin):
             mesosScheduler.set_logger(self.logger)
             mesosScheduler.set_config(self.cfg)
             mesosScheduler.jobs_handler = self.jobs_handler
+            mesosScheduler.network = self.network
             driver = mesos.native.MesosSchedulerDriver(
                 mesosScheduler,
                 framework,
-                self.cfg['mesos_master'])
+                self.cfg['mesos']['master'])
 
         self.driver = driver
         self.driver.start()

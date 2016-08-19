@@ -175,7 +175,7 @@ class Swarm(IExecutorPlugin):
                     # Create network if necessary and set config
                     endpoint_config = self.docker_client.create_endpoint_config()
                     container_network = {}
-                    container_network_name = self.network.network(job['requirements']['network'])
+                    container_network_name = self.network.network(job['requirements']['network'], job['user'])
                     network_status = self.network.create_network(container_network_name)
                     if not network_status:
                         raise Exception('Failed to create network %s for %s' % (job['requirements']['network'], container_network_name))
@@ -227,7 +227,9 @@ class Swarm(IExecutorPlugin):
                     job['container']['meta']['Node'] = {'Name': 'localhost'}
 
                 if networking_config:
-                    job['container']['meta']['Node']['Name'] = job['container']['meta']['NetworkSettings']['Networks'][container_network_name]['IPAddress']
+                    job['container']['ip_address'] = job['container']['meta']['NetworkSettings']['Networks'][container_network_name]['IPAddress']
+                else:
+                    job['container']['ip_address'] = job['container']['meta']['Node']['Name']
 
                 if 'Config' in job['container']['meta'] and 'Labels' in job['container']['meta']['Config']:
                     # We don't need labels and some labels with dots create
