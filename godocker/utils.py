@@ -70,7 +70,6 @@ def config_backward_compatibility(config):
             config['network']['disabled'] = config['network_disabled']
             warnings.append('network_disabled is deprecated, disabled should be defined in network section')
 
-
     return warnings
 
 

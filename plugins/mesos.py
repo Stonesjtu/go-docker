@@ -475,7 +475,6 @@ class MesosScheduler(mesos.interface.Scheduler):
             job['container']['meta']['Node']['Name'] = offer.slave_id.value
         self.logger.debug("Task placed on host " + str(job['container']['meta']['Node']['Name']))
 
-
         port_list = []
         job['container']['port_mapping'] = []
         job['container']['ports'] = []
@@ -483,7 +482,6 @@ class MesosScheduler(mesos.interface.Scheduler):
             port_list = job['requirements']['ports']
         if job['command']['interactive']:
             port_list.append(22)
-
 
         if self.config['mesos']['unified']:
             # Host mode only for the moment
@@ -493,7 +491,7 @@ class MesosScheduler(mesos.interface.Scheduler):
             # https://github.com/projectcalico/calico-containers/blob/v0.19.0/README.md
             # http://mesos.apache.org/documentation/latest/networking-for-mesos-managed-containers/
             docker = mesos_pb2.ContainerInfo.MesosInfo()
-            docker.image.type = 2 # Docker
+            docker.image.type = 2  # Docker
             docker.image.docker.name = job['container']['image']
             # Request an IP from a network module
             if self.network:
@@ -554,7 +552,6 @@ class MesosScheduler(mesos.interface.Scheduler):
         if update.state == 1:
             # Switched to RUNNING, get container id
             job = self.jobs_handler.find_one({'id': int(update.task_id.value)})
-            self.logger.debug('OSALLOU:::: '+str(update))
             # Switched to RUNNING, get container id
             containerId = None
             if self.config['mesos']['unified']:
@@ -588,7 +585,6 @@ class MesosScheduler(mesos.interface.Scheduler):
                 except Exception as e:
                     self.logger.debug("Could not extract info from TaskStatus: " + str(e))
                     containerId = None
-
 
         self.logger.debug('Mesos:Task:Over:' + str(update.task_id.value))
         if int(update.state) in [2, 3, 4, 5, 7]:
@@ -833,7 +829,7 @@ class Mesos(IExecutorPlugin):
                         task['container']['id'] = container['container_id']
                     self.jobs_handler.update({'id': task['id']}, {'$set': {'container.id': task['container']['id']}})
             except Exception as e:
-                self.logger.error('Could not get container identifier: '+str(e))
+                self.logger.error('Could not get container identifier: ' + str(e))
 
         # Mesos <= 0.22, container id is not in TaskStatus, let's query mesos
         '''
