@@ -375,6 +375,8 @@ class MesosScheduler(mesos.interface.Scheduler):
         task = mesos_pb2.TaskInfo()
         container = mesos_pb2.ContainerInfo()
         container.type = 1  # mesos_pb2.ContainerInfo.Type.DOCKER
+        if self.config['mesos']['unified']:
+            container.type = 2  # Mesos
 
         # Reserve requested resource and mount related volumes
         if 'resources' in job['requirements'] and job['requirements']['resources']:
@@ -473,10 +475,6 @@ class MesosScheduler(mesos.interface.Scheduler):
             job['container']['meta']['Node']['Name'] = offer.slave_id.value
         self.logger.debug("Task placed on host " + str(job['container']['meta']['Node']['Name']))
 
-        docker = mesos_pb2.ContainerInfo.DockerInfo()
-        docker.image = job['container']['image']
-        docker.network = 2  # mesos_pb2.ContainerInfo.DockerInfo.Network.BRIDGE
-        docker.force_pull_image = True
 
         port_list = []
         job['container']['port_mapping'] = []
@@ -486,33 +484,66 @@ class MesosScheduler(mesos.interface.Scheduler):
         if job['command']['interactive']:
             port_list.append(22)
 
-        if self.network:
-            # Define the specific network to use
-            docker.network = 4
-            container_network_name = self.network.network(job['requirements']['network'])
-            self.network.create_network(container_network_name)
-            network_info = container.network_infos.add()
-            network_info.name = container_network_name
+
+        if self.config['mesos']['unified']:
+            # Host mode only for the moment
+            # => no port mapping or possible conflict
+            # Need Calico or equivalent to have per task IP and network isolation
+            # More doc:
+            # https://github.com/projectcalico/calico-containers/blob/v0.19.0/README.md
+            # http://mesos.apache.org/documentation/latest/networking-for-mesos-managed-containers/
+            docker = mesos_pb2.ContainerInfo.MesosInfo()
+            docker.image.type = 2 # Docker
+            docker.image.docker.name = job['container']['image']
+            # Request an IP from a network module
+            if self.network:
+                container_network_name = self.network.network(job['requirements']['network'])
+                self.network.create_network(container_network_name)
+
+                network_info = container.network_infos.add()
+                network_info.name = container_network_name
+
+                # Get an IP V4 address
+                ip_address = network_info.ip_addresses.add()
+                ip_address.protocol = 1
+                # The network group to join
+                network_info.groups.append(container_network_name)
+
+            container.mesos.MergeFrom(docker)
         else:
-            if port_list:
-                mesos_ports = task.resources.add()
-                mesos_ports.name = "ports"
-                mesos_ports.type = mesos_pb2.Value.RANGES
-                for port in port_list:
-                    if self.config['port_allocate']:
-                        mapped_port = self.get_mapping_port(offer, job)
-                        if mapped_port is None:
-                            return None
-                    else:
-                        mapped_port = port
-                    job['container']['port_mapping'].append({'host': mapped_port, 'container': port})
-                    docker_port = docker.port_mappings.add()
-                    docker_port.host_port = mapped_port
-                    docker_port.container_port = port
-                    port_range = mesos_ports.ranges.range.add()
-                    port_range.begin = mapped_port
-                    port_range.end = mapped_port
-        container.docker.MergeFrom(docker)
+            # Docker containerizer
+            docker = mesos_pb2.ContainerInfo.DockerInfo()
+            docker.image = job['container']['image']
+            docker.network = 2  # mesos_pb2.ContainerInfo.DockerInfo.Network.BRIDGE
+            docker.force_pull_image = True
+
+            if self.network:
+                # Define the specific network to use
+                docker.network = 4
+                container_network_name = self.network.network(job['requirements']['network'])
+                self.network.create_network(container_network_name)
+                network_info = container.network_infos.add()
+                network_info.name = container_network_name
+            else:
+                if port_list:
+                    mesos_ports = task.resources.add()
+                    mesos_ports.name = "ports"
+                    mesos_ports.type = mesos_pb2.Value.RANGES
+                    for port in port_list:
+                        if self.config['port_allocate']:
+                            mapped_port = self.get_mapping_port(offer, job)
+                            if mapped_port is None:
+                                return None
+                        else:
+                            mapped_port = port
+                        job['container']['port_mapping'].append({'host': mapped_port, 'container': port})
+                        docker_port = docker.port_mappings.add()
+                        docker_port.host_port = mapped_port
+                        docker_port.container_port = port
+                        port_range = mesos_ports.ranges.range.add()
+                        port_range.begin = mapped_port
+                        port_range.end = mapped_port
+            container.docker.MergeFrom(docker)
         task.container.MergeFrom(container)
         return task
 
@@ -523,48 +554,41 @@ class MesosScheduler(mesos.interface.Scheduler):
         if update.state == 1:
             # Switched to RUNNING, get container id
             job = self.jobs_handler.find_one({'id': int(update.task_id.value)})
-
+            self.logger.debug('OSALLOU:::: '+str(update))
             # Switched to RUNNING, get container id
             containerId = None
-            try:
-                if str(update.data) != "":
-                    containers = json.loads(update.data)
-                    containerId = containers[0]["Id"]
-                    if self.network:
-                        container_network_name = self.network.network(job['requirements']['network'], job['user'])
-                        ip_address = containers[0]['NetworkSettings']['Networks'][container_network_name]['IPAddress']
-                    else:
-                        ip_address = job['container']['meta']['Node']['Name']
-                    self.jobs_handler.update({'id': int(update.task_id.value)},
-                                            {'$set': {
-                                                'container.id': containerId,
-                                                'container.ip_address': ip_address
-                                                }
-                                            })
+            if self.config['mesos']['unified']:
+                ip_address = None
+                if update.container_status:
+                    for network_info in update.container_status.network_infos:
+                        for ip_address_info in network_info.ip_addresses:
+                            ip_address = ip_address_info.ip_address
 
-            except Exception as e:
-                self.logger.debug("Could not extract info from TaskStatus: " + str(e))
-                containerId = None
-
-            # Mesos <= 0.22, container id is not in TaskStatus, let's query mesos
-            if containerId is None:
-                http = urllib3.PoolManager()
-                r = None
+                self.jobs_handler.update({'id': int(update.task_id.value)}, {
+                                                '$set': {
+                                                    'container.ip_address': ip_address
+                                                }})
+            else:
                 try:
-                    r = http.urlopen('GET', 'http://' + job['container']['meta']['Node']['Name'] + ':5051/slave(1)/state.json')
+                    if str(update.data) != "":
+                        containers = json.loads(update.data)
+                        containerId = containers[0]["Id"]
+                        if self.network:
+                            container_network_name = self.network.network(job['requirements']['network'], job['user'])
+                            ip_address = containers[0]['NetworkSettings']['Networks'][container_network_name]['IPAddress']
+                        else:
+                            ip_address = job['container']['meta']['Node']['Name']
+                        self.jobs_handler.update({'id': int(update.task_id.value)},
+                                                {'$set': {
+                                                    'container.id': containerId,
+                                                    'container.ip_address': ip_address
+                                                    }
+                                                })
 
-                    if r.status == 200:
-                        slave = json.loads(r.data)
-                        for f in slave['frameworks']:
-                            if f['name'] == "Go-Docker Mesos":
-                                for executor in f['executors']:
-                                    if str(executor['id']) == str(update.task_id.value):
-                                        container = 'mesos-' + executor['container']
-                                        self.jobs_handler.update({'id': int(update.task_id.value)}, {'$set': {'container.id': container}})
-                                        break
-                                break
                 except Exception as e:
-                    self.logger.error('Failed to contact mesos slave: ' + str(e))
+                    self.logger.debug("Could not extract info from TaskStatus: " + str(e))
+                    containerId = None
+
 
         self.logger.debug('Mesos:Task:Over:' + str(update.task_id.value))
         if int(update.state) in [2, 3, 4, 5, 7]:
@@ -616,6 +640,8 @@ class Mesos(IExecutorPlugin):
 
         framework = mesos_pb2.FrameworkInfo()
         framework.user = ""  # Have Mesos fill in the current user.
+        if self.cfg['mesos']['unified']:
+            framework.user = "root"
         framework.name = "Go-Docker Mesos"
         framework.failover_timeout = 3600 * 24 * 7  # 1 week
         frameworkId = self.redis_handler.get(self.cfg['redis_prefix'] + ':mesos:frameworkId')
@@ -786,7 +812,49 @@ class Mesos(IExecutorPlugin):
             return (task, True)
         else:
             self.logger.debug('Mesos:Task:Check:IsRunning:' + str(task['id']))
+            self.get_container_id(task)
             return (task, False)
+
+    def get_container_id(self, task):
+        '''
+        Extract container id from slave
+        '''
+        if task['container']['id']:
+            return
+
+        if self.cfg['mesos']['unified']:
+            http = urllib3.PoolManager()
+            r = None
+            try:
+                r = http.urlopen('GET', 'http://' + task['container']['meta']['Node']['Name'] + ':5051/containers/' + str(task['id']))
+                if r.status == 200:
+                    containers = json.loads(r.data)
+                    for container in containers:
+                        task['container']['id'] = container['container_id']
+                    self.jobs_handler.update({'id': task['id']}, {'$set': {'container.id': task['container']['id']}})
+            except Exception as e:
+                self.logger.error('Could not get container identifier: '+str(e))
+
+        # Mesos <= 0.22, container id is not in TaskStatus, let's query mesos
+        '''
+        if containerId is None:
+            http = urllib3.PoolManager()
+            r = None
+            try:
+                r = http.urlopen('GET', 'http://' + job['container']['meta']['Node']['Name'] + ':5051/slave(1)/state.json')
+                    if r.status == 200:
+                    slave = json.loads(r.data)
+                    for f in slave['frameworks']:
+                        if f['name'] == "Go-Docker Mesos":
+                            for executor in f['executors']:
+                                if str(executor['id']) == str(update.task_id.value):
+                                    task['container']['id'] = 'mesos-' + executor['container']
+                                    self.jobs_handler.update({'id': int(update.task_id.value)}, {'$set': {'container.id': task['container']['id']}})
+                                    break
+                            break
+            except Exception as e:
+                self.logger.error('Failed to contact mesos slave: ' + str(e))
+        '''
 
     def kill_task(self, task):
         '''

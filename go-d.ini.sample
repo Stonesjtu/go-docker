@@ -19,8 +19,12 @@ network:
     # In this case, you should make sure container contains required packages.
     disabled: False
     # Use ip per container CNI plugins, Kubernetes provides by default ip per container, cni is not needed
+    # For Mesos, mesos slave itself must be configured to work with cni:
+    #          --network_cni_config_dir=/etc/cni/net.d
+    #           --network_cni_plugins_dir=/opt/cni/bin
     use_cni: False
     # weave, calico, etc.: a plugin extending INetworkPlugin
+    # See https://www.weave.works/docs/net/latest/cni-plugin/, https://github.com/apache/mesos/blob/master/docs/cni.md
     cni_plugin: null
 
 # Allow root access to containers
@@ -156,11 +160,18 @@ master_timeout: 600
 web_endpoint: 'http://127.0.0.1:6543'
 
 # Mesos ################################
-mesos_master: '127.0.0.1:5050'
+
+# DEPRECATED
+# mesos_master: '127.0.0.1:5050'
 
 mesos:
     master: 'zk://localhost:2181/mesos'
+    # Check tasks status at start
     reconcile: True
+    # Use Mesos unified containerizer. TO use ports (ssh for interactive for example),
+    # Mesos needs to be configured with CNI
+    # Mesos slave needs to be configured to have in isolation cgroups/cpu and cgroups/mem
+    unified: False
 
 # Kubernetes ###########################
 # API Version: 1
@@ -217,8 +228,9 @@ docker:
 
 # CAdvisor #############################
 cadvisor_port: 8080
-# /containers/docker/ to map to /containers/docker/container_id
-cadvisor_url_part: '/containers/docker/'
+# /docker to map to /api/v1.2/docker/container_id, /containers/mesos for Mesos
+# This parameter override default url part to manage cAdvisor versions
+# cadvisor_url_part_override: '/docker'
 # Number of samples (seconds) to display , according to cAdvisor launch option -storage_duration
 cadvisor_samples: 60
 

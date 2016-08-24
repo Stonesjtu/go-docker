@@ -38,12 +38,28 @@ def config_backward_compatibility(config):
     :return: list of warnings
     '''
     warnings = []
+    if 'mesos' not in config:
+        config['mesos'] = {}
+
+    if 'unified' not in config['mesos']:
+        config['mesos']['unified'] = False
+
+    if config['mesos']['unified']:
+        config['cadvisor_url_part'] = '/containers/mesos'
+    else:
+        config['cadvisor_url_part'] = '/docker'
+
+    if 'cadvisor_url_part_override' in config and config['cadvisor_url_part_override']:
+        config['cadvisor_url_part'] = config['cadvisor_url_part_override']
+
+    if 'reconcile' not in config['mesos']:
+        config['mesos']['reconcile'] = True
+
     if 'mesos_master' in config:
-        if 'mesos' not in config:
-            config['mesos'] = {}
         if 'master' not in config['mesos']:
             config['mesos']['master'] = config['mesos_master']
             warnings.append('mesos_master is deprecated, master should be defined in mesos section')
+
     if 'network_disabled' in config:
         if 'network' not in config:
             config['network'] = {
@@ -53,6 +69,8 @@ def config_backward_compatibility(config):
         if 'disabled' not in config['network']:
             config['network']['disabled'] = config['network_disabled']
             warnings.append('network_disabled is deprecated, disabled should be defined in network section')
+
+
     return warnings
 
 

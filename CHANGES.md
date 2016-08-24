@@ -14,6 +14,8 @@
     Move mesos_master to mesos/master config section
     Move network_disabled to network/disabled config section
     GOD-51 Support CNI networks
+    GOD-35 support Mesos unified containerizer
+        New go-d.ini mesos/unified
 1.1:
     Fix case of kill failure
     Add ldap_base_dn_filter parameter in go-d.ini to filter LDAP directory search
