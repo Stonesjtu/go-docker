@@ -795,7 +795,10 @@ class Mesos(IExecutorPlugin):
                 reason = self.redis_handler.get(self.cfg['redis_prefix'] + ':mesos:over:' + str(task['id']) + ':reason')
                 if not reason:
                     reason = None
-                task['status']['reason'] = 'System crashed or failed to start the task: ' + str(reason)
+                if reason is None and int(mesos_task) == 3:
+                    task['status']['reason'] = None
+                else:
+                    task['status']['reason'] = 'System crashed or failed to start the task: ' + str(reason)
                 node_name = None
                 if 'Node' in task['container']['meta'] and 'Name' in task['container']['meta']['Node']:
                     node_name = task['container']['meta']['Node']['Name']
