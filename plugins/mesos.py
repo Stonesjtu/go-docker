@@ -563,7 +563,8 @@ class MesosScheduler(mesos.interface.Scheduler):
 
                 self.jobs_handler.update({'id': int(update.task_id.value)}, {
                                                 '$set': {
-                                                    'container.ip_address': ip_address
+                                                    'container.ip_address': ip_address,
+                                                    'container.status': 'ready'
                                                 }})
             else:
                 try:
@@ -578,7 +579,8 @@ class MesosScheduler(mesos.interface.Scheduler):
                         self.jobs_handler.update({'id': int(update.task_id.value)},
                                                 {'$set': {
                                                     'container.id': containerId,
-                                                    'container.ip_address': ip_address
+                                                    'container.ip_address': ip_address,
+                                                    'container.status': 'ready'
                                                     }
                                                 })
 
@@ -751,6 +753,7 @@ class Mesos(IExecutorPlugin):
         redis_task = self.redis_handler.lpop(self.cfg['redis_prefix'] + ':mesos:running')
         while redis_task is not None:
             task = json.loads(redis_task)
+            task['container']['status'] = 'initializing'
             running_tasks.append(task)
             redis_task = self.redis_handler.lpop(self.cfg['redis_prefix'] + ':mesos:running')
         redis_task = self.redis_handler.lpop(self.cfg['redis_prefix'] + ':mesos:rejected')
