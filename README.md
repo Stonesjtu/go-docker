@@ -229,7 +229,8 @@ Available plugins are:
     * etcd: register processes to etcd
     * consul: register processes to Consul
 * Network:
-    * weave: Weave network Docker plugin support, only 1 public network is supported for the moment.
+    * weave: Weave network Mesos/Docker plugin support, only 1 public network is supported for the moment.
+    * calico: Calico network Mesos/Docker plugin
 
 ### Swarm
 
@@ -246,6 +247,8 @@ Tasks are executed using Mesos executor with Docker. Port allocation (for intera
 Slaves should be started with an attribute "hostname" matching the slave hostname or ip, for example:
 
     mesos-slave.sh --master=10.0.0.1:5050 --containerizers=docker,mesos --attributes='hostname:10.0.0.2'
+
+GoDocker supports both Docker and Mesos Unified containerizers, choice is made in config file in mesos section.
 
 ### Kubernetes
 
@@ -423,7 +426,7 @@ To access a Docker registry/image with authentication, user needs to:
 ## CNI integration
 
 Network plugins allows to assign a job to a network (public/user/project) and assign an IP per container, avoiding port mapping.
-The choice of networks supported depends on the plugin. The weave plugin only support the public network at this time.
+The choice of networks supported depends on the plugin. The provided network plugins only support the public network at this time.
 
 In public network, all containers are in the same sub network and can dialog with each other.
 In user or project network, containers are placed in a network where only containers from the same user or project can talk to each other.

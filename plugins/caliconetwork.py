@@ -1,12 +1,12 @@
 from godocker.iNetworkPlugin import INetworkPlugin
 
 
-class WeaveNetwork(INetworkPlugin):
+class CalicoNetwork(INetworkPlugin):
 
     available_networks = {}
 
     def get_name(self):
-        return "weave"
+        return "calico"
 
     def get_type(self):
         return "Network"
@@ -37,21 +37,19 @@ class WeaveNetwork(INetworkPlugin):
         :type user_info: dict
         :return: str
         '''
-        if 'public' not in WeaveNetwork.available_networks:
+        if 'public' not in CalicoNetwork.available_networks:
             if 'cni_public_network_name' in self.cfg['network']:
-                WeaveNetwork.available_networks['public'] = {'name': self.cfg['network']['cni_public_network_name']}
-            else:
-                WeaveNetwork.available_networks['public'] = {'name': 'weave'}
-        if name not in WeaveNetwork.available_networks:
+                CalicoNetwork.available_networks['public'] = {'name': self.cfg['network']['cni_public_network_name']}
+        if name not in CalicoNetwork.available_networks:
             return None
-        return WeaveNetwork.available_networks[name]['name']
+        return CalicoNetwork.available_networks[name]['name']
 
     def create_network(self, network):
         '''
         Create a new network for user or project.
 
         Public network is already created
-        Not supported by this weave plugin.
+        Not supported by this calico plugin.
 
         :param network: name of the new network
         :type network: str
@@ -64,7 +62,7 @@ class WeaveNetwork(INetworkPlugin):
         Delete a network for user or project.
 
         Public network cannot be deleted
-        Not supported by this weave plugin.
+        Not supported by this calico plugin.
 
         :param network: name of the new network
         :type network: str

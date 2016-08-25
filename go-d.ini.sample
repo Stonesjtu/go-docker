@@ -22,10 +22,13 @@ network:
     # For Mesos, mesos slave itself must be configured to work with cni:
     #          --network_cni_config_dir=/etc/cni/net.d
     #           --network_cni_plugins_dir=/opt/cni/bin
+    # CNI usage requires to setup CNI plugin rules (*expose* for Weave, *calicoctl* profiles for Calico) to manage inbound/outbound rules
     use_cni: False
     # weave, calico, etc.: a plugin extending INetworkPlugin
     # See https://www.weave.works/docs/net/latest/cni-plugin/, https://github.com/apache/mesos/blob/master/docs/cni.md
     cni_plugin: null
+    # Default name of the cni plugin network ('weave' for weave CNI)
+    cni_public_network_name: null
 
 # Allow root access to containers
 allow_root: True

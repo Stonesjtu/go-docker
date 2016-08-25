@@ -5,5 +5,5 @@ Module = weavenetwork
 [Documentation]
 Author = Olivier Sallou
 Version = 0.1
-Website =
+Website = https://www.weave.works/docs/net/latest/plugin/
 Description = Weave CNI management

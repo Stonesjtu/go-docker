@@ -1,0 +1,9 @@
+[Core]
+Name = CalicoNetwork
+Module = caliconetwork
+
+[Documentation]
+Author = Olivier Sallou
+Version = 0.1
+Website = https://www.projectcalico.org/
+Description = Calico CNI management
