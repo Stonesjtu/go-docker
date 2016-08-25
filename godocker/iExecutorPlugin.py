@@ -74,6 +74,11 @@ class IExecutorPlugin(IGoDockerPlugin):
             - task['container']['port_mapping'] to append port mappings is some ports are opened with format {'host': mapped_port, 'container': port}
             - task['container']['ports'] array must also contain the list of host ports. Those are sets automatically if using get_mapping_port method.
 
+        Executor can optionally set task['container']['status'] to give additional information to the user, and update it during the life cycle of the task.
+
+            initializing: container is in startup step but not yet started (pulling image etc...)
+            ready: container is started
+
         :param tasks: list of tasks to run
         :type tasks: list
         :param callback: callback function to update tasks status (running/rejected)
