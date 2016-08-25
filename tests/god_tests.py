@@ -14,6 +14,7 @@ import string
 import random
 import yaml
 from bson.json_util import dumps
+from yapsy.PluginManager import PluginManager
 
 #from mock import patch
 
@@ -23,6 +24,7 @@ from godocker.godscheduler import GoDScheduler
 from godocker.godwatcher import GoDWatcher
 from godocker.pairtreeStorage import PairtreeStorage
 from godocker.storageManager import StorageManager
+from godocker.iNetworkPlugin import INetworkPlugin
 import godocker.utils as godutils
 
 
@@ -101,6 +103,86 @@ class PairtreeTests(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(task_dir,'subtest','sample1.txt')))
         storage.clean(task)
         self.assertFalse(os.path.exists(task_dir))
+
+
+class CNINetworkTest(unittest.TestCase):
+    '''
+    network:
+        use_cni: True
+        # weave, calico, etc.: a plugin extending INetworkPlugin
+        cni_plugin: 'calico'
+        # Default name of the cni plugin network
+        cni_public_network_name: 'calico-net-1'
+    '''
+    def setUp(self):
+        # pairtree cleanup
+        dirname, filename = os.path.split(os.path.abspath(__file__))
+        shared_dir = os.path.join(dirname, '..', 'godshared')
+        if os.path.exists(os.path.join(shared_dir,'tasks')):
+            shutil.rmtree(os.path.join(shared_dir,'tasks'))
+
+        curdir = os.path.dirname(os.path.abspath(__file__))
+        self.cfg =os.path.join(curdir,'go-d.ini')
+        self.test_dir = tempfile.mkdtemp('god')
+
+    def test_weave(self):
+        self.scheduler = GoDScheduler(os.path.join(self.test_dir,'godsched.pid'))
+        self.scheduler.load_config(self.cfg)
+        self.scheduler.cfg['network'] = {
+            'use_cni': True,
+            'cni_plugin': 'weave',
+            'cni_public_network_name': 'weave'
+        }
+
+        self.scheduler.stop_daemon = False
+        self.scheduler.init()
+        # Build the manager
+        simplePluginManager = PluginManager()
+        # Tell it the default place(s) where to find plugins
+        simplePluginManager.setPluginPlaces([self.scheduler.cfg['plugins_dir']])
+        simplePluginManager.setCategoriesFilter({
+           "Network": INetworkPlugin
+         })
+        # Load all plugins
+        simplePluginManager.collectPlugins()
+        self.scheduler.network_plugin = None
+        if 'network' in self.scheduler.cfg and self.scheduler.cfg['network']['use_cni']:
+            for pluginInfo in simplePluginManager.getPluginsOfCategory("Network"):
+                if pluginInfo.plugin_object.get_name() == self.scheduler.cfg['network']['cni_plugin']:
+                    self.scheduler.network_plugin = pluginInfo.plugin_object
+                    self.scheduler.network_plugin.set_config(self.scheduler.cfg)
+        self.assertTrue('public' in self.scheduler.network_plugin.networks())
+        self.assertTrue(self.scheduler.network_plugin.network('public') == 'weave')
+
+    def test_calico(self):
+        self.scheduler = GoDScheduler(os.path.join(self.test_dir,'godsched.pid'))
+        self.scheduler.load_config(self.cfg)
+        self.scheduler.cfg['network'] = {
+            'use_cni': True,
+            'cni_plugin': 'calico',
+            'cni_public_network_name': 'calico-test'
+        }
+
+        self.scheduler.stop_daemon = False
+        self.scheduler.init()
+        # Build the manager
+        simplePluginManager = PluginManager()
+        # Tell it the default place(s) where to find plugins
+        simplePluginManager.setPluginPlaces([self.scheduler.cfg['plugins_dir']])
+        simplePluginManager.setCategoriesFilter({
+           "Network": INetworkPlugin
+         })
+        # Load all plugins
+        simplePluginManager.collectPlugins()
+        self.scheduler.network_plugin = None
+        if 'network' in self.scheduler.cfg and self.scheduler.cfg['network']['use_cni']:
+            for pluginInfo in simplePluginManager.getPluginsOfCategory("Network"):
+                if pluginInfo.plugin_object.get_name() == self.scheduler.cfg['network']['cni_plugin']:
+                    self.scheduler.network_plugin = pluginInfo.plugin_object
+                    self.scheduler.network_plugin.set_config(self.scheduler.cfg)
+        self.assertTrue('public' in self.scheduler.network_plugin.networks())
+        self.assertTrue(self.scheduler.network_plugin.network('public') == 'calico-test')
+
 
 class SchedulerTest(unittest.TestCase):
     '''
