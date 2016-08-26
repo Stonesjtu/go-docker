@@ -316,6 +316,14 @@ failure_policy:
     # Do not reschedule on nodes where task previously failed
     skip_failed_nodes: False
 
+# Add in Web UI a link to the registry for the selected image
+# Example a.b.c/user1/image1 => name=a.b.c,url=http://myimages.c/browse/$IMAGE where $IMAGE will be replaced by user1/image1
+# DockerHub images user1/image1 will be linked to DockerHub official site
+link_image_to_registry:
+    - name: 'docker-registry.genouest.org'
+      url: 'https://docker-ui.genouest.org/app/#/container/$IMAGE'
+
+
 # Logging ##################################
 log_config:
     'version': 1
