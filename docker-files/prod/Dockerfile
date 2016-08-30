@@ -32,6 +32,7 @@ RUN dpkg -i mesos_0.23.0-1.0.debian81_amd64.deb
 #RUN wget http://downloads.mesosphere.io/master/debian/7/mesos-0.22.1-py2.7-linux-x86_64.egg
 RUN wget http://downloads.mesosphere.io/master/debian/8/mesos-0.23.0-py2.7-linux-x86_64.egg
 #RUN pip install mesos.interface==0.22.2
+RUN pip install -U setuptools
 RUN pip install mesos.interface==0.23.1
 #RUN easy_install mesos-0.22.1-py2.7-linux-x86_64.egg
 RUN easy_install mesos-0.23.0-py2.7-linux-x86_64.egg
