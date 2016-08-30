@@ -16,6 +16,7 @@
     GOD-51 Support CNI networks
     GOD-35 support Mesos unified containerizer
         New go-d.ini mesos/unified
+    GOD-55 Create an archive/cleanup daemon (go-d-archive.py)
 1.1:
     Fix case of kill failure
     Add ldap_base_dn_filter parameter in go-d.ini to filter LDAP directory search

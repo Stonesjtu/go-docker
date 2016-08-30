@@ -127,6 +127,15 @@ Timeout must be higher than the maximum time needed for a scheduling run.
 watcher checks job status and manage jobs kill/suspend/resume. There can be
 multiple watchers running in parallel
 
+## Archiver
+
+The archiver is in charge of the cleanup of old jobs.
+go-d-clean.py can be put as a cron task to delete old jobs based on configuration. Job identifiers can also be given as parameter to the script to force the archive of those jobs, even if expiration date is not reached.
+*go-d-clean.py* sends archive requests to the go-d-archive daemon.
+
+Archiver service is required to let user archive jobs themselves.
+
+
 ## Configuration
 
 Configuration is in file go-d.ini. One can define the scheduler and executor to use. It must be one of the classes defined in plugins. One can easily add new ones following godocker/iExecutorPlugin and iSchedulerPlugin interfaces
@@ -163,11 +172,15 @@ FairShare plugin adds additional, optional configuration to manage different wei
 To identify processes, each process must have a unique id. It is possible to set this id with the environment variable GOD_PROCID.
 This variable is needed when multiple processes are executed on the same server and to set a process id (one watcher for example) identical after each restart.
 
+Environment variable **GOD_CONFIG** can specify go-d.ini location.
+
     export GOD_PROCID = 1
     python go-d-scheduler start
 
     export GOD_PROCID = 2
     python go-d-watcher start
+
+    python go-d-archive start
 
 Executables have *start* and *stop* commands to manage their execution (ran in background)
 

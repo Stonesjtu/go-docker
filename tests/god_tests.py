@@ -22,6 +22,7 @@ from optparse import OptionParser
 
 from godocker.godscheduler import GoDScheduler
 from godocker.godwatcher import GoDWatcher
+from godocker.godarchiver import GoDArchiver
 from godocker.pairtreeStorage import PairtreeStorage
 from godocker.storageManager import StorageManager
 from godocker.iNetworkPlugin import INetworkPlugin
@@ -207,6 +208,9 @@ class SchedulerTest(unittest.TestCase):
         self.watcher = GoDWatcher(os.path.join(self.test_dir,'godwatcher.pid'))
         self.watcher.load_config(self.cfg)
         self.watcher.stop_daemon = False
+        self.archiver = GoDArchiver(os.path.join(self.test_dir,'godarchiverr.pid'))
+        self.archiver.load_config(self.cfg)
+        self.archiver.stop_daemon = False
         dt = datetime.datetime.now()
         self.sample_user = {
             'id': 'osallou',
@@ -293,6 +297,7 @@ class SchedulerTest(unittest.TestCase):
 
         self.scheduler.cfg['shared_dir'] = tempfile.mkdtemp('godshared')
         self.watcher.cfg['shared_dir'] = self.scheduler.cfg['shared_dir']
+        self.archiver.cfg['shared_dir'] = self.scheduler.cfg['shared_dir']
         #self.scheduler.store = PairtreeStorage(self.scheduler.cfg)
         self.scheduler.store = StorageManager.get_storage(self.scheduler.cfg)
 
@@ -381,8 +386,21 @@ class SchedulerTest(unittest.TestCase):
         over_tasks = self.watcher.db_jobsover.find()
         self.assertTrue(over_tasks.count() == 1)
         for task in over_tasks:
-            print("###### "+str(task['container']))
             self.assertTrue(task['container']['meta']['disk_size'] > 0)
+
+        return over_tasks
+
+    def test_archive(self):
+        self.test_watch_task_over()
+        over_tasks = self.watcher.db_jobsover.find()
+        for task in over_tasks:
+            print("#### REQUEST TO ARDHIVE")
+            self.archiver.archive_task(task)
+        over_tasks = self.watcher.db_jobsover.find()
+        for task in over_tasks:
+            print("#### "+task['status']['primary'])
+            self.assertTrue(task['status']['primary'] == godutils.STATUS_ARCHIVED)
+
 
     def test_dependent_tasks(self):
         running = self.test_run_task()

@@ -345,6 +345,16 @@ log_config:
             'filename': 'godscheduler.log'
             'formatter': 'generic'
             'level': 'INFO'
+        'archiver':
+            'class': 'logging.FileHandler'
+            'filename': 'godarchiver.log'
+            'formatter': 'generic'
+            'level': 'DEBUG'
+        'ftp':
+            'class': 'logging.FileHandler'
+            'filename': 'godftp.log'
+            'formatter': 'generic'
+            'level': 'DEBUG'
         'gelf':
             'class': 'graypy.GELFHandler'
             'host': 'localhost'
@@ -374,4 +384,15 @@ log_config:
                 - 'console'
                 - 'scheduler'
                 - 'gelf'
+        'godocker-archiver':
+            'level': 'INFO'
+            'handlers':
+                - 'console'
+                - 'archiver'
+                - 'gelf'
+        'godocker-ftp':
+            'level': 'DEBUG'
+            'handlers':
+                - 'console'
+                - 'ftp'                
     'disable_existing_loggers': False
