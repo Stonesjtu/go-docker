@@ -24,7 +24,6 @@ config = {
                             'urllib3',
                             'graypy',
                             'python-logstash',
-                            'config',
                             'python-etcd',
                             'python-consul',
                             'requests',
