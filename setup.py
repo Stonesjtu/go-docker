@@ -37,7 +37,7 @@ config = {
                             'bcrypt'],
     'packages': find_packages(),
     'include_package_data': True,
-    'scripts': ['go-d-scheduler.py', 'go-d-watcher.py', 'go-d-clean.py', 'go-d-ftp.py', 'go-d-status.py, go-d-archive.py'],
+    'scripts': ['go-d-scheduler.py', 'go-d-watcher.py', 'go-d-clean.py', 'go-d-ftp.py', 'go-d-status.py', 'go-d-archive.py'],
     'name': 'godsched'
 }
 
