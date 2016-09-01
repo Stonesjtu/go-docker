@@ -508,6 +508,11 @@ class GoDScheduler(Daemon):
         # Exit with code of executed cmd.sh
         user_id = task['user']['id']
         cmd = "#!/bin/bash\n"
+        cmd += "MYUSER=`getent passwd \"" + str(task['user']['uid']) + "\" | cut -d: -f1`\n"
+        cmd += "if [ \"r$MYUSER\" != \"r\" ]; then\n"
+        cmd += "    userdel $MYUSER\n"
+        cmd += "fi\n"
+
         cmd += "groupadd --gid " + str(task['user']['gid']) + " " + user_id
         cmd += " ; useradd --uid " + str(task['user']['uid']) + " --gid " + str(task['user']['gid']) + " " + user_id + "\n"
         cmd += "usermod -p" + task['user']['credentials']['apikey'] + "  " + user_id + "\n"
