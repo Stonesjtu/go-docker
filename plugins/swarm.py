@@ -196,6 +196,7 @@ class Swarm(IExecutorPlugin):
                                                                 environment=constraints,
                                                                 host_config=host_config,
                                                                 volumes=vol_list,
+                                                                user='root',
                                                                 networking_config=networking_config
                                                                 )
                 else:
@@ -212,7 +213,8 @@ class Swarm(IExecutorPlugin):
                                                                 network_disabled=self.cfg['network']['disabled'],
                                                                 environment=constraints,
                                                                 host_config=host_config,
-                                                                volumes=vol_list
+                                                                volumes=vol_list,
+                                                                user='root'
                                                                 )
 
                 self.docker_client.start(container=container.get('Id'))

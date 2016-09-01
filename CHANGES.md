@@ -18,6 +18,7 @@
         New go-d.ini mesos/unified
     GOD-55 Create an archive/cleanup daemon (go-d-archive.py)
     If user already exists in container, delete it
+    #43 Error if image contains a USER entry, fix for Swarm and Mesos
 1.1:
     Fix case of kill failure
     Add ldap_base_dn_filter parameter in go-d.ini to filter LDAP directory search

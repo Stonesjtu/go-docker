@@ -244,6 +244,7 @@ class MesosScheduler(mesos.interface.Scheduler):
                 self.logger.debug('Mesos:Offer:NoTask')
                 driver.declineOffer(offer.id)
                 continue
+
             offer_tasks = []
             offerCpus = 0
             offerMem = 0
@@ -514,6 +515,9 @@ class MesosScheduler(mesos.interface.Scheduler):
             docker.image = job['container']['image']
             docker.network = 2  # mesos_pb2.ContainerInfo.DockerInfo.Network.BRIDGE
             docker.force_pull_image = True
+            set_root_user = docker.parameters.add()
+            set_root_user.key = "user"
+            set_root_user.value = "root"
 
             if self.network:
                 # Define the specific network to use
