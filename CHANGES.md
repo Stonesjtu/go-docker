@@ -17,8 +17,11 @@
     GOD-35 support Mesos unified containerizer
         New go-d.ini mesos/unified
     GOD-55 Create an archive/cleanup daemon (go-d-archive.py)
-    If user already exists in container, delete it
-    #43 Error if image contains a USER entry, fix for Swarm and Mesos
+    Partial fix #43 Error if image contains a USER entry, fix for Swarm and Mesos
+        If user already exists in container, delete it
+    Fix #32 manage node maintenance. If mesos node is scheduled for maintenance,
+        framework will skip node and will not schedule any task on this node.
+        For swarm and kubernetes, maintenance is managed directly by them.
 1.1:
     Fix case of kill failure
     Add ldap_base_dn_filter parameter in go-d.ini to filter LDAP directory search
