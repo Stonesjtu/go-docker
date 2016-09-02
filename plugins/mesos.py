@@ -240,6 +240,13 @@ class MesosScheduler(mesos.interface.Scheduler):
             redis_task = self.redis_handler.lpop(self.config['redis_prefix'] + ':mesos:pending')
 
         for offer in offers:
+            # Check maintenance of node
+            self.logger.debug(offer)
+            if offer.unavailability.start.nanoseconds:
+                self.logger.debug("Node %s in planned maintenance, skipping..." % (offer.hostname))
+                driver.declineOffer(offer.id)
+                continue
+
             if not tasks:
                 self.logger.debug('Mesos:Offer:NoTask')
                 driver.declineOffer(offer.id)
