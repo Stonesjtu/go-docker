@@ -227,6 +227,8 @@ class GodFTP(object):
         with open(config_file, 'r') as ymlfile:
             self.cfg = yaml.load(ymlfile)
 
+        godutils.config_backward_compatibility(self.cfg)            
+
         if self.cfg['log_config'] is not None:
             for handler in list(self.cfg['log_config']['handlers'].keys()):
                 self.cfg['log_config']['handlers'][handler] = dict(self.cfg['log_config']['handlers'][handler])

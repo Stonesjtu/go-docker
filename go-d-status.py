@@ -10,6 +10,7 @@ from pymongo import MongoClient
 from yapsy.PluginManager import PluginManager
 
 from godocker.iStatusPlugin import IStatusPlugin
+import godocker.utils as godutils
 
 
 class GoDStatus():
@@ -21,6 +22,8 @@ class GoDStatus():
         self.cfg = None
         with open(f, 'r') as ymlfile:
             self.cfg = yaml.load(ymlfile)
+
+        godutils.config_backward_compatibility(self.cfg)
 
         self.hostname = socket.gethostbyaddr(socket.gethostname())[0]
 

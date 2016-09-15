@@ -70,6 +70,120 @@ def config_backward_compatibility(config):
             config['network']['disabled'] = config['network_disabled']
             warnings.append('network_disabled is deprecated, disabled should be defined in network section')
 
+
+    # Manage environment variables
+    if 'GODOCKER_PLUGINS_DIR' in os.environ:
+        config['plugins_dir'] = os.environ['GODOCKER_PLUGINS_DIR']
+    if 'GODOCKER_SHARED_DIR' in os.environ:
+        config['shared_dir'] = os.environ['GODOCKER_SHARED_DIR']
+    if 'GODOCKER_MONGO_URL' in os.environ:
+        config['mongo_url'] = os.environ['GODOCKER_MONGO_URL']
+    if 'GODOCKER_MONGO_DB' in os.environ:
+        config['mongo_db'] = os.environ['GODOCKER_MONGO_DB']
+    if 'GODOCKER_REDIS_HOST' in os.environ:
+        config['redis_host'] = os.environ['GODOCKER_REDIS_HOST']
+    if 'GODOCKER_REDIS_PORT' in os.environ:
+        config['redis_port'] = int(os.environ['GODOCKER_REDIS_PORT'])
+    if 'GODOCKER_INFLUXDB_HOST' in os.environ:
+        config['influxdb_host'] = os.environ['GODOCKER_INFLUXDB_HOST']
+    if 'GODOCKER_INFLUXDB_PORT' in os.environ:
+        config['influxdb_port'] = int(os.environ['GODOCKER_INFLUXDB_PORT'])
+    if 'GODOCKER_INFLUXDB_USER' in os.environ:
+        config['influxdb_user'] = os.environ['GODOCKER_INFLUXDB_USER']
+    if 'GODOCKER_INFLUXDB_PASSWORD' in os.environ:
+        config['influxdb_password'] = os.environ['GODOCKER_INFLUXDB_PASSWORD']
+    if 'GODOCKER_INFLUXDB_DB' in os.environ:
+        config['influxdb_db'] = os.environ['GODOCKER_INFLUXDB_DB']
+
+    if 'GODOCKER_EXECUTOR' in os.environ:
+        config['executor'] = os.environ['GODOCKER_EXECUTOR']
+
+    if 'GODOCKER_SCHEDULER_POLICY' in os.environ:
+        config['scheduler_policy'] = os.environ['GODOCKER_SCHEDULER_POLICY']
+    if 'GODOCKER_AUTH_POLICY' in os.environ:
+        config['auth_policy'] = os.environ['GODOCKER_AUTH_POLICY']
+    if 'GODOCKER_STATUS_POLICY' in os.environ:
+        config['status_policy'] = os.environ['GODOCKER_STATUS_POLICY']
+
+    if 'GODOCKER_PROMETHEUS_EXPORTER' in os.environ:
+        config['prometheus_exporter'] = os.environ['GODOCKER_PROMETHEUS_EXPORTER']
+
+    if 'GODOCKER_WEB_ENDPOINT' in os.environ:
+        config['web_endpoint'] = os.environ['GODOCKER_WEB_ENDPOINT']
+
+    if 'GODOCKER_MESOS_MASTER' in os.environ:
+        config['mesos']['master'] = os.environ['GODOCKER_MESOS_MASTER']
+
+    if 'GODOCKER_KUBE_SERVER' in os.environ:
+        config['kube_server'] = os.environ['GODOCKER_KUBE_SERVER']
+    if 'GODOCKER_KUBE_TOKEN' in os.environ:
+        config['kube_token'] = os.environ['GODOCKER_KUBE_TOKEN']
+
+    if 'GODOCKER_DOCKER_URL' in os.environ:
+        config['docker']['url'] = os.environ['GODOCKER_DOCKER_URL']
+    if 'GODOCKER_DOCKER_TLS' in os.environ:
+        # Set to 1 to activate
+        do_tls = os.environ['GODOCKER_DOCKER_TLS']
+        if do_tls == '1':
+            config['docker']['tls'] = True
+        else:
+            config['docker']['tls'] = False
+    if 'GODOCKER_DOCKER_CA_CERT' in os.environ:
+        config['docker']['ca_cert'] = os.environ['GODOCKER_DOCKER_CA_CERT']
+    if 'GODOCKER_DOCKER_CLIENT_CERT' in os.environ:
+        config['docker']['client_cert'] = os.environ['GODOCKER_DOCKER_CLIENT_CERT']
+    if 'GODOCKER_DOCKER_CLIENT_KEY' in os.environ:
+        config['docker']['client_key'] = os.environ['GODOCKER_DOCKER_CLIENT_KEY']
+
+    if 'GODOCKER_LDAP_HOST' in os.environ:
+        config['ldap_host'] = os.environ['GODOCKER_LDAP_HOST']
+    if 'GODOCKER_LDAP_PORT' in os.environ:
+        config['ldap_port'] = int(os.environ['GODOCKER_LDAP_PORT'])
+    if 'GODOCKER_LDAP_DN' in os.environ:
+        config['ldap_dn'] = os.environ['GODOCKER_LDAP_DN']
+    if 'GODOCKER_LDAP_BASE_DN_FILTER' in os.environ:
+        config['ldap_base_dn_filter'] = os.environ['GODOCKER_LDAP_BASE_DN_FILTER']
+
+    if 'GODOCKER_WATCHERS' in os.environ:
+        # Comma separated list of watcher names
+        config['watchers'] = os.environ['GODOCKER_WATCHERS'].split(',')
+
+    if 'GODOCKER_CADVISOR_PORT' in os.environ:
+        config['cadvisor_port'] = int(os.environ['GODOCKER_CADVISOR_PORT'])
+
+
+    if 'GODOCKER_EMAIL_FROM' in os.environ:
+        config['email_from'] = os.environ['GODOCKER_EMAIL_FROM']
+    if 'GODOCKER_EMAIL_SMTP_TLS' in os.environ:
+        # Set to 1 to activate
+        do_tls = os.environ['GODOCKER_EMAIL_SMTP_TLS']
+        if do_tls == '1':
+            config['email_smtp_tls'] = True
+        else:
+            config['email_smtp_tls'] = False
+    if 'GODOCKER_EMAIL_SMTP_USER' in os.environ:
+        config['email_smtp_user'] = os.environ['GODOCKER_EMAIL_SMTP_USER']
+    if 'GODOCKER_EMAIL_SMTP_PASSWORD' in os.environ:
+        config['email_smtp_password'] = os.environ['GODOCKER_EMAIL_SMTP_PASSWORD']
+    if 'GODOCKER_EMAIL_SMTP_HOST' in os.environ:
+        config['email_smtp_host'] = os.environ['GODOCKER_EMAIL_SMTP_HOST']
+    if 'GODOCKER_EMAIL_SMTP_PORT' in os.environ:
+        config['email_smtp_port'] = int(os.environ['GODOCKER_EMAIL_SMTP_PORT'])
+
+    if 'GODOCKER_ETCD_PREFIX' in os.environ:
+        config['etcd_prefix'] = os.environ['GODOCKER_ETCD_PREFIX']
+    if 'GODOCKER_ETCD_HOST' in os.environ:
+        config['etcd_host'] = os.environ['GODOCKER_ETCD_HOST']
+    if 'GODOCKER_EMAIL_SMTP_PORT' in os.environ:
+        config['etcd_port'] = int(os.environ['GODOCKER_ETCD_PORT'])
+
+    if 'GODOCKER_FTP_LISTEN' in os.environ:
+        config['ftp']['listen'] = os.environ['GODOCKER_FTP_LISTEN']
+    if 'GODOCKER_FTP_PUBLIC_ENDPOINT' in os.environ:
+        config['ftp']['public_endpoint'] = os.environ['GODOCKER_FTP_PUBLIC_ENDPOINT']
+    if 'GODOCKER_FTP_PORT' in os.environ:
+        config['ftp']['port'] = int(os.environ['GODOCKER_FTP_PORT'])
+
     return warnings
 
 
