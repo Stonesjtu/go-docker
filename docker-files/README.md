@@ -91,7 +91,7 @@ Run *one or many* watchers (1 is enough test or medium size production)
 
 From GoDocker v1.2, it is possible to override some configuration with environment variables (see README.md for the list). Example:
 
-    docker run --rm -e "GODOCKER_EXECUTOR=mesos" -e "GODOCKER_MESOS_MASTER=http://master_ip:5050" -e "GODOCKER_REDIS_HOST=test-redis" -e "GODOCKER_MONGO_URL=mongodb://test-mongo:27017" -w /opt/go-docker --link test-mongo:test-mongo --link test-redis:test-redis -v /opt/godshared:/opt/godshared --name godocker-scheduler test-godocker python go-d-scheduler.py run
+    docker run --rm -e "GODOCKER_EXECUTOR=mesos" -e "GODOCKER_MESOS_MASTER=master_ip:5050" -e "GODOCKER_REDIS_HOST=test-redis" -e "GODOCKER_MONGO_URL=mongodb://test-mongo:27017" -w /opt/go-docker --link test-mongo:test-mongo --link test-redis:test-redis -v /opt/godshared:/opt/godshared --name godocker-scheduler test-godocker python go-d-scheduler.py run
 
 In this example we override the default executor to use mesos instead of default swarm executor and we specify the master url. Redis and Mongo hosts are also specified in the command line.
 
