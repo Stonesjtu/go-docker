@@ -253,7 +253,7 @@ clean_old: 30
 
 # Disk quota ###############################
 # Optional disk quota management
-# Default: None (no quota)
+# Default: null (no quota)
 # Possible values (value + unit): 12 (bytes), 5k (kilobytes), 12M (megabytes), 40G (gigabytes)
 disk_default_quota: null
 
@@ -262,7 +262,7 @@ disk_default_quota: null
 # Max number of pending tasks for a user
 # New tasks will be rejected if rate is reached
 # It is wise to limit it to limit total number of pending jobs for scheduler.
-# Default: None (no limit)
+# Default: null (no limit)
 # Value example: 1000
 rate_limit: null
 # Max number of pending tasks for all users (to avoid scheduler overload)
@@ -394,5 +394,5 @@ log_config:
             'level': 'DEBUG'
             'handlers':
                 - 'console'
-                - 'ftp'                
+                - 'ftp'
     'disable_existing_loggers': False

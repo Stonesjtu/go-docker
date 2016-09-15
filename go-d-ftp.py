@@ -227,7 +227,7 @@ class GodFTP(object):
         with open(config_file, 'r') as ymlfile:
             self.cfg = yaml.load(ymlfile)
 
-        godutils.config_backward_compatibility(self.cfg)            
+        godutils.config_backward_compatibility(self.cfg)
 
         if self.cfg['log_config'] is not None:
             for handler in list(self.cfg['log_config']['handlers'].keys()):
@@ -291,7 +291,7 @@ class GodFTP(object):
         self.handler.logger = self.logger
 
     def start(self):
-        self.hostname = socket.gethostbyaddr(socket.gethostname())[0]
+        self.hostname = godutils.get_hostname()
         self.proc_name = 'scheduler-' + self.hostname
         if self.status_manager is not None:
             self.status_manager.keep_alive(self.proc_name, 'ftp')

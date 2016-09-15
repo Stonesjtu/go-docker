@@ -1,5 +1,6 @@
 import re
 import os
+import socket
 
 STATUS_CREATED = 'created'
 STATUS_PENDING = 'pending'
@@ -27,6 +28,12 @@ QUEUE_RUNNING = 'running'
 QUEUE_KILL = 'kill'
 QUEUE_SUSPEND = 'suspend'
 QUEUE_RESUME = 'resume'
+
+
+def get_hostname():
+    if 'HOSTNAME' in os.environ and os.environ['HOSTNAME']:
+        return os.environ['HOSTNAME']
+    return socket.gethostbyaddr(socket.gethostname())[0]
 
 
 def config_backward_compatibility(config):
@@ -69,7 +76,6 @@ def config_backward_compatibility(config):
         if 'disabled' not in config['network']:
             config['network']['disabled'] = config['network_disabled']
             warnings.append('network_disabled is deprecated, disabled should be defined in network section')
-
 
     # Manage environment variables
     if 'GODOCKER_PLUGINS_DIR' in os.environ:
@@ -150,7 +156,6 @@ def config_backward_compatibility(config):
 
     if 'GODOCKER_CADVISOR_PORT' in os.environ:
         config['cadvisor_port'] = int(os.environ['GODOCKER_CADVISOR_PORT'])
-
 
     if 'GODOCKER_EMAIL_FROM' in os.environ:
         config['email_from'] = os.environ['GODOCKER_EMAIL_FROM']

@@ -7,7 +7,6 @@ import logging
 import logging.config
 import datetime
 import os
-import socket
 import traceback
 import yaml
 
@@ -69,7 +68,7 @@ class GoDWatcher(Daemon):
             self.cfg = yaml.load(ymlfile)
         config_warnings = godutils.config_backward_compatibility(self.cfg)
 
-        self.hostname = socket.gethostbyaddr(socket.gethostname())[0]
+        self.hostname = godutils.get_hostname()
         self.proc_name = 'watcher-' + self.hostname
         if os.getenv('GOD_PROCID'):
             self.proc_name += os.getenv('GOD_PROCID')

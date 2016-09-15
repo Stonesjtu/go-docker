@@ -6,7 +6,6 @@ import json
 import logging
 import logging.config
 import os
-import socket
 import yaml
 import traceback
 import datetime
@@ -82,7 +81,7 @@ class GoDArchiver(Daemon):
 
         config_warnings = godutils.config_backward_compatibility(self.cfg)
 
-        self.hostname = socket.gethostbyaddr(socket.gethostname())[0]
+        self.hostname = godutils.get_hostname()
         self.proc_name = 'archiver-' + self.hostname
         if os.getenv('GOD_PROCID'):
             self.proc_name += os.getenv('GOD_PROCID')

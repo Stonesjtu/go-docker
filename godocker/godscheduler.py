@@ -8,7 +8,6 @@ import logging
 import logging.config
 import os
 import datetime
-import socket
 import random
 import string
 import urllib3
@@ -157,7 +156,7 @@ class GoDScheduler(Daemon):
 
         config_warnings = godutils.config_backward_compatibility(self.cfg)
 
-        self.hostname = socket.gethostbyaddr(socket.gethostname())[0]
+        self.hostname = godutils.get_hostname()
         self.proc_name = 'scheduler-' + self.hostname
         if os.getenv('GOD_PROCID'):
             self.proc_name += os.getenv('GOD_PROCID')
