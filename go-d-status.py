@@ -78,6 +78,9 @@ if __name__ == "__main__":
         if 'GOD_CONFIG' in os.environ:
             config_file = os.environ['GOD_CONFIG']
         status.load_config(config_file)
+        if status.status_manager is None:
+            print("No status manager configured")
+            sys.exit(1)
         if len(sys.argv) == 2:
                 if 'status' == sys.argv[1]:
                         status = status.status_manager.status()
