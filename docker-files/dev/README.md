@@ -18,10 +18,7 @@ parameter), it can be set to a known ip address in:
 
     docker_url: 'tcp://god-swarm:2375'
 
-
-Mesos python library installed in container is v0.22. For different mesos
-version, you need to update mesos and mesos.interface python libs in container.
-
+For Mesos, latest mesos package is installed from repositories. Some issue may occur if using a different version, depending on API compatibilities. If this occurs, you must uninstall mesos package and install your mesos version package in the container (needed for the Python API).
 
 ## Requirements
 
@@ -89,3 +86,16 @@ Run *one or many* watchers (1 is enough test or medium size production)
       -v path_to/go-d.ini:/opt/go-docker/go-d.ini \
       osallou/go-docker \
       /usr/bin/python go-d-watcher.py run
+
+## Customization
+
+From GoDocker v1.2, it is possible to override some configuration with environment variables (see README.md for the list). Example:
+
+    docker run --rm -e "GODOCKER_EXECUTOR=mesos" -e "GODOCKER_MESOS_MASTER=master_ip:5050" -e "GODOCKER_REDIS_HOST=test-redis" -e "GODOCKER_MONGO_URL=mongodb://test-mongo:27017" -w /opt/go-docker --link test-mongo:test-mongo --link test-redis:test-redis -v /opt/godshared:/opt/godshared --name godocker-scheduler test-godocker python go-d-scheduler.py run
+
+In this example we override the default executor to use mesos instead of default swarm executor and we specify the master url. Redis and Mongo hosts are also specified in the command line.
+
+To add a prefix to the web server:
+
+Add  -e "GODOCKER_WEB_PREFIX=/testapp" to web container to add a prefix to web UI (http://xxx:6543/testapp/app).
+Update scheduler/watcher containers command with -e "GODOCKER_PROMETHEUS_EXPORTER=godocker-web:6543/testapp" to match the declared prefix.
