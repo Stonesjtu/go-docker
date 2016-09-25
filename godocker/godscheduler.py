@@ -15,9 +15,6 @@ import traceback
 from copy import deepcopy
 import yaml
 
-# import graypy
-# import logstash
-
 from pymongo import MongoClient
 from pymongo import DESCENDING as pyDESCENDING
 from bson.json_util import dumps
@@ -154,7 +151,12 @@ class GoDScheduler(Daemon):
         with open(f, 'r') as ymlfile:
             self.cfg = yaml.load(ymlfile)
 
-        config_warnings = godutils.config_backward_compatibility(self.cfg)
+        config_warnings = []
+        try:
+            config_warnings = godutils.config_backward_compatibility(self.cfg)
+        except Exception as e:
+            print("Invalid configuration: %s" % (str(e)))
+            sys.exit(1)
 
         self.hostname = godutils.get_hostname()
         self.proc_name = 'scheduler-' + self.hostname

@@ -23,6 +23,7 @@
         framework will skip node and will not schedule any task on this node.
         For swarm and kubernetes, maintenance is managed directly by them.
     Fix #44 Override some go-d.ini fields with env variables (not all fields are available, see list in README.md)
+    Fix #45 check config at startup (plugins_dir and shared_dir)
 1.1:
     Fix case of kill failure
     Add ldap_base_dn_filter parameter in go-d.ini to filter LDAP directory search

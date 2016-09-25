@@ -121,7 +121,7 @@ class CNINetworkTest(unittest.TestCase):
         shared_dir = os.path.join(dirname, '..', 'godshared')
         if os.path.exists(os.path.join(shared_dir,'tasks')):
             shutil.rmtree(os.path.join(shared_dir,'tasks'))
-
+        os.environ['GODOCKER_SHARED_DIR'] = shared_dir
         curdir = os.path.dirname(os.path.abspath(__file__))
         self.cfg =os.path.join(curdir,'go-d.ini')
         self.test_dir = tempfile.mkdtemp('god')
@@ -201,6 +201,9 @@ class SchedulerTest(unittest.TestCase):
         curdir = os.path.dirname(os.path.abspath(__file__))
         self.cfg =os.path.join(curdir,'go-d.ini')
         self.test_dir = tempfile.mkdtemp('god')
+        god_shared = tempfile.mkdtemp('godshared')
+        os.environ['GODOCKER_SHARED_DIR'] = god_shared
+
         self.scheduler = GoDScheduler(os.path.join(self.test_dir,'godsched.pid'))
         self.scheduler.load_config(self.cfg)
         self.scheduler.stop_daemon = False
@@ -295,9 +298,11 @@ class SchedulerTest(unittest.TestCase):
         self.scheduler.db_users.insert(self.sample_user)
         self.scheduler.r.flushdb()
 
+        '''
         self.scheduler.cfg['shared_dir'] = tempfile.mkdtemp('godshared')
         self.watcher.cfg['shared_dir'] = self.scheduler.cfg['shared_dir']
         self.archiver.cfg['shared_dir'] = self.scheduler.cfg['shared_dir']
+        '''
         #self.scheduler.store = PairtreeStorage(self.scheduler.cfg)
         self.scheduler.store = StorageManager.get_storage(self.scheduler.cfg)
 
@@ -379,7 +384,7 @@ class SchedulerTest(unittest.TestCase):
         total_redis_after_restore = int(self.scheduler.r.get(self.watcher.cfg['redis_prefix']+':jobs'))
         self.assertTrue(total_redis == total_redis_after_restore)
 
-
+    @attr('test')
     def test_watch_task_over(self):
         self.test_run_task()
         self.watcher.check_running_jobs()
@@ -394,13 +399,10 @@ class SchedulerTest(unittest.TestCase):
         self.test_watch_task_over()
         over_tasks = self.watcher.db_jobsover.find()
         for task in over_tasks:
-            print("#### REQUEST TO ARDHIVE")
             self.archiver.archive_task(task)
         over_tasks = self.watcher.db_jobsover.find()
         for task in over_tasks:
-            print("#### "+task['status']['primary'])
             self.assertTrue(task['status']['primary'] == godutils.STATUS_ARCHIVED)
-
 
     def test_dependent_tasks(self):
         running = self.test_run_task()

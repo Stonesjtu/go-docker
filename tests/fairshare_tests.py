@@ -103,6 +103,7 @@ class FairShareSchedulerTest(unittest.TestCase):
         # pairtree cleanup
         dirname, filename = os.path.split(os.path.abspath(__file__))
         shared_dir = os.path.join(dirname, '..', 'godshared')
+        os.environ['GODOCKER_SHARED_DIR'] = shared_dir
         if os.path.exists(os.path.join(shared_dir,'tasks')):
             shutil.rmtree(os.path.join(shared_dir,'tasks'))
 

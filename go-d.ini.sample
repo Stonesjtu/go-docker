@@ -3,10 +3,10 @@
 ########################################
 
 # PLUGINS ##############################
-plugins_dir: '/home/osallou/Development/NOSAVE/go-docker/go-d-sched/plugins'
+plugins_dir: '/opt/go-docker/plugins'
 
 # DIRECTORIES ##########################
-shared_dir: '/home/osallou/Development/NOSAVE/go-docker/godshared'
+shared_dir: '/opt/godshared'
 
 # DEFAULTS #############################
 

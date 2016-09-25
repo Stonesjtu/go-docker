@@ -189,6 +189,11 @@ def config_backward_compatibility(config):
     if 'GODOCKER_FTP_PORT' in os.environ:
         config['ftp']['port'] = int(os.environ['GODOCKER_FTP_PORT'])
 
+    if config['plugins_dir'] and not os.path.exists(config['plugins_dir']):
+        raise Exception('plugins_dir does not exists')
+    if not os.path.exists(config['shared_dir']):
+        raise Exception('shared_dir does not exists')
+
     return warnings
 
 
