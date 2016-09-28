@@ -22,7 +22,7 @@ RUN echo "deb http://repos.mesosphere.io/debian jessie main" > /etc/apt/sources.
 RUN apt-get update
 RUN apt-get install -y git python-dev libldap2-dev gcc libsasl2-dev
 RUN apt-get install -y python-setuptools apt-transport-https wget
-RUN apt-get install -y openssl libpython-dev libffi-dev libssl-dev
+RUN apt-get install -y openssl libpython-dev libffi-dev libssl-dev protobuf-compiler
 RUN apt-get install -y mesos
 
 RUN cd /opt && git clone https://bitbucket.org/osallou/go-docker.git
