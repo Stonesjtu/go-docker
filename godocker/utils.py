@@ -30,6 +30,20 @@ QUEUE_SUSPEND = 'suspend'
 QUEUE_RESUME = 'resume'
 
 
+def get_executor(task, executors):
+    '''
+    Get executor for task from field requirements/executor.
+    Field can be in the form executorname:somedata:otherdata
+    '''
+    task_executor = None
+    if 'executor' not in task['requirements'] or not task['requirements']['executor']:
+        task['requirements']['executor'] = executors[0].get_name()
+    for executor in executors:
+        executor_requirements = task['requirements']['executor'].split(':')
+        if executor.get_name() == executor_requirements[0]:
+            return executor
+    return None
+
 def get_hostname():
     if 'HOSTNAME' in os.environ and os.environ['HOSTNAME']:
         return os.environ['HOSTNAME']
@@ -45,6 +59,9 @@ def config_backward_compatibility(config):
     :return: list of warnings
     '''
     warnings = []
+    if 'placement' not in config:
+        config['placement'] = {}
+
     if 'mesos' not in config:
         config['mesos'] = {}
 
@@ -55,6 +72,10 @@ def config_backward_compatibility(config):
         config['cadvisor_url_part'] = '/containers/mesos'
     else:
         config['cadvisor_url_part'] = '/docker'
+
+    if 'executor' in config:
+        warnings.append('executor is deprecated in favor of executors array list')
+        config['executors'] = [config['executor']]
 
     if 'cadvisor_url_part_override' in config and config['cadvisor_url_part_override']:
         config['cadvisor_url_part'] = config['cadvisor_url_part_override']

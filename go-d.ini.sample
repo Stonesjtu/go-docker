@@ -142,9 +142,20 @@ scheduler_policy: 'FiFo'
 max_job_pop: 100
 
 # Execution system #####################
-executor: 'swarm'
-#executor: 'fake'
-#executor: 'mesos'
+# swarmn, mesos, fake, kubernetes, sge
+executors:
+    - 'fake'
+
+# Placement selection if multiple choices are available for executor
+placement:
+    sge:
+        # available queues
+        queues:
+            - all.q
+        # support docker execution (not yet implemented)
+        docker: false
+        # parallel environment to use when cpu > 1
+        parallel_env: 'make'
 
 # Stats ################################
 prometheus_key: 'mysecretkey'

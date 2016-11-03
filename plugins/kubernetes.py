@@ -19,7 +19,7 @@ class Kubernetes(IExecutorPlugin):
 
         :return: list of features within ['kill', 'pause']
         '''
-        return ['kill', 'resources.port']
+        return ['kill', 'resources.port', 'interactive']
 
     def set_config(self, cfg):
         self.cfg = cfg

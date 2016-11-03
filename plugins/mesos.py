@@ -41,7 +41,7 @@ class MesosScheduler(mesos.interface.Scheduler):
 
         :return: list of features within ['docker-plugin-zfs']
         '''
-        return ['docker-plugin-zfs']
+        return ['docker-plugin-zfs', 'interactive', 'cni']
 
     def set_config(self, config):
         self.config = config

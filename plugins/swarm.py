@@ -18,7 +18,7 @@ class Swarm(IExecutorPlugin):
 
         :return: list of features within ['kill', 'pause', 'cni']
         '''
-        return ['kill', 'pause', 'cni']
+        return ['kill', 'pause', 'cni', 'interactive']
 
     def release_port(self, task):
         '''

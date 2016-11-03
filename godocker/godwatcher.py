@@ -155,17 +155,20 @@ class GoDWatcher(Daemon):
                 self.scheduler.set_projects_handler(self.db_projects)
                 self.scheduler.set_config(self.cfg)
                 print("Loading scheduler: " + self.scheduler.get_name())
+
+        self.executors = []
         self.executor = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Executor"):
-            if pluginInfo.plugin_object.get_name() == self.cfg['executor']:
-                self.executor = pluginInfo.plugin_object
-                self.executor.set_logger(self.logger)
-                self.executor.set_redis_handler(self.r)
-                self.executor.set_jobs_handler(self.db_jobs)
-                self.executor.set_users_handler(self.db_users)
-                self.executor.set_projects_handler(self.db_projects)
-                self.executor.set_config(self.cfg)
-                print("Loading executor: " + self.executor.get_name())
+            if pluginInfo.plugin_object.get_name() in self.cfg['executors']:
+                executor = pluginInfo.plugin_object
+                executor.set_logger(self.logger)
+                executor.set_redis_handler(self.r)
+                executor.set_jobs_handler(self.db_jobs)
+                executor.set_users_handler(self.db_users)
+                executor.set_projects_handler(self.db_projects)
+                executor.set_config(self.cfg)
+                self.executors.append(executor)
+                print("Loading executor: " + executor.get_name())
 
         self.watchers = []
         if 'watchers' in self.cfg and self.cfg['watchers'] is not None:
@@ -217,8 +220,13 @@ class GoDWatcher(Daemon):
         '''
         for task in task_list:
             if self.stop_daemon:
-                self.executor.close()
+                for executor in self.executors:
+                    executor.close()
                 return
+            self.executor = godutils.get_executor(task, self.executors)
+            if 'kill' not in self.executor.features():
+                self.logger.debug('kill not supported by this executor %s for task %d' % (self.executor.get_name(), task['id']))
+                continue
             if task['status']['primary'] == godutils.STATUS_OVER:
                 continue
             if task['status']['primary'] != godutils.STATUS_PENDING:
@@ -364,16 +372,24 @@ class GoDWatcher(Daemon):
         Suspend/pause tasks in list
         '''
         if self.stop_daemon:
-            self.executor.close()
+            for executor in self.executors:
+                executor.close()
             return
 
         for task in suspend_list:
             if self.stop_daemon:
-                self.executor.close()
+                for executor in self.executors:
+                    executor.close()
                 return
 
             status = None
             over = False
+
+            self.executor = godutils.get_executor(task, self.executors)
+
+            if 'pause' not in self.executor.features():
+                self.logger.debug('suspend not supported by this executor %s for task %d' % (self.executor.get_name(), task['id']))
+                continue
 
             if task['status']['primary'] == godutils.STATUS_PENDING or task['status']['primary'] == godutils.STATUS_OVER:
                 status = godutils.STATUS_SECONDARY_SUSPEND_REJECTED
@@ -401,14 +417,21 @@ class GoDWatcher(Daemon):
         Resume tasks in list
         '''
         if self.stop_daemon:
-            self.executor.close()
+            for executor in self.executors:
+                executor.close()
             return
         for task in resume_list:
             if self.stop_daemon:
-                self.executor.close()
+                for executor in self.executors:
+                    executor.close()
                 return
             status = None
             over = False
+
+            self.executor = godutils.get_executor(task, self.executors)
+            if 'pause' not in self.executor.features():
+                self.logger.debug('resume not supported by this executor %s for task %d' % (self.executor.get_name(), task['id']))
+                continue
 
             if task['status']['primary'] == godutils.STATUS_PENDING or task['status']['primary'] == godutils.STATUS_OVER or task['status']['secondary'] != 'resume requested':
                 status = godutils.STATUS_SECONDARY_RESUME_REJECTED
@@ -434,7 +457,8 @@ class GoDWatcher(Daemon):
         :return: list of tasks ordered
         '''
         if self.stop_daemon:
-            self.executor.close()
+            for executor in self.executors:
+                executor.close()
             return
         return self.scheduler.schedule(pending_list, None)
 
@@ -628,6 +652,7 @@ class GoDWatcher(Daemon):
                 if not elt:
                     return
                 task = json.loads(elt)
+                self.executor = godutils.get_executor(task, self.executors)
                 # Has been killed in the meanwhile, already managed
                 if not self.r.get(self.cfg['redis_prefix'] + ':job:' + str(task['id']) + ':task'):
                     continue
@@ -775,7 +800,8 @@ class GoDWatcher(Daemon):
         self.logger.debug('Watcher:' + str(self.hostname) + ':Run')
         self.logger.debug("Get tasks to kill")
         if self.stop_daemon:
-            self.executor.close()
+            for executor in self.executors:
+                executor.close()
             return
         kill_task_list = []
         kill_task_length = self.r.llen(self.cfg['redis_prefix'] + ':jobs:kill')
@@ -784,12 +810,12 @@ class GoDWatcher(Daemon):
             if task and task != 'None':
                 kill_task_list.append(json.loads(task))
 
-        if 'kill' in self.executor.features():
-            self.kill_tasks(kill_task_list)
+        self.kill_tasks(kill_task_list)
 
         self.logger.debug('Get tasks to suspend')
         if self.stop_daemon:
-            self.executor.close()
+            for executor in self.executors:
+                executor.close()
             return
         suspend_task_list = []
         suspend_task_length = self.r.llen(self.cfg['redis_prefix'] + ':jobs:suspend')
@@ -798,12 +824,12 @@ class GoDWatcher(Daemon):
             if task:
                 suspend_task_list.append(json.loads(task))
 
-        if 'pause' in self.executor.features():
-            self.suspend_tasks(suspend_task_list)
+        self.suspend_tasks(suspend_task_list)
 
         self.logger.debug('Get tasks to resume')
         if self.stop_daemon:
-            self.executor.close()
+            for executor in self.executors:
+                executor.close()
             return
         resume_task_list = []
         resume_task_length = self.r.llen(self.cfg['redis_prefix'] + ':jobs:resume')
@@ -812,19 +838,20 @@ class GoDWatcher(Daemon):
             if task:
                 resume_task_list.append(json.loads(task))
 
-        if 'pause' in self.executor.features():
-            self.resume_tasks(resume_task_list)
+        self.resume_tasks(resume_task_list)
 
         self.logger.debug('Look for terminated jobs')
         if self.stop_daemon:
-            self.executor.close()
+            for executor in self.executors:
+                executor.close()
             return
         self.check_running_jobs()
 
     def signal_handler(self, signum, frame):
         GoDWatcher.SIGINT = True
         self.logger.warn('User request to exit')
-        self.executor.close()
+        for executor in self.executors:
+            executor.close()
 
     def update_status(self):
         if self.status_manager is None:
@@ -842,7 +869,8 @@ class GoDWatcher(Daemon):
         '''
         self.hostname = None
         infinite = True
-        self.executor.open(1)
+        for executor in self.executors:
+            executor.open(1)
         self.logger.warn('Start watcher')
         while infinite and True and not GoDWatcher.SIGINT:
                 # Schedule timer
@@ -862,5 +890,5 @@ class GoDWatcher(Daemon):
             time.sleep(2)
             if not loop:
                 infinite = False
-
-        self.executor.close()
+        for executor in self.executors:
+            executor.close()

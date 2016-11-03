@@ -18,7 +18,7 @@ class FakeExecutor(IExecutorPlugin):
 
         :return: list of features within ['kill', 'pause']
         '''
-        return ['kill', 'pause']
+        return ['kill', 'pause', 'interactive']
 
     def run_all_tasks(self, tasks, callback=None):
         '''

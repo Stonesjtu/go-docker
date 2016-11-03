@@ -6,11 +6,25 @@ class IExecutorPlugin(IGoDockerPlugin):
     Executor plugins interface
     '''
 
+    def is_native(self):
+        '''
+        Is executor using docker or native calls
+        '''
+        executor_name = self.get_name()
+        if 'placement' not in self.cfg or executor_name not in self.cfg['placement'] :
+            # if not defined, then default is Docker
+            return False
+        if 'docker' not in self.cfg['placement'][executor_name]:
+            return False
+        if not self.cfg['placement'][executor_name]['docker']:
+            return True
+        return False
+
     def features(self):
         '''
         Get supported features
 
-        :return: list of features within ['kill', 'pause','resources.port',' cni']
+        :return: list of features within ['kill', 'pause','resources.port',' cni', 'interactive']
         '''
         return []
 

@@ -1,4 +1,7 @@
-1.2
+1.3:
+    Add multi executor support
+       - change go-d.ini: executor => executors with list of executors, add placement field for external executors additional info.
+1.2:
     GOD-49 set ldap homeDirectory field configurable via ldap/fields go-d.ini config field.
     Fix #39 mem_limit has been moved to host_config in API version 1.19
        - change go-d.ini docker_api_version => 'auto'

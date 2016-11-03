@@ -254,21 +254,23 @@ class GoDScheduler(Daemon):
                     self.network_plugin.set_config(self.cfg)
                     print("Loading network_plugin: " + self.network_plugin.get_name())
 
+        self.executors = []
         self.executor = None
         for pluginInfo in simplePluginManager.getPluginsOfCategory("Executor"):
-            if pluginInfo.plugin_object.get_name() == self.cfg['executor']:
-                self.executor = pluginInfo.plugin_object
-                self.executor.set_logger(self.logger)
-                self.executor.set_redis_handler(self.r)
-                self.executor.set_jobs_handler(self.db_jobs)
-                self.executor.set_users_handler(self.db_users)
-                self.executor.set_projects_handler(self.db_projects)
-                self.executor.set_config(self.cfg)
-                if 'cni' in self.executor.features():
-                    self.executor.set_network_plugin(self.network_plugin)
+            if pluginInfo.plugin_object.get_name() in self.cfg['executors']:
+                executor = pluginInfo.plugin_object
+                executor.set_logger(self.logger)
+                executor.set_redis_handler(self.r)
+                executor.set_jobs_handler(self.db_jobs)
+                executor.set_users_handler(self.db_users)
+                executor.set_projects_handler(self.db_projects)
+                executor.set_config(self.cfg)
+                if 'cni' in executor.features():
+                    executor.set_network_plugin(self.network_plugin)
                 else:
                     print("Skipping network plugin, not supported by executor")
-                print("Loading executor: " + self.executor.get_name())
+                self.executors.append(executor)
+                print("Loading executor: " + executor.get_name())
 
         self.watchers = []
         if 'watchers' in self.cfg and self.cfg['watchers'] is not None:
@@ -507,27 +509,33 @@ class GoDScheduler(Daemon):
         # Write wrapper script to run script with user uidNumber/guidNumber
         # Chown files in shared dir to gives files ACLs to user at the end
         # Exit with code of executed cmd.sh
+
+        # Check if task executor uses Docker or calls native commands
+        task_executor = godutils.get_executor(task, self.executors)
+        is_native = task_executor.is_native()
+
         user_id = task['user']['id']
         cmd = "#!/bin/bash\n"
-        cmd += "MYUSER=`getent passwd \"" + str(task['user']['uid']) + "\" | cut -d: -f1`\n"
-        cmd += "if [ \"r$MYUSER\" != \"r\" ]; then\n"
-        cmd += "    userdel $MYUSER\n"
-        cmd += "fi\n"
-
-        cmd += "groupadd --gid " + str(task['user']['gid']) + " " + user_id
-        cmd += " ; useradd --uid " + str(task['user']['uid']) + " --gid " + str(task['user']['gid']) + " " + user_id + "\n"
-        cmd += "usermod -p" + task['user']['credentials']['apikey'] + "  " + user_id + "\n"
-        # Create secondary groups
-        if 'sgids' in task['user']:
-            for sgid in task['user']['sgids']:
-                cmd += "groupadd --gid " + str(sgid) + " group" + str(sgid) + "; "
-                cmd += "usermod -a -G " + str(sgid) + " " + user_id + "\n"
-
-        # docker-plugin-zfs
-        if 'plugin_zfs' in self.cfg and self.cfg['plugin_zfs']:
-            cmd += "if [ -e /tmp-data ]; then\n"
-            cmd += "    chown -R " + user_id + " /tmp-data\n"
+        if not is_native:
+            cmd += "MYUSER=`getent passwd \"" + str(task['user']['uid']) + "\" | cut -d: -f1`\n"
+            cmd += "if [ \"r$MYUSER\" != \"r\" ]; then\n"
+            cmd += "    userdel $MYUSER\n"
             cmd += "fi\n"
+
+            cmd += "groupadd --gid " + str(task['user']['gid']) + " " + user_id
+            cmd += " ; useradd --uid " + str(task['user']['uid']) + " --gid " + str(task['user']['gid']) + " " + user_id + "\n"
+            cmd += "usermod -p" + task['user']['credentials']['apikey'] + "  " + user_id + "\n"
+            # Create secondary groups
+            if 'sgids' in task['user']:
+                for sgid in task['user']['sgids']:
+                    cmd += "groupadd --gid " + str(sgid) + " group" + str(sgid) + "; "
+                    cmd += "usermod -a -G " + str(sgid) + " " + user_id + "\n"
+
+            # docker-plugin-zfs
+            if 'plugin_zfs' in self.cfg and self.cfg['plugin_zfs']:
+                cmd += "if [ -e /tmp-data ]; then\n"
+                cmd += "    chown -R " + user_id + " /tmp-data\n"
+                cmd += "fi\n"
 
         cmd += "cd /mnt/go-docker\n"
         array_cmd = ""
@@ -560,7 +568,10 @@ class GoDScheduler(Daemon):
         vol_home = "export GODOCKER_HOME=/mnt/go-docker"
         for v in task['container']['volumes']:
             if v['name'] == 'home':
-                vol_home = "export GODOCKER_HOME=" + v['mount']
+                if is_native:
+                    vol_home = "export GODOCKER_HOME=" + v['path']
+                else:
+                    vol_home = "export GODOCKER_HOME=" + v['mount']
                 break
         cmd += vol_home + "\n"
         cmd += "startprocess=`date +%s`\n"
@@ -573,7 +584,7 @@ class GoDScheduler(Daemon):
         else:
             cmd += "/mnt/go-docker/cmd.sh 2> /mnt/go-docker/god.err 1> /mnt/go-docker/god.log\n"
 
-        if task['command']['interactive']:
+        if task['command']['interactive'] and not is_native:
             # should execute ssh, copy user ssh key from home in /root/.ssh/authorized_keys or /home/gocker/.ssh/authorized_keys
             # Need to create .ssh dir
             # sshd MUST be installed in container
@@ -729,17 +740,28 @@ class GoDScheduler(Daemon):
                 try:
                     self._create_command(task)
                 except Exception as e:
-                    logging.error("Failed to create cmd: " + str(e))
+                    logging.exception("Failed to create cmd: " + str(e))
                     continue
                 filtered_list.append(task)
 
         dt = datetime.datetime.now()
         start_time = time.mktime(dt.timetuple())
-        (running_tasks, rejected_tasks) = self.executor.run_tasks(filtered_list, self._update_scheduled_task_status)
+        list_per_executor = {}
+        for executor in self.executors:
+            list_per_executor[executor.get_name()] = []
+        for filtered_task in filtered_list:
+            task_executor = godutils.get_executor(filtered_task, self.executors)
+            list_per_executor[task_executor.get_name()].append(filtered_task)
+        running_tasks = []
+        rejected_tasks = []
+        for executor in self.executors:
+            self.executor = executor
+            filtered_list = list_per_executor[executor.get_name()]
+            (running_tasks, rejected_tasks) = self.executor.run_tasks(filtered_list, self._update_scheduled_task_status)
+            self._update_scheduled_task_status(running_tasks, rejected_tasks)
         dt = datetime.datetime.now()
         end_time = time.mktime(dt.timetuple())
         self._prometheus_stats('god_scheduler_run_duration', end_time - start_time)
-        self._update_scheduled_task_status(running_tasks, rejected_tasks)
 
     def reject_quota(self, task):
         '''
@@ -845,7 +867,8 @@ class GoDScheduler(Daemon):
     def signal_handler(self, signum, frame):
         GoDScheduler.SIGINT = True
         self.logger.warn('User request to exit')
-        self.executor.close()
+        for executor in self.executors:
+            executor.close()
 
     def update_status(self):
         if self.status_manager is None:
@@ -898,7 +921,8 @@ class GoDScheduler(Daemon):
             time.sleep(2)
             is_master = self.is_master(random_key)
 
-        self.executor.open(0)
+        for executor in self.executors:
+            executor.open(0)
         self.logger.warn('Start scheduler')
 
         try:
@@ -917,6 +941,8 @@ class GoDScheduler(Daemon):
             self.logger.error('Scheduler:' + str(self.hostname) + ':' + str(e))
             traceback_msg = traceback.format_exc()
             self.logger.error(traceback_msg)
-        self.executor.close()
+
+        for executor in self.executors:
+            executor.close()
         if is_master:
             self.r.delete(self.cfg['redis_prefix'] + ':master')

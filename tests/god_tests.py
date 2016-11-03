@@ -392,7 +392,6 @@ class SchedulerTest(unittest.TestCase):
         self.assertTrue(over_tasks.count() == 1)
         for task in over_tasks:
             self.assertTrue(task['container']['meta']['disk_size'] > 0)
-
         return over_tasks
 
     def test_archive(self):
@@ -440,8 +439,6 @@ class SchedulerTest(unittest.TestCase):
         running_tasks = self.scheduler.db_jobs.find({'status.primary': 'running'})
         self.assertTrue(running_tasks.count() == 1)
 
-
-
     def test_kill_task_running(self):
         running_tasks = self.test_run_task()
         task_to_kill = running_tasks[0]
@@ -475,7 +472,6 @@ class SchedulerTest(unittest.TestCase):
         self.assertTrue(running_tasks.count() == 0)
         over_tasks = self.scheduler.db_jobsover.find()
         self.assertTrue(over_tasks.count() == 0)
-
 
     def test_suspend_task_running(self):
         running_tasks = self.test_run_task()
@@ -625,7 +621,7 @@ class SchedulerTest(unittest.TestCase):
         self.assertTrue(over_tasks.count() == 4)
 
     def test_plugin_get_users(self):
-        user_list = self.scheduler.executor.get_users(['osallou'])
+        user_list = self.scheduler.executors[0].get_users(['osallou'])
         self.assertTrue(user_list.count()==1)
 
 
