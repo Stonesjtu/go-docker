@@ -631,7 +631,8 @@ class GoDScheduler(Daemon):
         cmd += "ret_code=$?\n"
         cmd += "echo $startprocess > /mnt/go-docker/god.info\n"
         cmd += "date +%s >> /mnt/go-docker/god.info\n"
-        cmd += "chown -R " + user_id + ":" + str(task['user']['gid']) + " /mnt/go-docker/*\n"
+        if not is_native:
+            cmd += "chown -R " + user_id + ":" + str(task['user']['gid']) + " /mnt/go-docker/*\n"
         cmd += str(self.store.get_post_command()) + "\n"
         cmd += "exit $ret_code\n"
 
