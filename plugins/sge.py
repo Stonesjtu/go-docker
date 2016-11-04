@@ -1,16 +1,13 @@
 from godocker.iExecutorPlugin import IExecutorPlugin
-import datetime
-import iso8601
-from godocker.utils import is_array_task
 import subprocess
 import re
 import os
 
-QDEL="qdel -j ${jobid}"
+QDEL = "qdel -j ${jobid}"
 
-QSTAT="qstat -u '${userid}' | grep ${jobid}"
+QSTAT = "qstat -u '${userid}' | grep ${jobid}"
 
-QACCT="qacct -j ${jobid}"
+QACCT = "qacct -j ${jobid}"
 
 SIMU_QSUB = "Your job #SGEID# (\"test.sh\") has been submitted"
 SIMU_QDEL = "test has deleted job #ID#"
@@ -91,6 +88,7 @@ maxvmem      0.000
 arid         undefined
 """
 
+
 class SGE(IExecutorPlugin):
 
     def get_name(self):
@@ -109,7 +107,6 @@ class SGE(IExecutorPlugin):
 
     def set_config(self, cfg):
         self.cfg = cfg
-
 
     def run_all_tasks(self, tasks, callback=None):
         '''
@@ -177,14 +174,14 @@ class SGE(IExecutorPlugin):
 
         if not self.cfg['placement']['sge']['docker']:
             cmd_content = ''
-            with open(task['requirements']['sge']['task_dir']+'/cmd.sh', 'r') as cmd_file:
+            with open(task['requirements']['sge']['task_dir'] + '/cmd.sh', 'r') as cmd_file:
                 cmd_content = cmd_file.read()
-            with open(task['requirements']['sge']['task_dir']+'/cmd.sh', 'w') as cmd_file:
+            with open(task['requirements']['sge']['task_dir'] + '/cmd.sh', 'w') as cmd_file:
                 cmd_file.write(cmd)
-            os.chmod(task['requirements']['sge']['task_dir']+'/cmd.sh', 0o755)
-            with open(task['requirements']['sge']['task_dir']+'/qsub_cmd.sh', 'w') as cmd_file:
+            os.chmod(task['requirements']['sge']['task_dir'] + '/cmd.sh', 0o755)
+            with open(task['requirements']['sge']['task_dir'] + '/qsub_cmd.sh', 'w') as cmd_file:
                 cmd_file.write(cmd_content)
-            os.chmod(task['requirements']['sge']['task_dir']+'/qsub_cmd.sh', 0o755)
+            os.chmod(task['requirements']['sge']['task_dir'] + '/qsub_cmd.sh', 0o755)
         else:
             with open(task['requirements']['sge']['task_dir'] + '/qsub_docker.sh', 'w') as qsub_docker:
                 docker_url = ''
@@ -208,7 +205,7 @@ class SGE(IExecutorPlugin):
                 sge_docker += "sleep 2\n"
                 sge_docker += "done\n"
                 qsub_docker.write(sge_docker)
-            os.chmod(task['requirements']['sge']['task_dir']+'/qsub_docker.sh', 0o755)
+            os.chmod(task['requirements']['sge']['task_dir'] + '/qsub_docker.sh', 0o755)
 
             with open(task['requirements']['sge']['task_dir'] + '/qsub_cmd.sh', 'w') as cmd_file:
                 cmd_file.write(cmd)
@@ -232,7 +229,7 @@ class SGE(IExecutorPlugin):
         if not self.cfg['placement']['sge']['docker']:
             res = None
             if 'simulate' in self.cfg['placement']['sge'] and self.cfg['placement']['sge']['simulate']:
-                res = SIMU_QSUB.replace('#SGEID#', str(task['id']+1000)).replace('#ID#', str(task['id']))
+                res = SIMU_QSUB.replace('#SGEID#', str(task['id'] + 1000)).replace('#ID#', str(task['id']))
                 self.logger.debug('SGE:simulate:would execute: ' + task['requirements']['sge']['task_dir'] + '/godocker.sh')
             else:
                 try:
@@ -253,14 +250,14 @@ class SGE(IExecutorPlugin):
                 else:
                     task['container']['meta']['Node']['Name'] = 'localhost'
             else:
-                task['status']['reason']  = res
+                task['status']['reason'] = res
                 self.logger.warn('SGE:Job:Error:Failed to submit job ' + str(task['id']))
                 return False
             return True
         else:
             res = None
             try:
-                res = subprocess.check_output("su - " + task['user']['id'] + " -c \"" +task['requirements']['sge']['task_dir'] + '/qsub_cmd.sh +"\""', shell=True)
+                res = subprocess.check_output("su - " + task['user']['id'] + " -c \"" + task['requirements']['sge']['task_dir'] + '/qsub_cmd.sh +"\""', shell=True)
             except Exception as e:
                 self.logger.error('SGE:Execute:error:' + str(e))
                 return False
@@ -275,11 +272,10 @@ class SGE(IExecutorPlugin):
                 else:
                     task['container']['meta']['Node']['Name'] = 'localhost'
             else:
-                task['status']['reason']  = res
+                task['status']['reason'] = res
                 self.logger.warn('SGE:Job:Error:Failed to submit job ' + str(task['id']))
                 return False
             return True
-
 
     def run_tasks(self, tasks, callback=None):
         '''
@@ -340,10 +336,8 @@ class SGE(IExecutorPlugin):
         :param over: is task over
         :type over: bool
         '''
-        over = False
-        finished_date = None
         # exec stat to get status, and qacct if not present in result
-        QSTAT='su - ' + task['user']['id'] +' -c "qstat | grep '+ str(task['container']['id']) + ' | grep god"'
+        QSTAT = 'su - ' + task['user']['id'] + ' -c "qstat | grep ' + str(task['container']['id']) + ' | grep god"'
 
         res = None
         if 'simulate' in self.cfg['placement']['sge'] and self.cfg['placement']['sge']['simulate']:
@@ -352,13 +346,13 @@ class SGE(IExecutorPlugin):
         else:
             try:
                 res = subprocess.check_output(QSTAT, shell=True)
-                self.logger.debug('SGE:qstat:'+str(res))
+                self.logger.debug('SGE:qstat:' + str(res))
             except Exception:
                 self.logger.debug('SGE:qstat:%d:no result' % (task['id']))
                 res = None
         if not res:
             # not in qstat, may be pending for scheduling or over
-            QACCT = 'su - ' + task['user']['id'] +' -c "qacct -j '+ str(task['container']['id']) + '"'
+            QACCT = 'su - ' + task['user']['id'] + ' -c "qacct -j ' + str(task['container']['id']) + '"'
             res = None
             if 'simulate' in self.cfg['placement']['sge'] and self.cfg['placement']['sge']['simulate']:
                 res = SIMU_QACCT.replace('#SGEID#', task['container']['id']).replace('#ID#', str(task['id']))
@@ -366,7 +360,7 @@ class SGE(IExecutorPlugin):
             else:
                 try:
                     res = subprocess.check_output(QACCT, shell=True)
-                    self.logger.debug('SGE:qacct:'+str(res))
+                    self.logger.debug('SGE:qacct:' + str(res))
                 except Exception:
                     self.logger.debug('SGE:qacct:%d:no result' % (task['id']))
                     res = None
@@ -421,14 +415,14 @@ class SGE(IExecutorPlugin):
             if 'State' not in task['container']['meta']:
                 task['container']['meta']['State'] = {}
             task['container']['meta']['State']['ExitCode'] = 1
-            QEXPLAIN = 'su - ' + task['user']['id'] +' -c "qstat -explain E -j '+ str(task['container']['id']) + '"'
+            QEXPLAIN = 'su - ' + task['user']['id'] + ' -c "qstat -explain E -j ' + str(task['container']['id']) + '"'
             res = None
             if 'simulate' in self.cfg['placement']['sge'] and self.cfg['placement']['sge']['simulate']:
                 res = SIMU_QEXPLAIN.replace('#SGEID#', task['container']['id']).replace('#ID#', str(task['id']))
                 self.logger.debug('SGE:simulate:would execute: ' + QEXPLAIN)
             else:
                 res = subprocess.check_output(QEXPLAIN, shell=True)
-            task['status']['reason'] = 'SGE failed to schedule task: '+str(res)
+            task['status']['reason'] = 'SGE failed to schedule task: ' + str(res)
             self.kill_task(task)
             return (task, True)
 
@@ -442,10 +436,9 @@ class SGE(IExecutorPlugin):
         :type tasks: Task
         :return: (Task, over) over is True if task could be killed
         '''
-        QDEL='su - ' + task['user']['id'] +' -c "qdel -j ' + str(task['container']['id']) + '"'
-        res = None
+        QDEL = 'su - ' + task['user']['id'] + ' -c "qdel -j ' + str(task['container']['id']) + '"'
         if 'simulate' in self.cfg['placement']['sge'] and self.cfg['placement']['sge']['simulate']:
-            res = SIMU_QDEL.replace('#SGEID#', task['container']['id']).replace('#ID#', str(task['id']))
+            SIMU_QDEL.replace('#SGEID#', task['container']['id']).replace('#ID#', str(task['id']))
             self.logger.debug('SGE:simulate:would execute: ' + QDEL)
         else:
             try:

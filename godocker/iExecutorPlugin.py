@@ -11,7 +11,7 @@ class IExecutorPlugin(IGoDockerPlugin):
         Is executor using docker or native calls
         '''
         executor_name = self.get_name()
-        if 'placement' not in self.cfg or executor_name not in self.cfg['placement'] :
+        if 'placement' not in self.cfg or executor_name not in self.cfg['placement']:
             # if not defined, then default is Docker
             return False
         if 'docker' not in self.cfg['placement'][executor_name]:

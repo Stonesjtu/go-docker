@@ -35,7 +35,6 @@ def get_executor(task, executors):
     Get executor for task from field requirements/executor.
     Field can be in the form executorname:somedata:otherdata
     '''
-    task_executor = None
     if 'executor' not in task['requirements'] or not task['requirements']['executor']:
         task['requirements']['executor'] = executors[0].get_name()
     for executor in executors:
@@ -43,6 +42,7 @@ def get_executor(task, executors):
         if executor.get_name() == executor_requirements[0]:
             return executor
     return None
+
 
 def get_hostname():
     if 'HOSTNAME' in os.environ and os.environ['HOSTNAME']:
