@@ -190,7 +190,7 @@ class SGE(IExecutorPlugin):
 
                 container_opts = self._container_opts(task)
                 sge_docker = "#!/bin/bash\n"
-                sge_docker += "trap \"docker %s stop $containerid; docker %s rm $containerid; exit 1\" SIGHUP SIGINT SIGTERM\n" % (docker_url, docker_url)
+                sge_docker += "trap \"docker %s stop $containerid; docker %s rm $containerid; exit 1\" SIGHUP SIGUSR1 SIGUSR2 SIGINT SIGTERM\n" % (docker_url, docker_url)
                 sge_docker += "docker %s pull %s\n" % (docker_url, task['container']['image'])
                 sge_docker += "containerid=$(docker %s run -d %s)\n" % (docker_url, container_opts)
                 sge_docker += "export containerid\n"
