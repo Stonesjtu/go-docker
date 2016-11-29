@@ -146,7 +146,7 @@ class SGE(IExecutorPlugin):
             mode = 'ro'
             if 'acl' in v and v['acl'] == 'rw':
                 mode = 'rw'
-            volumes.append((v['path'] + ':' + v['mount'] + ':' + mode)
+            volumes.append(v['path'] + ':' + v['mount'] + ':' + mode)
             opts += ' -v %s:%s:%s' % (v['path'], v['mount'], mode)
 
         god_auth_token = godutils.get_jwt_docker_token(
@@ -170,14 +170,16 @@ class SGE(IExecutorPlugin):
         opts += ' -c ' + str(task['requirements']['cpu'] * 1024)
         opts += ' -m ' + str(task['requirements']['ram']) + 'g'
         opts += ' -e "GOD_AUTH_TOKEN=' + str(god_auth_token) + '"'
+        opts += ' --entrypoint ' + task['command']['script']
         opts += ' ' + task['container']['image']
-        opts += ' ' + task['command']['script']
         return opts
 
     def _qsub(self, task):
 
         cmd = "#/bin/sh\n"
-        cmd += ". %s/god.env\n" % (task['requirements']['sge']['task_dir'])
+        cmd += "if [ -e %s ]; then\n" % (task['requirements']['sge']['task_dir'])
+        cmd += "    . %s/god.env\n" % (task['requirements']['sge']['task_dir'])
+        cmd += "fi\n"
         cmd += "qsub -N god-%d " % (task['id'])
         if task['requirements']['sge']['queue']:
             cmd += " -q %s " % (task['requirements']['sge']['queue'])

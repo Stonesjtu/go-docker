@@ -269,6 +269,7 @@ class GoDScheduler(Daemon):
                     executor.set_network_plugin(self.network_plugin)
                 else:
                     print("Skipping network plugin, not supported by executor")
+                    executor.set_network_plugin(None)
                 self.executors.append(executor)
                 print("Loading executor: " + executor.get_name())
 

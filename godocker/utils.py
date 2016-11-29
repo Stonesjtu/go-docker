@@ -2,6 +2,7 @@ import re
 import os
 import socket
 import hashlib
+import jwt
 
 STATUS_CREATED = 'created'
 STATUS_PENDING = 'pending'
