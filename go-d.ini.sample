@@ -152,7 +152,7 @@ placement:
         # available queues
         queues:
             - all.q
-        # support docker execution (not yet implemented)
+        # support docker execution, if false, execute native jobs
         docker: false
         # parallel environment to use when cpu > 1
         parallel_env: 'make'

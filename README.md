@@ -278,6 +278,7 @@ Available plugins are:
     * swarm (Docker Swarm)
     * mesos (Apache Mesos, tested with mesos 0.28)
     * Kubernetes (tested with 1.2.0, using API v1)
+    * SGE (tested with SGE 8.1.9)
     * fake  (not be used, for test only, simulate a job execution)
 * Auth:
     * goauth: ldap based authentications.
@@ -492,6 +493,33 @@ In public network, all containers are in the same sub network and can dialog wit
 In user or project network, containers are placed in a network where only containers from the same user or project can talk to each other.
 
 CNI is activated in the network section of the configuration file. If not activated, basic Docker bridge and port mapping is used.
+
+## SGE integration
+
+If docker for SGE is not enabled, native SGE jobs will be executed (no containers). GoDocker will simply add mem and cpu requirements for the job and execute the job under user id (no root access possible, no mounts as job is directly executed on the node).
+If docker is set, GoDocker will submit job in SGE and execute a Docker container. To prevent users from using direclty Docker, the web interface will act as an authorization plugin for docker. To do so, docker must be configured to:
+
+* listen on a tcp port (docker/url parameter of config)
+* define an authorization plugin
+
+    # cat /etc/docker/plugins/godocker-auth.spec
+    http://ip_of_godocker_web:6543
+
+* Add authorization plugin to docker daemon
+
+    # cat /etc/systemd/system/docker.service.d/docker.conf
+    [Service]
+    ExecStart=
+    ExecStart=/usr/bin/docker daemon --host=fd:// --host=tcp://127.0.0.1:2375 --authorization-plugin=godocker-auth
+
+* Reload config and restart docker (godocker web must already be running)
+
+    #systemctl daemon-reload
+    #service docker restart
+
+
+When a docker command is executed, docker will trigger godocker web to ask for authorization. A specific token is created at job creation only and only docker commands using this token are accepted. GoDocker will check that volumes, scripts etc. are the same than those requested at job creation time to prevent reusing a token for a different job.
+Without this token, users won't be able to use Docker directly on your cluster.
 
 ## Tips
 
