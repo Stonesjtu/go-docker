@@ -1,6 +1,7 @@
 import re
 import os
 import socket
+import hashlib
 
 STATUS_CREATED = 'created'
 STATUS_PENDING = 'pending'
@@ -29,6 +30,79 @@ QUEUE_KILL = 'kill'
 QUEUE_SUSPEND = 'suspend'
 QUEUE_RESUME = 'resume'
 
+
+def md5sum(fname):
+    hash_md5 = hashlib.md5()
+    with open(fname, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+def check_jwt_docker_token(docker_data, secret_passphrase):
+    '''
+    Check a JWT token against Docker provided auth data
+
+    docker_data is the decoded data from plugin RequestBody (which is base64 encoded)
+    '''
+    god_auth_token = None
+    for docker_env in docker_data['Env']:
+        if docker_env.startswith('GOD_AUTH_TOKEN='):
+            god_auth_token = docker_env.replace('GOD_AUTH_TOKEN=', '')
+            break
+    if not god_auth_token:
+        return (False, 'No GOD_AUTH_TOKEN in env vars')
+    decoded_msg = jwt.decode(god_auth_token, secret_passphrase, audience='urn:godocker/auth-api')
+    decoded_msg = decoded_msg['docker']
+    if decoded_msg['image'] != docker_data['Image']:
+        return (False, 'Using different image')
+    if 'network' in decoded_msg and decoded_msg['network'] and decoded_msg['network'] != docker_data['HostConfig']['NetworkMode']:
+        return (False, 'Using a different network mode')
+    if docker_data['HostConfig']['CapAdd']:
+        return (False, 'Not allowed to extend capabilities')
+    if docker_data['Entrypoint'][0] != decoded_msg['EntryPoint']:
+        return (False, 'Not allowed to override Entrypoint')
+    if docker_data['HostConfig']['Privileged']:
+        return (False, 'Not allowed to execute in privileged mode')
+    if docker_data['HostConfig']['Binds']:
+        for bind in docker_data['HostConfig']['Binds']:
+            if bind not in decoded_msg['volumes']:
+                return (False, 'Volume not allowed: ' + str(bind))
+    if 'files' in decoded_msg:
+        for md5_file in decoded_msg['files']:
+            file_to_check = md5_file['file']
+            file_to_check_md5 = md5sum(file_to_check)
+            if file_to_check_md5 != md5_file['md5']:
+                return (False, 'Different files used')
+    return (True, 'ok')
+
+def get_jwt_docker_token(image, task_directory, secret_passphrase, entrypoint='/mnt/go-docker/wrapper.sh', volumes=[], network='default'):
+    '''
+    Get a JWT token that will be used for Docker authorization plugin using env variable GOD_AUTH_TOKEN
+
+    :return: JWT encoded token
+    '''
+    dockerinfo = {
+        'image': image,
+        'EntryPoint': entrypoint,
+        'volumes': volumes,
+        'network': network,
+        'files': []
+    }
+    wrapper_file = os.path.join(task_directory, 'wrapper.sh')
+    wrapper_file_md5 = md5sum(wrapper_file)
+    dockerinfo['files'].append({
+        'file': wrapper_file, 'md5': wrapper_file_md5
+    })
+    godocker_file = os.path.join(task_directory, 'godocker.sh')
+    godocker_file_md5 = md5sum(godocker_file)
+    dockerinfo['files'].append({
+        'file': godocker_file, 'md5': godocker_file_md5
+    })
+
+    token = jwt.encode({'docker': dockerinfo,
+#                        'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=3600),
+                        'aud': 'urn:godocker/auth-api'}, secret_passphrase)
+    return token
 
 def get_executor(task, executors):
     '''

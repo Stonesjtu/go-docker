@@ -1,4 +1,5 @@
 from godocker.iExecutorPlugin import IExecutorPlugin
+import godocker.utils as godutils
 import subprocess
 import re
 import os
@@ -124,6 +125,9 @@ class SGE(IExecutorPlugin):
         return ([], tasks)
 
     def _container_opts(self, task):
+        '''
+        Generate Docker options for task
+        '''
         opts = ' --name god-' + str(task['id'])
         port_list = []
         if 'ports' in task['requirements']:
@@ -131,13 +135,27 @@ class SGE(IExecutorPlugin):
         if task['command']['interactive']:
             port_list.append(22)
 
+        default_network = 'default'
+        if self.network:
+            default_network = self.network.network(task['requirements']['network'], task['user'])
+
+        volumes = []
         for v in task['container']['volumes']:
             if v['mount'] is None:
                 v['mount'] = v['path']
             mode = 'ro'
             if 'acl' in v and v['acl'] == 'rw':
                 mode = 'rw'
+            volumes.append((v['path'] + ':' + v['mount'] + ':' + mode)
             opts += ' -v %s:%s:%s' % (v['path'], v['mount'], mode)
+
+        god_auth_token = godutils.get_jwt_docker_token(
+                            task['container']['image'],
+                            task['requirements']['sge']['task_dir'],
+                            self.cfg['secret_passphrase'],
+                            entrypoint='/mnt/go-docker/wrapper.sh',
+                            volumes=volumes,
+                            network=default_network)
 
         for port in port_list:
             if self.cfg['port_allocate']:
@@ -151,6 +169,7 @@ class SGE(IExecutorPlugin):
 
         opts += ' -c ' + str(task['requirements']['cpu'] * 1024)
         opts += ' -m ' + str(task['requirements']['ram']) + 'g'
+        opts += ' -e "GOD_AUTH_TOKEN=' + str(god_auth_token) + '"'
         opts += ' ' + task['container']['image']
         opts += ' ' + task['command']['script']
         return opts
@@ -190,6 +209,7 @@ class SGE(IExecutorPlugin):
 
                 container_opts = self._container_opts(task)
                 sge_docker = "#!/bin/bash\n"
+                sge_docker += "echo \"SGE JOB ID: $JOB_ID\"\n"
                 sge_docker += "trap \"docker %s stop $containerid; docker %s rm $containerid; exit 1\" SIGHUP SIGUSR1 SIGUSR2 SIGINT SIGTERM\n" % (docker_url, docker_url)
                 sge_docker += "docker %s pull %s\n" % (docker_url, task['container']['image'])
                 sge_docker += "containerid=$(docker %s run -d %s)\n" % (docker_url, container_opts)
