@@ -180,7 +180,7 @@ class SGE(IExecutorPlugin):
         cmd += "if [ -e %s ]; then\n" % (task['requirements']['sge']['task_dir'])
         cmd += "    . %s/god.env\n" % (task['requirements']['sge']['task_dir'])
         cmd += "fi\n"
-        cmd += "qsub -N god-%d " % (task['id'])
+        cmd += "qsub -notify -N god-%d " % (task['id'])
         if task['requirements']['sge']['queue']:
             cmd += " -q %s " % (task['requirements']['sge']['queue'])
         if task['requirements']['cpu'] > 1:
@@ -211,6 +211,7 @@ class SGE(IExecutorPlugin):
 
                 container_opts = self._container_opts(task)
                 sge_docker = "#!/bin/bash\n"
+                sge_docker += "#$ -S /bin/bash\n"
                 sge_docker += "echo \"SGE JOB ID: $JOB_ID\"\n"
                 sge_docker += "trap \"docker %s stop $containerid; docker %s rm $containerid; exit 1\" SIGHUP SIGUSR1 SIGUSR2 SIGINT SIGTERM\n" % (docker_url, docker_url)
                 sge_docker += "docker %s pull %s\n" % (docker_url, task['container']['image'])
@@ -272,6 +273,7 @@ class SGE(IExecutorPlugin):
                     task['container']['meta']['Node'] = {'Name': 'localhost'}
                 else:
                     task['container']['meta']['Node']['Name'] = 'localhost'
+                task['container']['meta']['Node']['sge_id'] = str(job_id)
             else:
                 task['status']['reason'] = res
                 self.logger.warn('SGE:Job:Error:Failed to submit job ' + str(task['id']))
@@ -294,6 +296,7 @@ class SGE(IExecutorPlugin):
                     task['container']['meta']['Node'] = {'Name': 'localhost'}
                 else:
                     task['container']['meta']['Node']['Name'] = 'localhost'
+                task['container']['meta']['Node']['sge_id'] = str(job_id)
             else:
                 task['status']['reason'] = res
                 self.logger.warn('SGE:Job:Error:Failed to submit job ' + str(task['id']))
@@ -359,12 +362,13 @@ class SGE(IExecutorPlugin):
         :param over: is task over
         :type over: bool
         '''
+        sge_job_id = str(task['container']['meta']['Node']['sge_id'])
         # exec stat to get status, and qacct if not present in result
-        QSTAT = 'su - ' + task['user']['id'] + ' -c "qstat | grep ' + str(task['container']['id']) + ' | grep god"'
+        QSTAT = 'su - ' + task['user']['id'] + ' -c "qstat | grep ' + sge_job_id + ' | grep god"'
 
         res = None
         if 'simulate' in self.cfg['placement']['sge'] and self.cfg['placement']['sge']['simulate']:
-            res = SIMU_QSTAT.replace('#SGEID#', task['container']['id']).replace('#ID#', str(task['id']))
+            res = SIMU_QSTAT.replace('#SGEID#', sge_job_id).replace('#ID#', str(task['id']))
             self.logger.debug('SGE:simulate:would execute: ' + QSTAT)
         else:
             try:
@@ -375,10 +379,10 @@ class SGE(IExecutorPlugin):
                 res = None
         if not res:
             # not in qstat, may be pending for scheduling or over
-            QACCT = 'su - ' + task['user']['id'] + ' -c "qacct -j ' + str(task['container']['id']) + '"'
+            QACCT = 'su - ' + task['user']['id'] + ' -c "qacct -j ' + sge_job_id + '"'
             res = None
             if 'simulate' in self.cfg['placement']['sge'] and self.cfg['placement']['sge']['simulate']:
-                res = SIMU_QACCT.replace('#SGEID#', task['container']['id']).replace('#ID#', str(task['id']))
+                res = SIMU_QACCT.replace('#SGEID#', sge_job_id).replace('#ID#', str(task['id']))
                 self.logger.debug('SGE:simulate:would execute: ' + QACCT)
             else:
                 try:
@@ -399,7 +403,7 @@ class SGE(IExecutorPlugin):
                 try:
                     exit_code = int(exit_status.group(1))
                 except Exception as e:
-                    self.logger.error('SGE:qacct:%d:%s:Failed to get exit code: %s' % (task['id'], str(task['container']['id']), str(e)))
+                    self.logger.error('SGE:qacct:%d:%s:Failed to get exit code: %s' % (task['id'], sge_job_id, str(e)))
                 task['container']['meta']['State']['ExitCode'] = exit_code
 
                 return (task, True)
@@ -414,6 +418,22 @@ class SGE(IExecutorPlugin):
         if not job_status_reg:
             self.logger.debug('SGE:Status:Unknown:' + str(res))
             return (task, False)
+        
+        if self.cfg['placement']['sge']['docker'] and 'id' not in task['container'] or not task['container']['id']:
+            self.logger.debug('SGE:Job:Container:search job %s container id' % (str(task['id']))
+            sge_container_log = None
+            if os.path.exists(os.path.join(task['requirements']['sge']['task_dir'], 'sge.info')):
+                with open(os.path.join(task['requirements']['sge']['task_dir'], 'sge.info'), 'r') as sge_info:
+                    sge_container_log = sge_info.read()
+                sge_id_reg = re.search('CONTAINER\sID:\s+(\w+)', sge_container_log)
+                sge_container_id = None
+                if sge_id_reg:
+                    sge_container_id = sge_id_reg.group(1)
+                    self.logger.debug('SGE:Job:Container:%s' % (sge_container_id))
+                    task['container']['id'] = str(sge_container_id)
+            else:
+                self.logger.debug('SGE:Job:Container:sge.info for %s not yet present' % (str(task['id']))
+            
         job_status = None
         job_status = job_status_reg.group(1)
         self.logger.debug('SGE:Status:%d:%s' % (task['id'], str(job_status)))
@@ -438,10 +458,10 @@ class SGE(IExecutorPlugin):
             if 'State' not in task['container']['meta']:
                 task['container']['meta']['State'] = {}
             task['container']['meta']['State']['ExitCode'] = 1
-            QEXPLAIN = 'su - ' + task['user']['id'] + ' -c "qstat -explain E -j ' + str(task['container']['id']) + '"'
+            QEXPLAIN = 'su - ' + task['user']['id'] + ' -c "qstat -explain E -j ' + sge_job_id + '"'
             res = None
             if 'simulate' in self.cfg['placement']['sge'] and self.cfg['placement']['sge']['simulate']:
-                res = SIMU_QEXPLAIN.replace('#SGEID#', task['container']['id']).replace('#ID#', str(task['id']))
+                res = SIMU_QEXPLAIN.replace('#SGEID#', sge_job_id).replace('#ID#', str(task['id']))
                 self.logger.debug('SGE:simulate:would execute: ' + QEXPLAIN)
             else:
                 res = subprocess.check_output(QEXPLAIN, shell=True)
