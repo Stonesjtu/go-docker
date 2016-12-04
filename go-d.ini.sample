@@ -154,6 +154,8 @@ placement:
             - all.q
         # support docker execution, if false, execute native jobs
         docker: false
+        # native job execution (no docker image)
+        native: true
         # parallel environment to use when cpu > 1
         parallel_env: 'make'
 
@@ -199,7 +201,7 @@ auth_policy: 'fake'
 # Allow HTTP_REMOTE_USER header for authentication
 allow_proxy_remote_user: False
 
-#Â LDAP
+# LDAP
 ldap_host: null
 ldap_port: null
 ldap_dn: null
