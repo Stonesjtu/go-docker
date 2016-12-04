@@ -175,6 +175,9 @@ class SGE(IExecutorPlugin):
         return opts
 
     def _qsub(self, task):
+        if task['requirements']['executor'].endswith('docker') and not self.cfg['placement']['sge']['docker']:
+            self.logger.error('SGE:Job:Error:Task %s asks for docker execution but not allowed in config' % (str(task['id']))
+            return False
 
         cmd = "#/bin/sh\n"
         cmd += "if [ -e %s ]; then\n" % (task['requirements']['sge']['task_dir'])
@@ -193,7 +196,7 @@ class SGE(IExecutorPlugin):
 
         cmd += " -wd %s %s/qsub_docker.sh" % (task['requirements']['sge']['task_dir'], task['requirements']['sge']['task_dir'])
 
-        if not self.cfg['placement']['sge']['docker']:
+        if task['requirements']['executor'].endswith('native'):
             cmd_content = ''
             with open(task['requirements']['sge']['task_dir'] + '/cmd.sh', 'r') as cmd_file:
                 cmd_content = cmd_file.read()
@@ -235,7 +238,7 @@ class SGE(IExecutorPlugin):
                 cmd_file.write(cmd)
             os.chmod(task['requirements']['sge']['task_dir'] + '/qsub_cmd.sh', 0o755)
 
-        if not self.cfg['placement']['sge']['docker']:
+        if task['requirements']['executor'].endswith('native'):
             godocker_sh = None
             with open(os.path.join(task['requirements']['sge']['task_dir'], 'godocker.sh'), 'r') as godocker_sh_file:
                 godocker_sh = godocker_sh_file.read().replace('/mnt/go-docker', task['requirements']['sge']['task_dir'])
@@ -250,7 +253,7 @@ class SGE(IExecutorPlugin):
             for task_dir in files:
                 os.chown(os.path.join(root, task_dir), task['user']['uid'], task['user']['gid'])
 
-        if not self.cfg['placement']['sge']['docker']:
+        if task['requirements']['executor'].endswith('native'):
             res = None
             if 'simulate' in self.cfg['placement']['sge'] and self.cfg['placement']['sge']['simulate']:
                 res = SIMU_QSUB.replace('#SGEID#', str(task['id'] + 1000)).replace('#ID#', str(task['id']))
