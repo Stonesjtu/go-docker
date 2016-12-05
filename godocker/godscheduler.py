@@ -514,7 +514,7 @@ class GoDScheduler(Daemon):
         # Check if task executor uses Docker or calls native commands
         # task_executor = godutils.get_executor(task, self.executors)
         is_native = False
-        if task['requirements']['executor'].endswith('native'):
+        if 'executor' in task['requirements'] and task['requirements']['executor'].endswith('native'):
             is_native = True
 
         user_id = task['user']['id']
