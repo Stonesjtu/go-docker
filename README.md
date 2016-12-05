@@ -521,7 +521,7 @@ If docker is set, GoDocker will submit job in SGE and execute a Docker container
 When a docker command is executed, docker will trigger godocker web to ask for authorization. A specific token is created at job creation only and only docker commands using this token are accepted. GoDocker will check that volumes, scripts etc. are the same than those requested at job creation time to prevent reusing a token for a different job.
 Without this token, users won't be able to use Docker directly on your cluster.
 
-To allow job kill operation, SGE must be configured to send a SIGTERM on qdel instead of SIGKILL, else container will continue to run and won't be deleted on job completion.
+To allow job kill operation, SGE must be configured to either send a SIGTERM on qdel instead of SIGKILL or support the -notify option, else container will continue to run and won't be deleted on job completion.
 
 SGE docker jobs cannot be monitored (cAdvisor/prometheus) at this time.
 
