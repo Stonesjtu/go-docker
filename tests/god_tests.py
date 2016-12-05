@@ -270,7 +270,8 @@ class SchedulerTest(unittest.TestCase):
                 'user_quota_ram': 0,
                 'project_quota_time': 0,
                 'project_quota_cpu': 0,
-                'project_quota_ram': 0
+                'project_quota_ram': 0,
+                'executor': 'fake:default:docker'
             },
             'container': {
                 'image': 'centos:latest',
