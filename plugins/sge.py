@@ -218,11 +218,10 @@ class SGE(IExecutorPlugin):
                 sge_docker = "#!/bin/bash\n"
                 sge_docker += "#$ -S /bin/bash\n"
                 sge_docker += "echo \"SGE JOB ID: $JOB_ID\"\n"
-                sge_docker += "trap \"docker %s stop $containerid; docker %s rm $containerid; exit 1\" SIGHUP SIGUSR1 SIGUSR2 SIGINT SIGTERM\n" % (docker_url, docker_url)
                 sge_docker += "docker %s pull %s\n" % (docker_url, task['container']['image'])
                 sge_docker += "containerid=$(docker %s run -d %s)\n" % (docker_url, container_opts)
                 sge_docker += "echo \"CONTAINER ID: $containerid\" > %s/sge.info\n" % (task['requirements']['sge']['task_dir'])
-                sge_docker += "export containerid\n"
+                sge_docker += "trap \"docker %s stop $containerid; docker %s rm $containerid; exit 1\" SIGHUP SIGUSR1 SIGUSR2 SIGINT SIGTERM\n" % (docker_url, docker_url)
                 sge_docker += "while [ 1 -eq 1 ]\n"
                 sge_docker += "do\n"
                 sge_docker += "RUNNING=$(docker %s inspect --format=\"{{ .State.Running }}\" $containerid 2> /dev/null)\n" % (docker_url)
