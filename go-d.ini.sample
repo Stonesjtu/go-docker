@@ -142,7 +142,7 @@ scheduler_policy: 'FiFo'
 max_job_pop: 100
 
 # Execution system #####################
-# swarmn, mesos, fake, kubernetes, sge
+# swarm, mesos, fake, kubernetes, sge
 executors:
     - 'fake'
 
