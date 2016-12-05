@@ -176,7 +176,7 @@ class SGE(IExecutorPlugin):
 
     def _qsub(self, task):
         if task['requirements']['executor'].endswith('docker') and not self.cfg['placement']['sge']['docker']:
-            self.logger.error('SGE:Job:Error:Task %s asks for docker execution but not allowed in config' % (str(task['id']))
+            self.logger.error('SGE:Job:Error:Task %s asks for docker execution but not allowed in config' % (str(task['id'])))
             return False
 
         cmd = "#/bin/sh\n"
@@ -194,9 +194,9 @@ class SGE(IExecutorPlugin):
         # TODO manage job arrays
         cmd += " -o %s/sge.log -e %s/sge.err " % (task['requirements']['sge']['task_dir'], task['requirements']['sge']['task_dir'])
 
-        cmd += " -wd %s %s/qsub_docker.sh" % (task['requirements']['sge']['task_dir'], task['requirements']['sge']['task_dir'])
-
         if task['requirements']['executor'].endswith('native'):
+            cmd += " -wd %s %s/qsub_cmd.sh" % (task['requirements']['sge']['task_dir'], task['requirements']['sge']['task_dir'])
+
             cmd_content = ''
             with open(task['requirements']['sge']['task_dir'] + '/cmd.sh', 'r') as cmd_file:
                 cmd_content = cmd_file.read()
@@ -207,6 +207,8 @@ class SGE(IExecutorPlugin):
                 cmd_file.write(cmd_content)
             os.chmod(task['requirements']['sge']['task_dir'] + '/qsub_cmd.sh', 0o755)
         else:
+            cmd += " -wd %s %s/qsub_docker.sh" % (task['requirements']['sge']['task_dir'], task['requirements']['sge']['task_dir'])
+
             with open(task['requirements']['sge']['task_dir'] + '/qsub_docker.sh', 'w') as qsub_docker:
                 docker_url = ''
                 if self.cfg['docker']['url']:
@@ -219,7 +221,7 @@ class SGE(IExecutorPlugin):
                 sge_docker += "trap \"docker %s stop $containerid; docker %s rm $containerid; exit 1\" SIGHUP SIGUSR1 SIGUSR2 SIGINT SIGTERM\n" % (docker_url, docker_url)
                 sge_docker += "docker %s pull %s\n" % (docker_url, task['container']['image'])
                 sge_docker += "containerid=$(docker %s run -d %s)\n" % (docker_url, container_opts)
-                sge_docker += "echo \"CONTAINER ID: $containerid > %s/sge.info\"\n" % (task['requirements']['sge']['task_dir'])
+                sge_docker += "echo \"CONTAINER ID: $containerid\" > %s/sge.info\n" % (task['requirements']['sge']['task_dir'])
                 sge_docker += "export containerid\n"
                 sge_docker += "while [ 1 -eq 1 ]\n"
                 sge_docker += "do\n"
@@ -294,7 +296,7 @@ class SGE(IExecutorPlugin):
             if job_id_reg:
                 job_id = job_id_reg.group(1)
                 self.logger.debug('SGE:Job:New:' + str(job_id))
-                task['container']['id'] = str(job_id)
+                # task['container']['id'] = str(job_id)
                 if 'Node' not in task['container']['meta']:
                     task['container']['meta']['Node'] = {'Name': 'localhost'}
                 else:
@@ -421,9 +423,11 @@ class SGE(IExecutorPlugin):
         if not job_status_reg:
             self.logger.debug('SGE:Status:Unknown:' + str(res))
             return (task, False)
-        
-        if self.cfg['placement']['sge']['docker'] and 'id' not in task['container'] or not task['container']['id']:
-            self.logger.debug('SGE:Job:Container:search job %s container id' % (str(task['id']))
+
+        do_update = False
+        update_req = {}
+        if task['requirements']['executor'].endswith('docker') and ('id' not in task['container'] or not task['container']['id']):
+            self.logger.debug('SGE:Job:Container:search job %s container id' % (str(task['id'])))
             sge_container_log = None
             if os.path.exists(os.path.join(task['requirements']['sge']['task_dir'], 'sge.info')):
                 with open(os.path.join(task['requirements']['sge']['task_dir'], 'sge.info'), 'r') as sge_info:
@@ -434,9 +438,12 @@ class SGE(IExecutorPlugin):
                     sge_container_id = sge_id_reg.group(1)
                     self.logger.debug('SGE:Job:Container:%s' % (sge_container_id))
                     task['container']['id'] = str(sge_container_id)
+                    do_update = True
+                    update_req['container.id'] = task['container']['id']
+
             else:
-                self.logger.debug('SGE:Job:Container:sge.info for %s not yet present' % (str(task['id']))
-            
+                self.logger.debug('SGE:Job:Container:sge.info for %s not yet present' % (str(task['id'])))
+
         job_status = None
         job_status = job_status_reg.group(1)
         self.logger.debug('SGE:Status:%d:%s' % (task['id'], str(job_status)))
@@ -449,12 +456,13 @@ class SGE(IExecutorPlugin):
                 if 'status' not in task['container']:
                     task['container']['status'] = 'qw'
                 self.logger.debug('SGE:Status:%d:switch %s -> %s' % (task['id'], str(task['container']['status']), str(job_status)))
-                self.jobs_handler.update({'id': task['id']},
-                                                    {'$set': {
-                                                        'container.status': job_status,
-                                                        'container.meta.Node.Name': node_name
-                                                        }
-                                                    })
+                do_update = True
+                update_req['container.status'] = job_status
+                update_req['container.meta.Node.Name'] = node_name
+
+        if do_update:
+            self.jobs_handler.update({'id': task['id']}, {'$set': update_req})
+
         task['container']['status'] = job_status
         if 'E' in job_status:
             # Error
@@ -482,9 +490,10 @@ class SGE(IExecutorPlugin):
         :type tasks: Task
         :return: (Task, over) over is True if task could be killed
         '''
-        QDEL = 'su - ' + task['user']['id'] + ' -c "qdel -j ' + str(task['container']['id']) + '"'
+        sge_job_id = str(task['container']['meta']['Node']['sge_id'])
+        QDEL = 'su - ' + task['user']['id'] + ' -c "qdel -j ' + sge_job_id + '"'
         if 'simulate' in self.cfg['placement']['sge'] and self.cfg['placement']['sge']['simulate']:
-            SIMU_QDEL.replace('#SGEID#', task['container']['id']).replace('#ID#', str(task['id']))
+            SIMU_QDEL.replace('#SGEID#', sge_job_id).replace('#ID#', str(task['id']))
             self.logger.debug('SGE:simulate:would execute: ' + QDEL)
         else:
             try:

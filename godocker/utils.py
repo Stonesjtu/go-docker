@@ -39,6 +39,7 @@ def md5sum(fname):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
 
+
 def check_jwt_docker_token(docker_data, secret_passphrase):
     '''
     Check a JWT token against Docker provided auth data
@@ -76,6 +77,7 @@ def check_jwt_docker_token(docker_data, secret_passphrase):
                 return (False, 'Different files used')
     return (True, 'ok')
 
+
 def get_jwt_docker_token(image, task_directory, secret_passphrase, entrypoint='/mnt/go-docker/wrapper.sh', volumes=[], network='default'):
     '''
     Get a JWT token that will be used for Docker authorization plugin using env variable GOD_AUTH_TOKEN
@@ -104,6 +106,7 @@ def get_jwt_docker_token(image, task_directory, secret_passphrase, entrypoint='/
 #                        'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=3600),
                         'aud': 'urn:godocker/auth-api'}, secret_passphrase)
     return token
+
 
 def get_executor(task, executors):
     '''
