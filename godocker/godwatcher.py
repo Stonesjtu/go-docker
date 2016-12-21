@@ -9,6 +9,7 @@ import datetime
 import os
 import traceback
 import yaml
+import urllib3
 
 from pymongo import MongoClient
 from bson.json_util import dumps
@@ -627,6 +628,20 @@ class GoDWatcher(Daemon):
             'name': task['meta']['name']
         }))
 
+    def _prometheus_error_stats(self, host='none'):
+        if 'prometheus_key' in self.cfg and self.cfg['prometheus_exporter'] is not None and self.cfg['prometheus_key'] is not None:
+            try:
+                http = urllib3.PoolManager()
+                r = http.request('POST',
+                    self.cfg['prometheus_exporter'] + '/api/1.0/prometheus',
+                    headers={'Content-Type': 'application/json'},
+                    body=json.dumps({'key': self.cfg['prometheus_key'],
+                                      'stat': [{'name': 'god_watcher_job_error', 'value': 1, 'host': host}]}))
+                if r.status != 200:
+                    logging.warn('Prometheus:Failed to send stats')
+            except Exception as e:
+                logging.warn("Prometheus:Failed to send stats: " + str(e))
+
     def check_running_jobs(self):
         '''
         Checks if running jobs are over
@@ -701,6 +716,13 @@ class GoDWatcher(Daemon):
 
                     if 'failure_policy' not in self.cfg:
                         self.cfg['failure_policy'] = {'strategy': 0, 'skip_failed_nodes': False}
+
+
+                    if 'failure' in task['status'] and task['status']['failure']['reason'] is not None:
+                        if 'Node' in task['container']['meta'] and 'Name' in task['container']['meta']['Node']:
+                            node_name = task['container']['meta']['Node']['Name']
+                            # Send stat
+                            self._prometheus_error_stats(node_name)
 
                     if 'failure_policy' not in task['requirements'] or task['requirements']['failure_policy'] > self.cfg['failure_policy']['strategy']:
                         task['requirements']['failure_policy'] = self.cfg['failure_policy']['strategy']

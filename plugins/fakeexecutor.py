@@ -55,14 +55,36 @@ class FakeExecutor(IExecutorPlugin):
                 continue
             if i < self.fail_on:
                 self.logger.debug("Run:Fake:task:run:" + str(task['id']))
-                running_tasks.append(task)
+                task['container']['meta'] = {'Node': {'Name': 'fake-laptop'}}
                 if task['command']['interactive']:
                     # port mapping
-                    task['container']['meta'] = {'Node': {'Name': 'fake-laptop'}}
                     mapped_port = self.get_mapping_port('fake-laptop', task)
                     self.logger.debug('Run:Fake:MappedPort:' + str(mapped_port))
+                running_tasks.append(task)
             else:
                 self.logger.debug("Run:Fake:task:reject:" + str(task['id']))
                 rejected_tasks.append(task)
             i += 1
         return (running_tasks, rejected_tasks)
+
+
+    def watch_tasks(self, task):
+        '''
+        Get task status
+
+        Must update task with following params if task is over:
+            task['container']['meta']['State']['ExitCode']
+        In case of node failure:
+            task['status']['failure'] = { 'reason': reason_of_failure,
+                                           'nodes': [ node(s)_where_failure_occured]}
+
+
+        :param task: current task
+        :type task: Task
+        :param over: is task over
+        :type over: bool
+        '''
+        self.logger.debug('Mesos:Task:Check:Running:' + str(task['id']))
+        if 'testerror' == task['meta']['name']:
+            task['status']['failure'] = {'reason': 'fake error', 'nodes': ['testhost']}
+        return (task, True)

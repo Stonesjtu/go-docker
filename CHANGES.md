@@ -2,6 +2,7 @@
     GOD-58 Add multi executor support
        - change go-d.ini: executor => executors with list of executors, add placement field for external executors additional info.
     GOD-59 Add SGE plugin to submit native or docker jobs to Sun Grid Engine
+    Send job system errors (not execution failure) by watcher to stat handler
 1.2:
     GOD-49 set ldap homeDirectory field configurable via ldap/fields go-d.ini config field.
     Fix #39 mem_limit has been moved to host_config in API version 1.19
