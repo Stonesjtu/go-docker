@@ -48,7 +48,7 @@ on host AND container as final job will end in a host container needing the same
       -p 6543:6543 \
       -e "PYRAMID_ENV=prod" \
       osallou/go-docker \
-      gunicorn -p godweb.pid --log-config=/opt/go-docker-web/production.ini --paste /opt/go-docker-web/production.ini
+      gunicorn -c /opt/go-docker-web/gunicorn_conf.py -p godweb.pid --log-config=/opt/go-docker-web/production.ini --paste /opt/go-docker-web/production.ini
 
 
 The first time only, initialize db etc...

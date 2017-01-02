@@ -16,7 +16,9 @@ ENV admin="root"
 ENV swarm_url="tcp://god-swarm:2375"
 ENV PYTHONPATH="/usr/lib/python2.7/site-packages:${PYTHONPATH}"
 ENV PYRAMID_ENV="prod"
+ENV prometheus_multiproc_dir="/tmp/godocker-multiproc"
 
+RUN mkdir -p /tmp/godocker-multiproc
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
 RUN echo "deb http://repos.mesosphere.io/debian jessie main" > /etc/apt/sources.list.d/mesosphere.list
 RUN apt-get update
