@@ -13,6 +13,7 @@ pipelines:
           - service redis-server start
           - pip install flake8
           - pip install -r requirements.txt
+          - sleep 20
           - cat /var/log/mongodb/mongodb.log
           - nosetests --with-coverage --cover-package=godocker
           - codecov --token=$CODECOVTOKEN
