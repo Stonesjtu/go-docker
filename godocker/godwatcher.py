@@ -717,7 +717,6 @@ class GoDWatcher(Daemon):
                     if 'failure_policy' not in self.cfg:
                         self.cfg['failure_policy'] = {'strategy': 0, 'skip_failed_nodes': False}
 
-
                     if 'failure' in task['status'] and task['status']['failure']['reason'] is not None:
                         if 'Node' in task['container']['meta'] and 'Name' in task['container']['meta']['Node']:
                             node_name = task['container']['meta']['Node']['Name']

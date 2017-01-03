@@ -67,7 +67,6 @@ class FakeExecutor(IExecutorPlugin):
             i += 1
         return (running_tasks, rejected_tasks)
 
-
     def watch_tasks(self, task):
         '''
         Get task status
