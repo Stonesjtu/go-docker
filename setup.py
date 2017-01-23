@@ -9,7 +9,7 @@ config = {
     'url': '',
     'download_url': '',
     'author_email': 'olivier.sallou@irisa.fr',
-    'version': '1.3',
+    'version': '1.3.1',
     'install_requires': ['nose',
                             'PyJWT',
                             'PyYAML',

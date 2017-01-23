@@ -201,7 +201,7 @@ auth_policy: 'fake'
 # Allow HTTP_REMOTE_USER header for authentication
 allow_proxy_remote_user: False
 
-# LDAP
+#ï¿½LDAP
 ldap_host: null
 ldap_port: null
 ldap_dn: null
@@ -210,6 +210,8 @@ ldap_admin_dn: null
 ldap_admin_password: null
 
 ldap:
+    # Use ldaps (check that ldap_port matches ssl port of the ldap server)
+    ssl: false
     # LDAP field mapping
     fields:
         homeDirectory: 'homeDirectory'

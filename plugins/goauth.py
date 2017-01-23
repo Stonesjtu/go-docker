@@ -35,12 +35,14 @@ class GoAuth(IAuthPlugin):
         try:
             ldap_host = self.cfg['ldap_host']
             ldap_port = self.cfg['ldap_port']
-            s = Server(host=ldap_host, port=int(ldap_port), use_ssl=False, get_info='ALL')
+            s = Server(host=ldap_host, port=int(ldap_port), use_ssl=self.cfg['ldap']['ssl'], get_info='ALL')
             con = None
             if 'ldap_admin_dn' in self.cfg and self.cfg['ldap_admin_dn']:
                 con = Connection(s, user=self.cfg['ldap_admin_dn'], password=self.cfg['ldap_admin_password'])
             else:
                 con = Connection(s)
+            if self.cfg['ldap']['ssl']:
+                con.start_tls()
         except Exception as err:
             self.logger.error(str(err))
             return None

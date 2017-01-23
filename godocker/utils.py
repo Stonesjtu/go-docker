@@ -249,6 +249,15 @@ def config_backward_compatibility(config):
     if 'GODOCKER_LDAP_BASE_DN_FILTER' in os.environ:
         config['ldap_base_dn_filter'] = os.environ['GODOCKER_LDAP_BASE_DN_FILTER']
 
+    if 'ldap' not in config:
+        config['ldap'] = {'ssl': False}
+    if 'GODOCKER_LDAP_SSL' in os.environ:
+        do_ssl = os.environ['GODOCKER_LDAP_SSL']
+        if do_ssl == '1':
+            config['ldap']['ssl'] = True
+        else:
+            config['ldap']['ssl'] = False
+
     if 'GODOCKER_WATCHERS' in os.environ:
         # Comma separated list of watcher names
         config['watchers'] = os.environ['GODOCKER_WATCHERS'].split(',')
