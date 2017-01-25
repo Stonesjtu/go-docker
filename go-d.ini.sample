@@ -175,6 +175,8 @@ master_timeout: 600
 # Used by consul status manager
 web_endpoint: 'http://127.0.0.1:6543'
 
+session_timeout: 172800
+
 # Mesos ################################
 
 # DEPRECATED
@@ -337,7 +339,6 @@ failure_policy:
 link_image_to_registry:
     - name: 'docker-registry.genouest.org'
       url: 'https://docker-ui.genouest.org/app/#/container/$IMAGE'
-
 
 # Logging ##################################
 log_config:
