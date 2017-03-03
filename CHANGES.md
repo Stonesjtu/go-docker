@@ -1,6 +1,7 @@
 1.3.1:
     GOD-61 Add ldaps support
         - optional change to go-d.ini ldap/ssl as boolean
+    If container.id is not set, initialize it
 1.3:
     GOD-58 Add multi executor support
        - change go-d.ini: executor => executors with list of executors, add placement field for external executors additional info.

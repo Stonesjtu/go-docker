@@ -832,6 +832,9 @@ class Mesos(IExecutorPlugin):
         '''
         Extract container id from slave
         '''
+        if 'id' not in task['container']:
+            task['container']['id'] = None
+
         if task['container']['id']:
             return
 
