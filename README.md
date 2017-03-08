@@ -21,6 +21,10 @@ They also usually focus on running "production" long running tasks (such as a we
 This application mainly targets systems where you know your users (not an open cloud platform) which have a home directory they usually access to via SSH/SCP/... , working dirs, ... With Go-Docker, they can ask to get their home directroy mounted in the container (read-only when root access is required for example, and rw for basic access), as well as other pre-defined directories to do... what they need to do. The Authentication plugin will define what users can mount or not.
 With the plugin schedulers, it is possible to reorder the pending jobs before running them, based on previous user usage for example, or to reject a job because user reached some quota.
 
+## Documentation
+
+https://godocker.atlassian.net/wiki/display/GOD/GODOCKER
+
 ## Limitations
 
 docker images used to submit jobs must have *bash* installed.
