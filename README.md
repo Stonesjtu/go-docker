@@ -319,7 +319,7 @@ GoDocker supports both Docker and Mesos Unified containerizers, choice is made i
 
 GoDocker has experimental support with Kubernetes (see Kubernetes section in configuration).
 Tasks that cannot be planned doe to overcapacity are deleted from Kubernetes but remain in pending state in GoDocker.
-It does not support GPU reservation has Kubernetes does not support yet arbitrary resource counters (though in roadmap).
+It does not support GPU reservation as Kubernetes does not support yet arbitrary resource counters (though in roadmap).
 Regarding temporary storage, software makes use of *emptyDir* volume capability of Kubernetes. A local directory is created on node, but no capacity is guaranteed (per user or global). Other kinds of persistent volumes are not supported here.
 
 ## User scripts
@@ -454,6 +454,11 @@ Simply add to mesos-slave the attribute:
 
 With mesos, one can ask for specific resources (GPU, etc.) according to resources available set in mesos-slave.
 
+If native GPU is supported in your Mesos version (>= 1.x), configure mesos for GPU resources then simply use "gpus" resource in task.requirements:
+
+User will be able to select one or more GPU resources.
+
+For lower mesos versions, it is possible to define GPUs in constraints.
 Resources are defined in go-docker as constraints, in constraint named *resource*:
 
     constraints: [

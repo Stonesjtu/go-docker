@@ -190,6 +190,8 @@ mesos:
     # Mesos needs to be configured with CNI
     # Mesos slave needs to be configured to have in isolation cgroups/cpu and cgroups/mem
     unified: False
+    # Use native GPU management, must use unified containers
+    native_gpu: False
 
 # Kubernetes ###########################
 # API Version: 1

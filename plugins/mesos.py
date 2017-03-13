@@ -41,7 +41,7 @@ class MesosScheduler(mesos.interface.Scheduler):
 
         :return: list of features within ['docker-plugin-zfs']
         '''
-        return ['docker-plugin-zfs', 'interactive', 'cni']
+        return ['docker-plugin-zfs', 'interactive', 'cni', 'gpus']
 
     def set_config(self, config):
         self.config = config
@@ -255,12 +255,15 @@ class MesosScheduler(mesos.interface.Scheduler):
             offer_tasks = []
             offerCpus = 0
             offerMem = 0
+            offerGpus = 0
             labels = {}
             for resource in offer.resources:
                 if resource.name == "cpus":
                     offerCpus += resource.scalar.value
                 elif resource.name == "mem":
                     offerMem += resource.scalar.value
+                elif resource.name == "gpus":
+                    offerGpus += resource.scale.value
 
             for attr in offer.attributes:
                 if attr.type == 3:
@@ -271,8 +274,12 @@ class MesosScheduler(mesos.interface.Scheduler):
 
             self.logger.debug("Mesos:Received offer %s with cpus: %s and mem: %s" \
                   % (offer.id.value, offerCpus, offerMem))
+
+            if 'gpus' not in task['requirements']:
+                task['requirements']['gpus'] = 0
+
             for task in tasks:
-                if not task['mesos_offer'] and task['requirements']['cpu'] <= offerCpus and task['requirements']['ram'] * 1000 <= offerMem:
+                if not task['mesos_offer'] and task['requirements']['cpu'] <= offerCpus and task['requirements']['ram'] * 1000 <= offerMem and task['requirements']['gpus'] <= offerGpus:
                     # check for reservation constraints, if any
                     try:
                         self.logger.debug("Try to place task " + str(task['id']))
@@ -293,7 +300,6 @@ class MesosScheduler(mesos.interface.Scheduler):
                                 self.logger.debug("User " + task['user']['id'] + " not allowed to execute on " + offer_hostname)
                                 continue
 
-                        # check for resources
                         if 'label' in task['requirements'] and task['requirements']['label']:
                             task['requirements']['resources'] = {}
                             for task_resource in task['requirements']['label']:
@@ -361,6 +367,7 @@ class MesosScheduler(mesos.interface.Scheduler):
                     offer_tasks.append(new_task)
                     offerCpus -= task['requirements']['cpu']
                     offerMem -= task['requirements']['ram'] * 1000
+                    offGpus -= task['requirements']['gpus']
                     task['mesos_offer'] = True
                     self.logger.debug('Mesos:Task:Running:' + str(task['id']))
                     self.redis_handler.rpush(self.config['redis_prefix'] + ':mesos:running', dumps(task))
@@ -660,6 +667,10 @@ class Mesos(IExecutorPlugin):
             mesos_framework_id = mesos_pb2.FrameworkID()
             mesos_framework_id.value = frameworkId
             framework.id.MergeFrom(mesos_framework_id)
+
+        if self.cfg['mesos']['native_gpu']:
+            cap framework.capabilities.add()
+            cap.type = 3  # GPU resource
 
         if os.getenv("MESOS_CHECKPOINT"):
             self.logger.info("Enabling checkpoint for the framework")

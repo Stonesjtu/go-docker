@@ -1,3 +1,5 @@
+1.3.2:
+
 1.3.1:
     GOD-61 Add ldaps support
         - optional change to go-d.ini ldap/ssl as boolean

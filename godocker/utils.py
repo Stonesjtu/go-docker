@@ -151,6 +151,14 @@ def config_backward_compatibility(config):
     else:
         config['cadvisor_url_part'] = '/docker'
 
+    if 'native_gpu' not in config['mesos']:
+        config['mesos']['native_gpu'] = False
+        warnings.append('native_gpu not set in mesos config, set it to disabled')
+
+    if config['mesos']['native_gpu'] and not config['mesos']['unified']:
+        config['mesos']['native_gpu'] = False
+        warnings.append('mesos native_cpu set but not using unified containers, disabling GPU support')
+
     if 'executor' in config:
         warnings.append('executor is deprecated in favor of executors array list')
         config['executors'] = [config['executor']]
