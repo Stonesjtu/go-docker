@@ -591,6 +591,9 @@ class GoDScheduler(Daemon):
             # should execute ssh, copy user ssh key from home in /root/.ssh/authorized_keys or /home/gocker/.ssh/authorized_keys
             # Need to create .ssh dir
             # sshd MUST be installed in container
+            cmd += "if [ ! -e /var/run/sshd ]; then\n"
+            cmd += "    mkdir -p /var/run/sshd\n"
+            cmd += "fi\n"
             ssh_dir = ""
             if task['container']['root']:
                 ssh_dir = "/root/.ssh"
