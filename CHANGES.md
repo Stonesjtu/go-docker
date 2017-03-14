@@ -1,5 +1,5 @@
 1.3.2:
-
+    GOD-63 Add Mesos native GPU management (adds native_gpu field under mesos section of go-d.ini)
 1.3.1:
     GOD-61 Add ldaps support
         - optional change to go-d.ini ldap/ssl as boolean
