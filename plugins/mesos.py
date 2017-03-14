@@ -640,7 +640,7 @@ class Mesos(IExecutorPlugin):
 
         :return: list of features within ['kill', 'pause','resources.port', 'cni']
         '''
-        return ['kill', 'resources.port', 'cni']
+        return ['kill', 'resources.port', 'cni', 'interactive', 'gpus']
 
     def set_config(self, cfg):
         self.cfg = cfg
@@ -951,6 +951,7 @@ class Mesos(IExecutorPlugin):
                 'name': slave_hostname,
                 'cpu': (cpus_used, cpu_total),
                 'mem': (mem_used, mem_total),
+                'gpus': (gpus_used, gpus_total)
                 'disk': (disk_used, disk_total),
             }
 
@@ -968,9 +969,13 @@ class Mesos(IExecutorPlugin):
             if slave['active']:
                 r = http.urlopen('GET', 'http://' + slave['hostname'] + ':5051/metrics/snapshot')
                 state = json.loads(r.data)
+                if 'slave/gpus_total' not in state:
+                    state['slave/gpus_total'] = 0
+                    state['slave/gpus_used'] = 0
                 slaves.append({
                     'name': slave['hostname'],
                     'cpu': (int(state['slave/cpus_used']), int(state['slave/cpus_total'])),
+                    'gpus': (int(state['slave/gpus_used']), int(state['slave/gpus_total'])),
                     'mem': (int(state['slave/mem_used']), int(state['slave/mem_total'])),
                     'disk': (int(state['slave/disk_used']), int(state['slave/disk_total']))
                 })
