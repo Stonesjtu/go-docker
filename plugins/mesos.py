@@ -263,7 +263,7 @@ class MesosScheduler(mesos.interface.Scheduler):
                 elif resource.name == "mem":
                     offerMem += resource.scalar.value
                 elif resource.name == "gpus":
-                    offerGpus += resource.scale.value
+                    offerGpus += resource.scalar.value
 
             for attr in offer.attributes:
                 if attr.type == 3:
@@ -367,7 +367,7 @@ class MesosScheduler(mesos.interface.Scheduler):
                     offer_tasks.append(new_task)
                     offerCpus -= task['requirements']['cpu']
                     offerMem -= task['requirements']['ram'] * 1000
-                    offGpus -= task['requirements']['gpus']
+                    offerGpus -= task['requirements']['gpus']
                     task['mesos_offer'] = True
                     self.logger.debug('Mesos:Task:Running:' + str(task['id']))
                     self.redis_handler.rpush(self.config['redis_prefix'] + ':mesos:running', dumps(task))
@@ -478,6 +478,12 @@ class MesosScheduler(mesos.interface.Scheduler):
         mem.name = "mem"
         mem.type = mesos_pb2.Value.SCALAR
         mem.scalar.value = job['requirements']['ram'] * 1000
+
+        if 'gpus' in job['requirements'] and job['requirements']['gpus'] > 0:
+            gpus = task.resources.add()
+            gpus.name = "gpus"
+            gpus.type = mesos_pb2.Value.SCALAR
+            gpus.scalar.value = job['requirements']['gpus']
 
         if 'meta' not in job['container'] or job['container']['meta'] is None:
             job['container']['meta'] = {}
@@ -669,7 +675,7 @@ class Mesos(IExecutorPlugin):
             framework.id.MergeFrom(mesos_framework_id)
 
         if self.cfg['mesos']['native_gpu']:
-            cap framework.capabilities.add()
+            cap = framework.capabilities.add()
             cap.type = 3  # GPU resource
 
         if os.getenv("MESOS_CHECKPOINT"):

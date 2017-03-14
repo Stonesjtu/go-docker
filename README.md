@@ -454,7 +454,7 @@ Simply add to mesos-slave the attribute:
 
 With mesos, one can ask for specific resources (GPU, etc.) according to resources available set in mesos-slave.
 
-If native GPU is supported in your Mesos version (>= 1.x), configure mesos for GPU resources then simply use "gpus" resource in task.requirements:
+If native GPU is supported in your Mesos version (>= 1.x), configure mesos for GPU resources then simply use "gpus" resource in task.requirements. this requires *native_gpu* and *unified* parameters to be set in config (*warning*: unified containerizers in Mesos do not support port mapping without CNI, e.g. no interactive jobs)
 
 User will be able to select one or more GPU resources.
 

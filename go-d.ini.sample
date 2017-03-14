@@ -205,7 +205,7 @@ auth_policy: 'fake'
 # Allow HTTP_REMOTE_USER header for authentication
 allow_proxy_remote_user: False
 
-#�LDAP
+# LDAP
 ldap_host: null
 ldap_port: null
 ldap_dn: null
