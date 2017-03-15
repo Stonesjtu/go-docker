@@ -640,7 +640,10 @@ class Mesos(IExecutorPlugin):
 
         :return: list of features within ['kill', 'pause','resources.port', 'cni']
         '''
-        return ['kill', 'resources.port', 'cni', 'interactive', 'gpus']
+        feats = ['kill', 'resources.port', 'cni', 'interactive']
+        if self.cfg['mesos']['native_gpu']:
+            feats.append('gpus')
+        return feats
 
     def set_config(self, cfg):
         self.cfg = cfg
