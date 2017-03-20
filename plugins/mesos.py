@@ -1,20 +1,27 @@
+from __future__ import print_function
+
 from godocker.iExecutorPlugin import IExecutorPlugin
 import json
 import time
 import os
 import sys
-import threading
 import redis
 import urllib3
+import socket
+import signal
+import getpass
+import uuid
 
+from threading import Thread
 from bson.json_util import dumps
+from os.path import abspath, join, dirname
 
-import mesos.interface
-from mesos.interface import mesos_pb2
-import mesos.native
+from pymesos import MesosSchedulerDriver, Scheduler, encode_data
+from addict import Dict
 
 
-class MesosThread(threading.Thread):
+
+class MesosThread(Thread):
 
     def set_driver(self, driver):
         self.driver = driver
@@ -26,7 +33,7 @@ class MesosThread(threading.Thread):
         self.driver.stop()
 
 
-class MesosScheduler(mesos.interface.Scheduler):
+class MesosScheduler(Scheduler):
 
     def __init__(self, implicitAcknowledgements, executor):
         self.implicitAcknowledgements = implicitAcknowledgements
