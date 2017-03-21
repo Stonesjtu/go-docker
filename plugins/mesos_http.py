@@ -36,8 +36,9 @@ class MinimalScheduler(Scheduler):
 
     def resourceOffers(self, driver, offers):
         filters = {'refuse_seconds': 5}
-
         for offer in offers:
+            logging.debug('Recieving offer:' + json.dumps(offer))
+
             available_tasks = self.getAvailableTasks(offer)
 
             tasks_to_launch = self.addOfferInfo(available_tasks, offer)
@@ -64,6 +65,7 @@ class MinimalScheduler(Scheduler):
         while redis_task is not None:
             task = json.loads(redis_task)
             task = self.taskAdapter(task)
+            logging.debug('loading tasks from database: ' + json.dumps(task))
             tasks.append(task)
             redis_task = self.redis_handler.lpop(self.config['redis_prefix'] + ':mesos:pending')
 
