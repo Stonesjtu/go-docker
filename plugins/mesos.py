@@ -10,14 +10,22 @@ import urllib3
 import socket
 import signal
 import getpass
-import uuid
 
 from threading import Thread
 from bson.json_util import dumps
 from os.path import abspath, join, dirname
 
-from pymesos import MesosSchedulerDriver, Scheduler, encode_data
+from pymesos import MesosSchedulerDriver, Scheduler
 from addict import Dict
+
+
+
+config = Dict(
+    redis_host='localhost',
+    redis_port=6379,
+    redis_db=0,
+    redis_prefix='god',
+    )
 
 
 
@@ -35,8 +43,7 @@ class MesosThread(Thread):
 
 class MesosScheduler(Scheduler):
 
-    def __init__(self, implicitAcknowledgements, executor):
-        self.implicitAcknowledgements = implicitAcknowledgements
+    def __init__(self, executor):
         self.executor = executor
         self.Terminated = False
         self.jobs_handler = None
@@ -57,581 +64,101 @@ class MesosScheduler(Scheduler):
     def set_logger(self, logger):
         self.logger = logger
 
-    def registered(self, driver, frameworkId, masterInfo):
-        self.logger.info("Registered with framework ID %s" % frameworkId.value)
-        master_address = None
-        master_ip = None
-        master_port = 5050
-        try:
-            master_address = masterInfo.address.hostname
-            master_ip = masterInfo.address.ip
-            master_port = masterInfo.address.port
-        except Exception:
-            self.logger.warn("Address not available from master")
-        if master_address is None and master_ip is None:
-            try:
-                master_address = masterInfo.hostname
-                master_port = masterInfo.port
-            except Exception:
-                self.logger.warn("Could not get master address info")
-
-        if master_ip is not None and master_address is None:
-            master_address = master_ip
-
-        if master_address is not None:
-            self.logger.info("Master hostname: " + str(master_address))
-            self.logger.info("Master port: " + str(master_port))
-            self.redis_handler.set(self.config['redis_prefix'] + ':mesos:master',
-                                   master_address + ':' + str(master_port))
-
-        self.frameworkId = frameworkId.value
-        self.redis_handler.set(self.config['redis_prefix'] + ':mesos:frameworkId',
-                               self.frameworkId)
-
-        # Reconcile at startup
-        if 'mesos' in self.config and 'reconcile' in self.config['mesos'] and self.config['mesos']['reconcile']:
-            self.logger.info("Reconcile any running task")
-            tasks = self.jobs_handler.find({'status.primary': 'running'})
-            running_tasks = []
-            for task in tasks:
-                task_status = mesos_pb2.TaskStatus()
-                task_id = mesos_pb2.TaskID()
-                task_id.value = str(task['id'])
-                task_status.task_id.MergeFrom(task_id)
-                task_status.state = 1
-                self.logger.debug('Mesos:Reconcile:Task:' + str(task['id']))
-                running_tasks.append(task_status)
-            driver.reconcileTasks(running_tasks)
-
-    def has_enough_resource(self, offer, requested_resource, quantity):
-        '''
-        Checks if a resource is available and has enough slots available in offer
-
-        :param offer: Mesos offer
-        :type offer: Mesos Offer
-        :param requested_resource: requested resource name as defined in mesos-slave resource (resource==gpu)
-        :type requested_resource: str
-        :param quantity: number of slots requested_resource
-        :type quantity: int
-        :return: True if resource is available in offer, else False
-        '''
-        available_resources = 0
-        for resource in offer.resources:
-            if resource.name == requested_resource:
-                for mesos_range in resource.ranges.range:
-                    if mesos_range.begin <= mesos_range.end:
-                        available_resources += 1 + mesos_range.end - mesos_range.begin
-        if available_resources >= quantity:
-            return True
-        else:
-            return False
-
-    def get_mapping_port(self, offer, task):
-        '''
-        Get a port mapping for interactive tasks
-
-        :param task: task
-        :type task: int
-        :return: available port
-        '''
-
-        # Get first free port
-        port = None
-        for resource in offer.resources:
-            if resource.name == "ports":
-                for mesos_range in resource.ranges.range:
-                    if mesos_range.begin <= mesos_range.end:
-                        port = str(mesos_range.begin)
-                        mesos_range.begin += 1
-                        break
-        if port is None:
-            return None
-        self.logger.debug('Port:Give:' + task['container']['meta']['Node']['Name'] + ':' + str(port))
-        if 'ports' not in task['container']:
-            task['container']['ports'] = []
-        task['container']['ports'].append(port)
-        return int(port)
-
-    def plugin_zfs_unmount(self, hostname, task):
-        '''
-        Unmount and delete temporary storage
-        '''
-        if 'plugin_zfs' not in self.config or not self.config['plugin_zfs']:
-            return
-
-        if 'tmpstorage' not in task['requirements']:
-            return
-
-        if task['requirements']['tmpstorage'] is None or task['requirements']['tmpstorage']['size'] == '':
-            return
-
-        try:
-            http = urllib3.PoolManager()
-            r = http.urlopen('POST', 'http://' + hostname + ':5000/VolumeDriver.Unmount', body=json.dumps({'Name': str(task['id'])}))
-            res = json.loads(r.data)
-            if res['Err'] is not None or res['Err'] != '':
-                r = http.urlopen('POST', 'http://' + hostname + ':5000/VolumeDriver.Remove', body=json.dumps({'Name': str(task['id'])}))
-            else:
-                self.logger.error('Failed to remove zfs volume: ' + str(task['id']))
-        except Exception:
-            self.logger.error('Failed to remove zfs volume: ' + str(task['id']))
-
-    def plugin_zfs_mount(self, hostname, task):
-        '''
-        Create and mount temporary storage
-        '''
-        zfs_path = None
-
-        if 'plugin_zfs' not in self.config or not self.config['plugin_zfs']:
-            return (True, None)
-
-        if 'tmpstorage' not in task['requirements']:
-            return (True, None)
-
-        if task['requirements']['tmpstorage'] is None or task['requirements']['tmpstorage']['size'] == '':
-            return (True, None)
-
-        try:
-            http = urllib3.PoolManager()
-            r = None
-            activated = self.redis_handler.get(self.config['redis_prefix'] + ':plugins:zfs:' + hostname)
-            if activated is None:
-                http.urlopen('GET', 'http://' + hostname + ':5000/Plugin.Activate')
-                self.redis_handler.set(self.config['redis_prefix'] + ':plugins:zfs:' + hostname, "plugin-zfs")
-            r = http.urlopen('POST', 'http://' + hostname + ':5000/VolumeDriver.Create', body=json.dumps({'Name': str(task['id']), 'Opts': {'size': str(task['requirements']['tmpstorage']['size'])}}))
-            if r.status == 200:
-                r = http.urlopen('POST', 'http://' + hostname + ':5000/VolumeDriver.Mount', body=json.dumps({'Name': str(task['id'])}))
-                res = json.loads(r.data)
-                if res['Err'] is not None:
-                    return (False, None)
-                r = http.urlopen('POST', 'http://' + hostname + ':5000/VolumeDriver.Path', body=json.dumps({'Name': str(task['id'])}))
-                res = json.loads(r.data)
-                zfs_path = res['Name']
-            else:
-                self.logger.error("Failed to resource plugin-zfs")
-                return (False, None)
-        except Exception as e:
-            self.logger.error("Failed to resource plugin-zfs:" + str(e))
-            return (False, None)
-        return (True, zfs_path)
-
     def resourceOffers(self, driver, offers):
-        '''
-        Basic placement strategy (loop over offers and try to push as possible)
-        '''
-        if self.Terminated:
-            self.logger.info("Stop requested")
-            driver.stop()
-            return
+        filters = {'refuse_seconds': 5}
+        for offer in offers:
+            self.logger.debug('Recieving offer:' + json.dumps(offer))
 
-        self.logger.debug('Mesos:Offers:Kill:Begin')
-        redis_task_id = self.redis_handler.lpop(self.config['redis_prefix'] + ':mesos:kill')
-        while redis_task_id is not None:
-            is_over = self.redis_handler.get(self.config['redis_prefix'] + ':mesos:over:' + redis_task_id)
-            if is_over is not None:
-                task_id = mesos_pb2.TaskID()
-                task_id.value = redis_task_id
-                self.logger.debug('Mesos:Offers:Kill:Task:' + redis_task_id)
-                driver.killTask(task_id)
-            redis_task_id = self.redis_handler.lpop(self.config['redis_prefix'] + ':mesos:kill')
-        self.logger.debug('Mesos:Offers:Kill:End')
+            available_tasks = self.getAvailableTasks(offer)
 
-        self.logger.debug('Mesos:Offers:Begin')
-        # Get tasks
+            tasks_to_launch = self.addOfferInfo(available_tasks, offer)
+
+            driver.launchTasks(offer.id, tasks_to_launch, filters)
+
+    def getResource(self, res, name):
+        for r in res:
+            if r.name == name:
+                return r.scalar.value
+        return 0
+
+    def statusUpdate(self, driver, update):
+        self.logger.debug('Status update TID %s %s',
+                      update.task_id.value,
+                      update.state)
+
+    def getTasksFromDB(self):
+        '''
+        Get the list of tasks from database or redis cache
+        '''
         tasks = []
         redis_task = self.redis_handler.lpop(self.config['redis_prefix'] + ':mesos:pending')
         while redis_task is not None:
             task = json.loads(redis_task)
-            task['mesos_offer'] = False
+            task = self.taskAdapter(task)
+            self.logger.debug('loading tasks from database: ' + json.dumps(task))
             tasks.append(task)
             redis_task = self.redis_handler.lpop(self.config['redis_prefix'] + ':mesos:pending')
 
-        for offer in offers:
-            # Check maintenance of node
-            self.logger.debug(offer)
-            if offer.unavailability.start.nanoseconds:
-                self.logger.debug("Node %s in planned maintenance, skipping..." % (offer.hostname))
-                driver.declineOffer(offer.id)
-                continue
+        return tasks
 
-            if not tasks:
-                self.logger.debug('Mesos:Offer:NoTask')
-                driver.declineOffer(offer.id)
-                continue
-
-            offer_tasks = []
-            offerCpus = 0
-            offerMem = 0
-            offerGpus = 0
-            labels = {}
-            for resource in offer.resources:
-                if resource.name == "cpus":
-                    offerCpus += resource.scalar.value
-                elif resource.name == "mem":
-                    offerMem += resource.scalar.value
-                elif resource.name == "gpus":
-                    offerGpus += resource.scalar.value
-
-            for attr in offer.attributes:
-                if attr.type == 3:
-                    labels[attr.name] = attr.text.value
-            self.logger.debug("Mesos:Labels:" + str(labels))
-            if 'hostname' not in labels:
-                self.logger.error('Mesos:Error:Configuration: missing label hostname')
-
-            self.logger.debug("Mesos:Received offer %s with cpus: %s and mem: %s" \
-                  % (offer.id.value, offerCpus, offerMem))
-
-            if 'gpus' not in task['requirements']:
-                task['requirements']['gpus'] = 0
-
-            for task in tasks:
-                if not task['mesos_offer'] and task['requirements']['cpu'] <= offerCpus and task['requirements']['ram'] * 1000 <= offerMem and task['requirements']['gpus'] <= offerGpus:
-                    # check for reservation constraints, if any
-                    try:
-                        self.logger.debug("Try to place task " + str(task['id']))
-                        if 'hostname' in labels and 'skip_failed_nodes' in self.config['failure_policy'] and self.config['failure_policy']['skip_failed_nodes']:
-                            if 'failure' in task['status'] and task['status']['failure']['nodes']:
-                                if labels['hostname'] in task['status']['failure']['nodes']:
-                                    # Task previsouly failed on this node, skip this node
-                                    self.logger.debug("Task:" + str(task['id']) + ":Failure:Skip:" + labels['hostname'])
-                                    continue
-                        if 'reservation' in labels:
-                            self.logger.debug("Node has reservation")
-                            reservations = labels['reservation'].split(',')
-                            offer_hostname = "undefined"
-                            if 'hostname' in labels:
-                                offer_hostname = labels['hostname']
-                            self.logger.debug("Check reservation for " + offer_hostname)
-                            if task['user']['id'] not in reservations and task['user']['project'] not in reservations:
-                                self.logger.debug("User " + task['user']['id'] + " not allowed to execute on " + offer_hostname)
-                                continue
-
-                        if 'label' in task['requirements'] and task['requirements']['label']:
-                            task['requirements']['resources'] = {}
-                            for task_resource in task['requirements']['label']:
-                                if not task_resource or not task_resource.startswith('resource=='):
-                                    continue
-                                requested_resource = task_resource.split('==')
-                                requested_resource = requested_resource[1]
-                                if requested_resource not in task['requirements']['resources']:
-                                    task['requirements']['resources'][requested_resource] = 1
-                                else:
-                                    task['requirements']['resources'][requested_resource] += 1
-                            # check if enough resources
-                            has_enough_resources = True
-                            for requested_resource in task['requirements']['resources']:
-                                quantity = task['requirements']['resources'][requested_resource]
-                                if not self.has_enough_resource(offer, requested_resource, quantity):
-                                    self.logger.debug('Not enough ' + requested_resource + ' on this node')
-                                    has_enough_resources = False
-                                    break
-                            if not has_enough_resources:
-                                self.logger.debug("Not enough specific resources for task " + str(task['id']))
-                                del task['requirements']['resources']
-                                continue
-
-                        # check for label constraints, if any
-                        if 'label' in task['requirements'] and task['requirements']['label']:
-                            is_ok = True
-                            for req in task['requirements']['label']:
-                                if not req:
-                                    continue
-                                reqlabel = req.split('==')
-                                if reqlabel[0] == 'resource':
-                                    continue
-
-                                if reqlabel[0] not in labels or reqlabel[1] != labels[reqlabel[0]]:
-                                    is_ok = False
-                                    break
-                            if not is_ok:
-                                self.logger.debug("Label requirements do not match for task " + str(task['id']))
-                                continue
-
-                        (res, zfs_path) = self.plugin_zfs_mount(labels['hostname'], task)
-                        if not res:
-                            self.logger.debug("Zfs mount not possible for task " + str(task['id']))
-                            continue
-                        else:
-                            if zfs_path is not None:
-                                task['requirements']['tmpstorage']['path'] = zfs_path
-                            else:
-                                if task['requirements']['tmpstorage'] is not None:
-                                    task['requirements']['tmpstorage']['path'] = None
-                                else:
-                                    task['requirements']['tmpstorage'] = {'path': None, 'size': ''}
-
-                        new_task = self.new_task(offer, task, labels)
-
-                    except Exception as e:
-                        self.logger.error("Error with task " + str(task['id']) + ": " + str(e))
-                        task['status']['reason'] = 'Invalid task'
-                        # An error occur, switch to next task
-                        continue
-                    if new_task is None:
-                        self.logger.debug('Mesos:Task:Error:Failed to create new task ' + str(task['id']))
-                        continue
-                    offer_tasks.append(new_task)
-                    offerCpus -= task['requirements']['cpu']
-                    offerMem -= task['requirements']['ram'] * 1000
-                    offerGpus -= task['requirements']['gpus']
-                    task['mesos_offer'] = True
-                    self.logger.debug('Mesos:Task:Running:' + str(task['id']))
-                    self.redis_handler.rpush(self.config['redis_prefix'] + ':mesos:running', dumps(task))
-                    self.redis_handler.set(self.config['redis_prefix'] + ':mesos:over:' + str(task['id']), 0)
-            driver.launchTasks(offer.id, offer_tasks)
-
-        for task in tasks:
-            if not task['mesos_offer']:
-                self.logger.debug('Mesos:Task:Rejected:' + str(task['id']))
-                self.redis_handler.rpush(self.config['redis_prefix'] + ':mesos:rejected', dumps(task))
-
-        if tasks:
-            self.redis_handler.set(self.config['redis_prefix'] + ':mesos:offer', 1)
-        self.logger.debug('Mesos:Offers:End')
-
-    def new_task(self, offer, job, labels=None):
+    def taskAdapter(self, redis_task):
         '''
-        Creates a task for mesos
+        transform the json formatted redis task into a mesos task, without the execution info
         '''
-        task = mesos_pb2.TaskInfo()
-        container = mesos_pb2.ContainerInfo()
-        container.type = 1  # mesos_pb2.ContainerInfo.Type.DOCKER
-        if self.config['mesos']['unified']:
-            container.type = 2  # Mesos
+        task = Dict()
+        redis_task = Dict(redis_task)
+        task.task_id = redis_task.id
+        task.name = redis_task.meta.name
+        requirements = redis_task.requirements
+        task.resources = [
+            dict(name='cpus', type='SCALAR', scalar={'value': requirements.cpu}),
+            dict(name='mem', type='SCALAR', scalar={'value': requirements.ram * 1000}),
+            dict(name='gpus', type='SCALAR', scalar={'value': requirements.gpu or 0}),
+        ]
 
-        # Reserve requested resource and mount related volumes
-        if 'resources' in job['requirements'] and job['requirements']['resources']:
-            for requested_resource in job['requirements']['resources']:
-                quantity = job['requirements']['resources'][requested_resource]
-                mesos_resources = task.resources.add()
-                mesos_resources.name = requested_resource
-                mesos_resources.type = mesos_pb2.Value.RANGES
-                for resource in offer.resources:
-                    if resource.name == requested_resource and quantity > 0:
-                        for mesos_range in resource.ranges.range:
-                            if mesos_range.begin <= mesos_range.end:
-                                if (1 + mesos_range.end - mesos_range.begin >= quantity):
-                                    # take what is necessary
-                                    mesos_resource = mesos_resources.ranges.range.add()
-                                    mesos_resource.begin = mesos_range.begin
-                                    mesos_resource.end = mesos_range.begin + quantity - 1
-                                    mesos_range.begin = quantity
-                                    quantity = 0
-                                else:
-                                    # take what is available
-                                    mesos_resource = mesos_resources.ranges.range.add()
-                                    mesos_resource.begin = mesos_range.begin
-                                    mesos_resource.end = mesos_range.begin + (mesos_range.end - mesos_range.begin)
-                                    mesos_range.begin += 1 + mesos_range.end - mesos_range.begin
-                                    quantity -= 1 + mesos_range.end - mesos_range.begin
-                                self.logger.debug("Take resources: " + str(mesos_resource.begin) + "-" + str(mesos_resource.end))
-            for mesos_range in mesos_resources.ranges.range:
-                for res_range in range(mesos_range.begin, mesos_range.end + 1):
-                    resource_volume_id = mesos_resources.name + "_" + str(res_range)
-                    self.logger.debug("Add volumes for resource " + resource_volume_id)
-                    if resource_volume_id in labels:
-                        resource_volumes = labels[resource_volume_id].split(',')
-                        for resource_volume in resource_volumes:
-                            volume = container.volumes.add()
-                            self.logger.debug("Add volume for resource: " + resource_volume)
-                            volume.container_path = resource_volume
-                            volume.host_path = resource_volume
-                            volume.mode = 1
-            del job['requirements']['resources']
+        # containerizer
+        container = Dict(type='MESOS')
+        # image provider
+        container.mesos = Dict(type='DOCKER', docker={'name':redis_task.container.image})
+        task.container = container
 
-        dockercfg = None
+        task.executor.command = Dict(value=redis_task.command.script)
 
-        for v in job['container']['volumes']:
-            if v['mount'] is None:
-                v['mount'] = v['path']
-            volume = container.volumes.add()
-            volume.container_path = v['mount']
-            volume.host_path = v['path']
-            if 'acl' in v and v['acl'] == 'rw':
-                volume.mode = 1  # mesos_pb2.Volume.Mode.RW
-            else:
-                volume.mode = 2  # mesos_pb2.Volume.Mode.RO
-            if v['name'] == 'home':
-                if os.path.exists(os.path.join(v['path'], 'docker.tar.gz')):
-                    self.logger.debug('Add .dockercfg ' + os.path.join(v['path'], 'docker.tar.gz'))
-                    dockercfg = os.path.join(v['path'], 'docker.tar.gz')
-
-        if job['requirements']['tmpstorage']['path'] is not None:
-            volume = container.volumes.add()
-            volume.container_path = '/tmp-data'
-            volume.host_path = job['requirements']['tmpstorage']['path']
-            volume.mode = 1
-
-        tid = str(job['id'])
-
-        command = mesos_pb2.CommandInfo()
-        command.value = job['command']['script']
-        if dockercfg:
-            dockerconfig = command.uris.add()
-            dockerconfig.value = dockercfg
-
-        task.command.MergeFrom(command)
-        task.task_id.value = tid
-        task.slave_id.value = offer.slave_id.value
-        task.name = job['meta']['name']
-
-        cpus = task.resources.add()
-        cpus.name = "cpus"
-        cpus.type = mesos_pb2.Value.SCALAR
-        cpus.scalar.value = job['requirements']['cpu']
-
-        mem = task.resources.add()
-        mem.name = "mem"
-        mem.type = mesos_pb2.Value.SCALAR
-        mem.scalar.value = job['requirements']['ram'] * 1000
-
-        if 'gpus' in job['requirements'] and job['requirements']['gpus'] > 0:
-            gpus = task.resources.add()
-            gpus.name = "gpus"
-            gpus.type = mesos_pb2.Value.SCALAR
-            gpus.scalar.value = job['requirements']['gpus']
-
-        if 'meta' not in job['container'] or job['container']['meta'] is None:
-            job['container']['meta'] = {}
-        if 'Node' not in job['container']['meta'] or job['container']['meta']['Node'] is None:
-            job['container']['meta']['Node'] = {}
-        job['container']['meta']['Node']['slave'] = offer.slave_id.value
-        if labels is not None and 'hostname' in labels:
-            job['container']['meta']['Node']['Name'] = labels['hostname']
-        else:
-            job['container']['meta']['Node']['Name'] = offer.slave_id.value
-        self.logger.debug("Task placed on host " + str(job['container']['meta']['Node']['Name']))
-
-        port_list = []
-        job['container']['port_mapping'] = []
-        job['container']['ports'] = []
-        if 'ports' in job['requirements']:
-            port_list = job['requirements']['ports']
-        if job['command']['interactive']:
-            port_list.append(22)
-
-        if self.config['mesos']['unified']:
-            # Host mode only for the moment
-            # => no port mapping or possible conflict
-            # Need Calico or equivalent to have per task IP and network isolation
-            # More doc:
-            # https://github.com/projectcalico/calico-containers/blob/v0.19.0/README.md
-            # http://mesos.apache.org/documentation/latest/networking-for-mesos-managed-containers/
-            docker = mesos_pb2.ContainerInfo.MesosInfo()
-            docker.image.type = 2  # Docker
-            docker.image.docker.name = job['container']['image']
-            # Request an IP from a network module
-            if self.network:
-                container_network_name = self.network.network(job['requirements']['network'])
-                self.network.create_network(container_network_name)
-
-                network_info = container.network_infos.add()
-                network_info.name = container_network_name
-
-                # Get an IP V4 address
-                ip_address = network_info.ip_addresses.add()
-                ip_address.protocol = 1
-                # The network group to join
-                network_info.groups.append(container_network_name)
-
-            container.mesos.MergeFrom(docker)
-        else:
-            # Docker containerizer
-            docker = mesos_pb2.ContainerInfo.DockerInfo()
-            docker.image = job['container']['image']
-            docker.network = 2  # mesos_pb2.ContainerInfo.DockerInfo.Network.BRIDGE
-            docker.force_pull_image = True
-            set_root_user = docker.parameters.add()
-            set_root_user.key = "user"
-            set_root_user.value = "root"
-
-            if self.network:
-                # Define the specific network to use
-                docker.network = 4
-                container_network_name = self.network.network(job['requirements']['network'])
-                self.network.create_network(container_network_name)
-                network_info = container.network_infos.add()
-                network_info.name = container_network_name
-            else:
-                if port_list:
-                    mesos_ports = task.resources.add()
-                    mesos_ports.name = "ports"
-                    mesos_ports.type = mesos_pb2.Value.RANGES
-                    for port in port_list:
-                        if self.config['port_allocate']:
-                            mapped_port = self.get_mapping_port(offer, job)
-                            if mapped_port is None:
-                                return None
-                        else:
-                            mapped_port = port
-                        job['container']['port_mapping'].append({'host': mapped_port, 'container': port})
-                        docker_port = docker.port_mappings.add()
-                        docker_port.host_port = mapped_port
-                        docker_port.container_port = port
-                        port_range = mesos_ports.ranges.range.add()
-                        port_range.begin = mapped_port
-                        port_range.end = mapped_port
-            container.docker.MergeFrom(docker)
-        task.container.MergeFrom(container)
         return task
 
-    def statusUpdate(self, driver, update):
-        self.logger.debug("Task %s is in state %s" % \
-            (update.task_id.value, mesos_pb2.TaskState.Name(update.state)))
+    def getAvailableTasks(self, offer):
+        for pending_task in self.pending_tasks:
+            if self.hasEnoughResource(offer,pending_task):
+                return [pending_task]
+        return []
 
-        if update.state == 1:
-            # Switched to RUNNING, get container id
-            job = self.jobs_handler.find_one({'id': int(update.task_id.value)})
-            # Switched to RUNNING, get container id
-            containerId = None
-            if self.config['mesos']['unified']:
-                ip_address = None
-                if update.container_status:
-                    for network_info in update.container_status.network_infos:
-                        for ip_address_info in network_info.ip_addresses:
-                            ip_address = ip_address_info.ip_address
+    def addOfferInfo(self, available_tasks, offer):
+        tasks = []
+        for available_task in available_tasks:
+            task = Dict(available_task)
+            task.agent_id.value = offer.agent_id.value
+            tasks.append(task)
+        return tasks
+        # return [task for task in self.pending_tasks if self.hasEnoughResource(offer, task)]
 
-                self.jobs_handler.update({'id': int(update.task_id.value)}, {
-                                                '$set': {
-                                                    'container.ip_address': ip_address,
-                                                    'container.status': 'ready'
-                                                }})
-            else:
-                try:
-                    if str(update.data) != "":
-                        containers = json.loads(update.data)
-                        containerId = containers[0]["Id"]
-                        if self.network:
-                            container_network_name = self.network.network(job['requirements']['network'], job['user'])
-                            ip_address = containers[0]['NetworkSettings']['Networks'][container_network_name]['IPAddress']
-                        else:
-                            ip_address = job['container']['meta']['Node']['Name']
-                        self.jobs_handler.update({'id': int(update.task_id.value)},
-                                                {'$set': {
-                                                    'container.id': containerId,
-                                                    'container.ip_address': ip_address,
-                                                    'container.status': 'ready'
-                                                    }
-                                                })
+    def getResourcesNames(self, resources):
 
-                except Exception as e:
-                    self.logger.debug("Could not extract info from TaskStatus: " + str(e))
-                    containerId = None
+        return set([resource.name for resource in resources])
 
-        self.logger.debug('Mesos:Task:Over:' + str(update.task_id.value))
-        if int(update.state) in [2, 3, 4, 5, 7]:
-            job = self.jobs_handler.find_one({'id': int(update.task_id.value)})
-            if job is not None and 'meta' in job['container'] and job['container']['meta'] is not None and 'Node' in job['container']['meta']:
-                self.plugin_zfs_unmount(job['container']['meta']['Node']['Name'], job)
 
-        if update.reason:
-            self.redis_handler.set(self.config['redis_prefix'] + ':mesos:over:' + str(update.task_id.value) + ':reason', update.reason)
-        self.redis_handler.set(self.config['redis_prefix'] + ':mesos:over:' + str(update.task_id.value), update.state)
+    def hasEnoughResource(self, offer, task):
+        '''
+        check wether the resources are enough. Currently only for scalar
+        '''
+        offer_resources = offer.resources
+        requested_resources = task.resources
+        for resource_name in self.getResourcesNames(requested_resources):
+            if self.getResource(offer_resources, resource_name) < self.getResource(requested_resources, resource_name):
+                logging.warn("Not enough %s" % resource_name)
+                return False
+        return True
 
-    def frameworkMessage(self, driver, executorId, slaveId, message):
-        self.logger.debug("Received framework message")
-
+    
 
 class Mesos(IExecutorPlugin):
 
@@ -665,80 +192,41 @@ class Mesos(IExecutorPlugin):
         if proc_type is not None and proc_type == 1:
             # do not start framework on watchers
             return
+        import logging
+        logging.basicConfig(level=logging.DEBUG)
 
-        executor = mesos_pb2.ExecutorInfo()
-        executor.executor_id.value = "go-docker"
-        executor.name = "Go-Docker executor"
 
-        framework = mesos_pb2.FrameworkInfo()
-        framework.user = ""  # Have Mesos fill in the current user.
-        if self.cfg['mesos']['unified']:
-            framework.user = "root"
-        framework.name = "Go-Docker Mesos"
+        executor = Dict()
+        executor.executor_id.value = 'MinimalExecutor'
+        executor.name = executor.executor_id.value
+
+
+        framework = Dict()
+        framework.user = getpass.getuser()
+        framework.name = "MinimalFramework"
+        framework.hostname = socket.gethostname()
         framework.failover_timeout = 3600 * 24 * 7  # 1 week
-        frameworkId = self.redis_handler.get(self.cfg['redis_prefix'] + ':mesos:frameworkId')
-        if frameworkId:
+        prevFrameworkId = self.redis_handler.get(self.cfg['redis_prefix'] + ':mesos:frameworkId')
+        if prevFrameworkId:
             # Reuse previous framework identifier
-            self.logger.info("Mesos:FrameworkId:" + str(frameworkId))
-            mesos_framework_id = mesos_pb2.FrameworkID()
-            mesos_framework_id.value = frameworkId
-            framework.id.MergeFrom(mesos_framework_id)
-
-        if self.cfg['mesos']['native_gpu']:
-            cap = framework.capabilities.add()
-            cap.type = 3  # GPU resource
-
+            self.logger.info("Mesos:FrameworkId:" + str(prevFrameworkId))
+            framework.id = prevFrameworkId
         if os.getenv("MESOS_CHECKPOINT"):
             self.logger.info("Enabling checkpoint for the framework")
             framework.checkpoint = True
 
-        implicitAcknowledgements = 1
-        if os.getenv("MESOS_EXPLICIT_ACKNOWLEDGEMENTS"):
-            self.logger.info("Enabling explicit status update acknowledgements")
-            implicitAcknowledgements = 0
+        driver = MesosSchedulerDriver(
+            MesosScheduler(executor),
+            framework,
+            self.cfg['mesos']['master'],
+            use_addict=True,
+        )
 
-        driver = None
-        if os.getenv("MESOS_AUTHENTICATE"):
-            self.logger.info("Enabling authentication for the framework")
-            if not os.getenv("DEFAULT_PRINCIPAL"):
-                self.logger.error("Expecting authentication principal in the environment")
-                sys.exit(1)
+        driver_thread = Thread(MesosThread(driver))
+        driver_thread.start()
 
-            if not os.getenv("DEFAULT_SECRET"):
-                self.logger.error("Expecting authentication secret in the environment")
-                sys.exit(1)
+        print('Scheduler running, Ctrl+C to quit.')
 
-            credential = mesos_pb2.Credential()
-            credential.principal = os.getenv("DEFAULT_PRINCIPAL")
-            credential.secret = os.getenv("DEFAULT_SECRET")
-
-            framework.principal = os.getenv("DEFAULT_PRINCIPAL")
-
-            mesosScheduler = MesosScheduler(implicitAcknowledgements, executor)
-            mesosScheduler.set_logger(self.logger)
-            mesosScheduler.set_config(self.cfg)
-            mesosScheduler.jobs_handler = self.jobs_handler
-            mesosScheduler.network = self.network
-
-            driver = mesos.native.MesosSchedulerDriver(
-                mesosScheduler,
-                framework,
-                self.cfg['mesos']['master'],
-                credential)
-        else:
-            framework.principal = "godocker-mesos-framework"
-            mesosScheduler = MesosScheduler(implicitAcknowledgements, executor)
-            mesosScheduler.set_logger(self.logger)
-            mesosScheduler.set_config(self.cfg)
-            mesosScheduler.jobs_handler = self.jobs_handler
-            mesosScheduler.network = self.network
-            driver = mesos.native.MesosSchedulerDriver(
-                mesosScheduler,
-                framework,
-                self.cfg['mesos']['master'])
-
-        self.driver = driver
-        self.driver.start()
 
     def close(self):
         '''
@@ -878,26 +366,6 @@ class Mesos(IExecutorPlugin):
             except Exception as e:
                 self.logger.error('Could not get container identifier: ' + str(e))
 
-        # Mesos <= 0.22, container id is not in TaskStatus, let's query mesos
-        '''
-        if containerId is None:
-            http = urllib3.PoolManager()
-            r = None
-            try:
-                r = http.urlopen('GET', 'http://' + job['container']['meta']['Node']['Name'] + ':5051/slave(1)/state.json')
-                    if r.status == 200:
-                    slave = json.loads(r.data)
-                    for f in slave['frameworks']:
-                        if f['name'] == "Go-Docker Mesos":
-                            for executor in f['executors']:
-                                if str(executor['id']) == str(update.task_id.value):
-                                    task['container']['id'] = 'mesos-' + executor['container']
-                                    self.jobs_handler.update({'id': int(update.task_id.value)}, {'$set': {'container.id': task['container']['id']}})
-                                    break
-                            break
-            except Exception as e:
-                self.logger.error('Failed to contact mesos slave: ' + str(e))
-        '''
 
     def kill_task(self, task):
         '''
