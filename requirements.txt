@@ -17,7 +17,6 @@ pymongo==2.8
 ldap3
 redis==2.10.3
 codecov
-coverage
 sphinx
 influxdb
 python-logstash
@@ -35,6 +34,7 @@ pysendfile
 pyftpdlib
 protobuf
 PyJWT
+pymesos
 
 addict==1.0.0
 coverage==4.2
