@@ -1,24 +1,22 @@
 from __future__ import print_function
 
-from godocker.iExecutorPlugin import IExecutorPlugin
 import json
 import time
 import os
-import sys
-import redis
-import urllib3
 import socket
-import signal
 import getpass
 import uuid
-
 from threading import Thread
-from bson.json_util import dumps
 from os.path import abspath, join, dirname
+import redis
+
+from bson.json_util import dumps
+import urllib3
 
 from pymesos import MesosSchedulerDriver, Scheduler
 from addict import Dict
-
+from Helper import RedisHelper
+from godocker.iExecutorPlugin import IExecutorPlugin
 
 
 config = Dict(
@@ -44,11 +42,11 @@ class MesosThread(Thread):
 
 class MesosScheduler(Scheduler):
 
-    def __init__(self, executor):
+    def __init__(self, executor, dataHelper):
         self.executor = executor
         self.Terminated = False
-        self.jobs_handler = None
         self.network = None
+        self.dataHelper = dataHelper
 
     def features(self):
         '''
@@ -57,10 +55,6 @@ class MesosScheduler(Scheduler):
         :return: list of features within ['docker-plugin-zfs']
         '''
         return ['docker-plugin-zfs', 'interactive', 'cni', 'gpus']
-
-    def set_config(self, config):
-        self.config = config
-        self.redis_handler = redis.StrictRedis(host=self.config['redis_host'], port=self.config['redis_port'], db=self.config['redis_db'], decode_responses=True)
 
     def set_logger(self, logger):
         self.logger = logger
@@ -98,36 +92,38 @@ class MesosScheduler(Scheduler):
 
             tasks_to_launch = self.addOfferInfo(available_tasks, offer)
 
-            # TODO: for test only. mock task
-            tasks_to_launch[0].task_id.value = str(uuid.uuid4())
-            tasks_to_launch[0].container.mesos.image.docker.name='busybox'
-            self.logger.debug('launching task:' + str(tasks_to_launch))
-            driver.launchTasks(offer.id, tasks_to_launch, filters)
+            #TODO: for test only. mock task
+            if len(tasks_to_launch) > 0:
+                tasks_to_launch[0].task_id.value = str(uuid.uuid4())
+                tasks_to_launch[0].container.mesos.image.docker.name='alpine'
+                self.logger.debug('launching task:' + str(tasks_to_launch))
+                driver.launchTasks(offer.id, tasks_to_launch, filters)
 
-    def getResource(self, res, name):
-        for r in res:
-            r = Dict(r)
-            if r.name == name:
-                return r.scalar.value
+    def getResource(self, resources, name):
+        for resource in resources:
+            resource = Dict(resource)
+            if resource.name == name:
+                return resource.scalar.value
         return 0
 
     def statusUpdate(self, driver, update):
         self.logger.debug('Status update TID %s %s',
-                      update.task_id.value,
-                      update.state)
+                          update.task_id.value,
+                          update.state)
 
     def getTasksFromDB(self):
         '''
         Get the list of tasks from database or redis cache
         '''
         tasks = []
-        redis_tasks = self.redis_handler.lrange(self.config['redis_prefix'] + ':mesos:pending', 0, -1)
-        for redis_task in redis_tasks:
+        redis_task = self.redis_handler.lpop(self.config['redis_prefix'] + ':mesos:pending')
+        while redis_task is not None:
             task = json.loads(redis_task)
             task = self.taskAdapter(task)
             # self.logger.debug('loading tasks from database: ' + json.dumps(task))
             tasks.append(task)
-            
+            redis_task = self.redis_handler.lpop(self.config['redis_prefix'] + ':mesos:pending')
+
         return tasks
 
     def taskAdapter(self, request_task):
@@ -145,13 +141,9 @@ class MesosScheduler(Scheduler):
             dict(name='gpus', type='SCALAR', scalar={'value': requirements.gpu or 0}),
         ]
 
-
         task.container = self.containerAdapter(request_task.container)
 
-
-        task.executor.command = Dict(value=request_task.command.script)
-        task.executor.executor_id.value = 'MinimalExecutor'
-
+        task.command = Dict(value=request_task.command.script)
         return task
 
     def containerAdapter(self, request_container):
@@ -163,9 +155,6 @@ class MesosScheduler(Scheduler):
             docker={'name':request_container.image}
             )
 
-        #for debug
-        container.type = 'DOCKER'
-        container.docker.image = 'busybox'
         container.volumes = self.volumesAdapter(request_container.volumes)
         return container
 
@@ -223,7 +212,7 @@ class MesosScheduler(Scheduler):
                 return False
         return True
 
-    
+
 
 class Mesos(IExecutorPlugin):
 
@@ -249,7 +238,14 @@ class Mesos(IExecutorPlugin):
         self.Terminated = False
         self.driver = None
         self.redis_handler = redis.StrictRedis(host=self.cfg['redis_host'], port=self.cfg['redis_port'], db=self.cfg['redis_db'], decode_responses=True)
-
+        self.redis_config = Dict(
+            host=self.cfg['redis_host'],
+            port=self.cfg['redis_port'],
+            db=self.cfg['redis_db'],
+            prefix=self.cfg['redis_prefix'],
+            decode_responses=True
+            )
+        self.dataHelper = RedisHelper(self.redis_config)
     def open(self, proc_type):
         '''
         Request start of executor if needed
@@ -280,9 +276,9 @@ class Mesos(IExecutorPlugin):
             self.logger.info("Enabling checkpoint for the framework")
             framework.checkpoint = True
 
-        mesos_scheduler = MesosScheduler(executor)
+        redisHelper = RedisHelper(self.redis_config)
+        mesos_scheduler = MesosScheduler(executor, redisHelper)
         mesos_scheduler.set_logger(self.logger)
-        mesos_scheduler.set_config(self.cfg)
         driver = MesosSchedulerDriver(
             mesos_scheduler,
             framework,
