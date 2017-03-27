@@ -15,16 +15,8 @@ import urllib3
 
 from pymesos import MesosSchedulerDriver, Scheduler
 from addict import Dict
-from Helper import RedisHelper
+from plugins.Helper import RedisHelper
 from godocker.iExecutorPlugin import IExecutorPlugin
-
-
-config = Dict(
-    redis_host='localhost',
-    redis_port=6379,
-    redis_db=0,
-    redis_prefix='god',
-    )
 
 
 
@@ -42,12 +34,14 @@ class MesosThread(Thread):
 
 class MesosScheduler(Scheduler):
 
-    def __init__(self, executor, dataHelper):
+    def __init__(self, executor, dataHelper, jobs_handler):
         self.executor = executor
         self.Terminated = False
         self.network = None
         self.dataHelper = dataHelper
-
+        self.pending_tasks = []
+        self.rejected_tasks = []
+        self.jobs_handler = jobs_handler
     def features(self):
         '''
         Get supported features
@@ -61,10 +55,7 @@ class MesosScheduler(Scheduler):
 
     def registered(self, driver, frameworkId, masterInfo):
         self.logger.info("Registered with framework ID %s" % frameworkId.value)
-        self.redis_handler.set(
-            self.config['redis_prefix'] + ':mesos:frameworkId',
-            frameworkId.value
-            )
+        self.dataHelper.set('frameworkId', frameworkId.value)
 
         # Reconcile at startup
         # if 'mesos' in self.config and 'reconcile' in self.config['mesos'] and self.config['mesos']['reconcile']:
@@ -94,7 +85,7 @@ class MesosScheduler(Scheduler):
 
             #TODO: for test only. mock task
             if len(tasks_to_launch) > 0:
-                tasks_to_launch[0].task_id.value = str(uuid.uuid4())
+                # tasks_to_launch[0].task_id.value = str(uuid.uuid4())
                 tasks_to_launch[0].container.mesos.image.docker.name='alpine'
                 self.logger.debug('launching task:' + str(tasks_to_launch))
                 driver.launchTasks(offer.id, tasks_to_launch, filters)
@@ -107,24 +98,36 @@ class MesosScheduler(Scheduler):
         return 0
 
     def statusUpdate(self, driver, update):
+        task_id = update.task_id.value
+        status = update.state
+
         self.logger.debug('Status update TID %s %s',
                           update.task_id.value,
                           update.state)
+        if status == 'TASK_RUNNING':
+            ip_address = None
+            if update.container_status:
+                for network_info in update.container_status.network_infos:
+                    for ip_address_info in network_info.ip_addresses:
+                        ip_address = ip_address_info.ip_address
 
+                        self.jobs_handler.update(
+                            {'id': int(update.task_id.value)},
+                            {
+                                '$set': {
+                                    'container.ip_address': ip_address,
+                                    'container.status': 'ready'
+                                    }
+                                }
+                            )
+
+        self.dataHelper.setStatus(task_id, 0)
     def getTasksFromDB(self):
         '''
         Get the list of tasks from database or redis cache
         '''
-        tasks = []
-        redis_task = self.redis_handler.lpop(self.config['redis_prefix'] + ':mesos:pending')
-        while redis_task is not None:
-            task = json.loads(redis_task)
-            task = self.taskAdapter(task)
-            # self.logger.debug('loading tasks from database: ' + json.dumps(task))
-            tasks.append(task)
-            redis_task = self.redis_handler.lpop(self.config['redis_prefix'] + ':mesos:pending')
-
-        return tasks
+        return [self.taskAdapter(task)
+                for task in self.dataHelper.getTasks(status='pending')]
 
     def taskAdapter(self, request_task):
         '''
@@ -179,9 +182,11 @@ class MesosScheduler(Scheduler):
         return volume
 
     def getAvailableTasks(self, offer):
-        self.pending_tasks = self.getTasksFromDB()
+        # TODO: need more complex allocation methods.
+        self.pending_tasks += self.getTasksFromDB()
         for pending_task in self.pending_tasks:
             if self.hasEnoughResource(offer,pending_task):
+                self.pending_tasks.remove(pending_task)
                 self.logger.debug('\nget pending tasks: '.join(pending_task.task_id))
                 return [pending_task]
         return []
@@ -237,15 +242,18 @@ class Mesos(IExecutorPlugin):
         self.cfg = cfg
         self.Terminated = False
         self.driver = None
-        self.redis_handler = redis.StrictRedis(host=self.cfg['redis_host'], port=self.cfg['redis_port'], db=self.cfg['redis_db'], decode_responses=True)
         self.redis_config = Dict(
             host=self.cfg['redis_host'],
             port=self.cfg['redis_port'],
             db=self.cfg['redis_db'],
-            prefix=self.cfg['redis_prefix'],
+            prefix=self.cfg['redis_prefix'] + ':mesos',
             decode_responses=True
             )
         self.dataHelper = RedisHelper(self.redis_config)
+
+    def set_jobs_handler(self, jobs_handler):
+        self.jobs_handler = jobs_handler
+
     def open(self, proc_type):
         '''
         Request start of executor if needed
@@ -267,7 +275,7 @@ class Mesos(IExecutorPlugin):
         framework.name = "MinimalFramework"
         framework.hostname = socket.gethostname()
         framework.failover_timeout = 3600 * 24 * 7  # 1 week
-        prevFrameworkId = self.redis_handler.get(self.cfg['redis_prefix'] + ':mesos:frameworkId')
+        prevFrameworkId = self.dataHelper.get('frameworkId')
         if prevFrameworkId:
             # Reuse previous framework identifier
             self.logger.info("Mesos:FrameworkId:" + str(prevFrameworkId))
@@ -277,7 +285,7 @@ class Mesos(IExecutorPlugin):
             framework.checkpoint = True
 
         redisHelper = RedisHelper(self.redis_config)
-        mesos_scheduler = MesosScheduler(executor, redisHelper)
+        mesos_scheduler = MesosScheduler(executor, redisHelper, self.jobs_handler)
         mesos_scheduler.set_logger(self.logger)
         driver = MesosSchedulerDriver(
             mesos_scheduler,
@@ -328,33 +336,10 @@ class Mesos(IExecutorPlugin):
         :return: tuple of submitted and rejected/errored tasks
         '''
         # Add tasks in redis to be managed by mesos
-        self.redis_handler.set(self.cfg['redis_prefix'] + ':mesos:offer', 0)
         for task in tasks:
-            self.redis_handler.rpush(self.cfg['redis_prefix'] + ':mesos:pending', dumps(task))
-        # Wait for offer receival and treatment
-        self.logger.debug('Mesos:WaitForOffer:Begin')
-        mesos_offer = int(self.redis_handler.get(self.cfg['redis_prefix'] + ':mesos:offer'))
-        while mesos_offer != 1 and not self.Terminated:
-            self.logger.debug('Mesos:WaitForOffer:Wait')
-            time.sleep(1)
-            mesos_offer = int(self.redis_handler.get(self.cfg['redis_prefix'] + ':mesos:offer'))
-        self.logger.debug('Mesos:WaitForOffer:End')
-        # Get result
-        rejected_tasks = []
-        running_tasks = []
-        redis_task = self.redis_handler.lpop(self.cfg['redis_prefix'] + ':mesos:running')
-        while redis_task is not None:
-            task = json.loads(redis_task)
-            task['container']['status'] = 'initializing'
-            running_tasks.append(task)
-            redis_task = self.redis_handler.lpop(self.cfg['redis_prefix'] + ':mesos:running')
-        redis_task = self.redis_handler.lpop(self.cfg['redis_prefix'] + ':mesos:rejected')
-        while redis_task is not None:
-            task = json.loads(redis_task)
-            rejected_tasks.append(task)
-            redis_task = self.redis_handler.lpop(self.cfg['redis_prefix'] + ':mesos:rejected')
+            self.dataHelper.push('pending', dumps(task))
 
-        return (running_tasks, rejected_tasks)
+        return (tasks, [])
 
     def watch_tasks(self, task):
         '''
@@ -500,7 +485,7 @@ class Mesos(IExecutorPlugin):
             }
 
         '''
-        mesos_master = self.redis_handler.get(self.cfg['redis_prefix'] + ':mesos:master')
+        mesos_master = self.dataHelper.get('master')
         if not mesos_master:
             return []
 
